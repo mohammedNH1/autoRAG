@@ -23,7 +23,7 @@ def questionnaire(request):
     return JsonResponse({"error": "Only POST allowed"}, status=405)
 
 """
-EXAMPLE of json(API) or (form) sent from frontend to backend (including the 9 answers):
+EXAMPLE of json(API) or (form) sent from frontend to backend (including the 9 answers) hi abdul:
 {
     "reference": True,
     'temprature': 0.7,
