@@ -16,11 +16,13 @@ from django.views.decorators.csrf import csrf_exempt
 def questionnaire(request):
     if request.method == 'POST':
         # Read data from form POST
+        
         reference = request.POST.get('reference')
         temperature = float(request.POST.get('temperature'))
         top_p = float(request.POST.get('top_p'))
-
-        # later --> workspace.insert(reference, temperature, top_p)
+        
+        
+        # later --> workspace.insert(reference, temperature, top_p, embedding)
 
         return JsonResponse({"status": "success"})
     
@@ -34,3 +36,5 @@ example of json(API) sent from frontend to backend (including the 9 answers):
     'top_p': 0.9
 }
 """
+
+            
