@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Configuration</title>
+    <link rel="stylesheet" href="../static/css/questionnaire.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>RAG Configuration Setup</h1>
+            <div class="progress"><span id="step">1</span> of 9</div>
+
+            <form id="form">
+                <!-- Q1: Language -->
+                <div class="question active" data-q="1">
+                    <h2>Language of your documents?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="english">English</button>
+                        <button type="button" class="option" data-value="arabic">Arabic</button>
+                        <button type="button" class="option" data-value="multilingual">Multilingual</button>
+                    </div>
+                    <input type="hidden" name="language" value="">
+                </div>
+
+                <!-- Q2: Speed vs Quality -->
+                <div class="question" data-q="2">
+                    <h2>Do you prefer speed or quality?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="speed">Speed</button>
+                        <button type="button" class="option" data-value="quality">Quality</button>
+                        <button type="button" class="option" data-value="balanced">Balanced</button>
+                    </div>
+                    <input type="hidden" name="speed_quality" value="">
+                </div>
+
+                <!-- Q3: Main Idea or Related Points -->
+                <div class="question" data-q="3">
+                    <h2>Do you want just the main idea or also with related points?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="main_only">Main Idea Only</button>
+                        <button type="button" class="option" data-value="with_related">Include Related Points</button>
+                    </div>
+                    <input type="hidden" name="main_idea_or_related" value="">
+                </div>
+
+                <!-- Q4: Up to Date Documents -->
+                <div class="question" data-q="4">
+                    <h2>Do you want your answers to be based from up-to-date documents?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="yes">Yes</button>
+                        <button type="button" class="option" data-value="no">No</button>
+                    </div>
+                    <input type="hidden" name="upToDate" value="">
+                </div>
+
+                <!-- Q5: Document Information -->
+                <div class="question" data-q="5">
+                    <h2>What information about each retrieved document do you want?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="minimal">Minimal Info</button>
+                        <button type="button" class="option" data-value="standard">Standard Metadata</button>
+                        <button type="button" class="option" data-value="detailed">Detailed Metadata</button>
+                    </div>
+                    <input type="hidden" name="document_info" value="">
+                </div>
+
+                <!-- Q6: Content Type -->
+                <div class="question" data-q="6">
+                    <h2>What kind of content will you mostly upload to this workspace?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="slide_deck">Slide Deck</button>
+                        <button type="button" class="option" data-value="meeting_notes">Meeting Notes</button>
+                        <button type="button" class="option" data-value="article">Article</button>
+                        <button type="button" class="option" data-value="research_paper">Research Paper</button>
+                        <button type="button" class="option" data-value="policy">Policy Document</button>
+                    </div>
+                    <input type="hidden" name="chunking_strategy" value="">
+                </div>
+
+                <!-- Q7: References -->
+                <div class="question" data-q="7">
+                    <h2>Should the answers include reference to the source documents?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="yes">Yes</button>
+                        <button type="button" class="option" data-value="no">No</button>
+                    </div>
+                    <input type="hidden" name="reference" value="">
+                </div>
+
+                <!-- Q8: Model Creativity -->
+                <div class="question" data-q="8">
+                    <h2>Do you want the model to be precise or creative?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="precise">Precise</button>
+                        <button type="button" class="option" data-value="balanced">Balanced</button>
+                        <button type="button" class="option" data-value="creative">Creative</button>
+                    </div>
+                    <input type="hidden" name="temperature" value="">
+                </div>
+
+                <!-- Q9: Source Strictness -->
+                <div class="question" data-q="9">
+                    <h2>Should the system stick strictly to the source content, or allow uncommon suggestions?</h2>
+                    <div class="options">
+                        <button type="button" class="option" data-value="strict">Stick to Source</button>
+                        <button type="button" class="option" data-value="balanced">Balanced</button>
+                        <button type="button" class="option" data-value="exploratory">Allow Suggestions</button>
+                    </div>
+                    <input type="hidden" name="top_p" value="">
+                </div>
+            </form>
+
+            <div class="controls">
+                <button id="prev" onclick="prev()">← Back</button>
+                <button id="next" class="primary" onclick="next()">Next →</button>
+                <button id="submit" class="primary" onclick="submit()" style="display:none">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success UI -->
+    <div id="successModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✅ Success!</h2>
+            </div>
+            <div class="modal-body">
+                <p>🎉 Your workspace has been created successfully!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal" style="display: none;">
+        <div class="modal-content error">
+            <div class="modal-header">
+                <h2>❌ Error</h2>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage">An error occurred. Please try again.</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeErrorModal()" class="btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://c99c4f2d-1720-45d2-a91c-4310c76af467.mock.pstmn.io';
+        const totalQ = 9;
+        let currentQ = 1;
+
+        function updateUI() {
+            document.querySelectorAll('.question').forEach((q, i) => {
+                q.classList.toggle('active', i + 1 === currentQ);
+            });
+            document.getElementById('step').textContent = currentQ;
+            document.getElementById('prev').style.display = currentQ === 1 ? 'none' : 'block';
+            document.getElementById('next').style.display = currentQ === totalQ ? 'none' : 'block';
+            document.getElementById('submit').style.display = currentQ === totalQ ? 'block' : 'none';
+        }
+
+        function next() {
+            const q = document.querySelector(`.question[data-q="${currentQ}"]`);
+            const input = q.querySelector('input[type="hidden"]');
+            if (!input.value) { alert('Please select an answer'); return; }
+            if (currentQ < totalQ) currentQ++;
+            updateUI();
+        }
+
+        function prev() {
+            if (currentQ > 1) currentQ--;
+            updateUI();
+        }
+
+        function submit() {
+            const data = new FormData(document.getElementById('form'));
+            
+            // Map temperature to numeric value
+            const tempMap = {
+                'precise': 0.2,
+                'balanced': 0.5,
+                'creative': 0.7
+            };
+            
+            // Map top_p to numeric value
+            const topPMap = {
+                'strict': 0.2,
+                'balanced': 0.5,
+                'exploratory': 0.9
+            };
+            
+            // Map chunking strategy to readable format
+            const chunkingMap = {
+                'slide_deck': 'slide deck',
+                'meeting_notes': 'meeting notes',
+                'article': 'article',
+                'research_paper': 'research paper',
+                'policy': 'policy'
+            };
+            
+            const payload = {
+                reference: data.get('reference') === 'yes',
+                temprature: tempMap[data.get('temperature')] || 0.5,
+                top_p: topPMap[data.get('top_p')] || 0.5,
+                upToDate: data.get('upToDate') === 'yes',
+                chunking_strategy: chunkingMap[data.get('chunking_strategy')] || data.get('chunking_strategy'),
+                document_info: data.get('document_info'),
+                speed_quality: data.get('speed_quality'),
+                main_idea_or_related: data.get('main_idea_or_related'),
+                language: data.get('language')
+            };
+            console.log('📤 Submitting:', JSON.stringify(payload, null, 2));
+            fetch(API_BASE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(d => {
+                console.log('✓ Success:', d);
+                document.getElementById('successModal').style.display = 'flex';
+            })
+            .catch(e => {
+                console.error('❌ Error:', e);
+                document.getElementById('errorMessage').textContent = 'Error creating workspace. Please try again.';
+                document.getElementById('errorModal').style.display = 'flex';
+            });
+        }
+
+        document.querySelectorAll('.option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const q = e.target.closest('.question');
+                q.querySelectorAll('.option').forEach(b => b.classList.remove('selected'));
+                e.target.classList.add('selected');
+                q.querySelector('input').value = e.target.dataset.value;
+            });
+        });
+
+        updateUI();
+
+        function closeErrorModal() {
+            document.getElementById('errorModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
