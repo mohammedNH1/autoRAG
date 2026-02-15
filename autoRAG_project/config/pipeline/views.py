@@ -9,6 +9,12 @@ def questionnaire(request):
     if request.method == 'POST':
         # Read data from form POST
         
+        language = request.POST.get('language')
+        use_case = request.POST.get('use_case')
+        embedding_reranker = embedding_reranker(language, use_case)
+        
+        top_k = top_k(request.POST.get('reference'))
+        
         reference = reference(request.POST.get('reference'))
         temperature = temperature(request.POST.get('creative'))
         top_p = top_p(request.POST.get('strict'))
@@ -32,12 +38,46 @@ EXAMPLE of json(API) or (form) sent from frontend to backend (including the 9 an
     'chunking_strategy':'slide deck'
 }
 """
+def embedding_reranker(language, use_case):
+   
+    if language == 'english':
+        if use_case == 'fast':
+            return {
+                "embedding_model": "all-MiniLM-L6-v2",
+                "reranker_model": "cross-encoder/ms-marco-MiniLM-L6-v2"
+            }
+
+        elif use_case == 'balanced':
+            return {
+                "embedding_model": "all-mpnet-base-v2",
+                "reranker_model": "cross-encoder/ms-marco-MiniLM-L6-v2"
+            }
+
+        elif use_case == 'quality':
+            return {
+                "embedding_model": "intfloat/e5-large-v2",
+                "reranker_model": "intfloat/e5-mistral-7b-instruct"
+            }
+    else:
+        return {
+            "embedding_model": "BAAI/bge-m3",
+            "reranker_model": "BAAI/bge-reranker-v2-m3"
+        }
+
+
+def top_k(top_k_value):  
+    if top_k_value == 'main':
+        k = 5
+    else:
+        k = 10
+    return k
+
 def temperature(temperature_value):
     temp = 0
     if temperature_value == 'precise':
         temp = 0.2
     elif temperature_value == 'balanced':
-        0.5
+        temp = 0.5
     else: # creative
         temp = 0.8
     return temp      
