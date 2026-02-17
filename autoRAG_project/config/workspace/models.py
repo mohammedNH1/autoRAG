@@ -1,20 +1,71 @@
 from django.db import models
 
-# Create your models here.
-# workspace/models.py
-from django.db import models
+
+# ----------------------
+# User Table
+# ----------------------
+class User(models.Model):
+    user_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)  # already hashed before saving
+
+    def __str__(self):
+        return self.name
+
 
 # ----------------------
 # Main Workspace Table
 # ----------------------
 class Workspace(models.Model):
     workspace_id = models.AutoField(primary_key=True)
+
+    workspace_name = models.CharField(max_length=150, null=True, blank=True)
+
+
+    workspace_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_workspaces"
+    )
+
+    users = models.ManyToManyField(
+        User,
+        through="WorkspaceMembership",
+        related_name="workspaces"
+    )
+
     tokens = models.IntegerField(default=0)
     collection_id = models.CharField(max_length=255, blank=True, null=True)
     api_key = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
-        return f"Workspace {self.workspace_id}"
+        return self.workspace_name
+
+
+# ----------------------
+# Through Table (M2M + role)
+# ----------------------
+class WorkspaceMembership(models.Model):
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    role = models.CharField(max_length=50) 
+
+    class Meta:
+        unique_together = ('workspace', 'user')
+
+    def __str__(self):
+        return f"{self.user.name} in {self.workspace.workspace_name} as {self.role}"
 
 
 # ----------------------

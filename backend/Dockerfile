@@ -1,5 +1,13 @@
 FROM python:3.11-slim
+
 WORKDIR /app
+
 COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
-CMD ["echo", "Backend container is ready!"]
+
+# Copy your Django project files into the container
+COPY . .
+
+# Start Django dev server on all interfaces
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

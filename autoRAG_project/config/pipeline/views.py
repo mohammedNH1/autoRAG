@@ -2,31 +2,70 @@ from django.shortcuts import render
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembership
+from sentence_transformers import SentenceTransformer, CrossEncoder
+
 
 
 @csrf_exempt
 def questionnaire(request):
-    if request.method == 'POST':
-        # Read data from form POST
-        
-        language = request.POST.get('language')
-        use_case = request.POST.get('use_case')
-        embedding_reranker = embedding_reranker(language, use_case)
-        
-        top_k = top_k(request.POST.get('reference'))
-        
-        reference = reference(request.POST.get('reference'))
-        temperature = temperature(request.POST.get('creative'))
-        top_p = top_p(request.POST.get('strict'))
-        upToDate =up_to_date_docs((request.POST.get('uptodate')))
-        metadata = add_metadata((request.POST.get('metadata')))
-        chunking_strategy =determine_chunking_strategy((request.POST.get('chunking_strategy')))
-        
-        # later --> workspace.insert(reference, temperature, top_p, embedding)
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-        return JsonResponse({"status": "success"})
+    try:
+        data = json.loads(request.body)  # 🔥 read JSON body
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    # Extract values from JSON
+    language = data.get("language")
+    use_case = data.get("use_case")
+    reference_value = data.get("reference")
+    temperature_value = data.get("temperature")
+    top_p_value = data.get("top_p")
+    uptodate_value = data.get("uptodate")
+    metadata_value = data.get("metadata")
+    chunking_value = data.get("chunking_strategy")
+
+    # Process logic
+    embedding_config = embedding_reranker(language, use_case)
+    k_value = top_k(reference_value)
+    reference_flag = reference(reference_value)
+    temp_value = temperature(temperature_value)
+    top_p_final = top_p(top_p_value)
+    uptodate_flag = up_to_date_docs(uptodate_value)
+    metadata_flag = add_metadata(metadata_value)
+    chunking_strategy = determine_chunking_strategy(chunking_value)
     
-    return JsonResponse({"error": "Only POST allowed"}, status=405)
+    # save to DB
+    workspace = Workspace.objects.create()
+
+    # 2️⃣ Create WorkspaceConfig linked via OneToOne
+    WorkspaceConfig.objects.create(
+        workspace=workspace,
+        retrieval_type='none',  # placeholder, (what is retrieval type?)
+        re_ranker=embedding_config["reranker_model"],
+        embedding_model=embedding_config["embedding_model"],
+        chunking_strategy=chunking_strategy,
+        distance_metric="cosine", # placeholder, (is it always cosine?)
+        temperature=temp_value,
+        top_p=top_p_final,
+        top_k=k_value
+    )
+    return JsonResponse({
+        "status": "success",
+        "config": {
+            "embedding": embedding_config,
+            "top_k": k_value,
+            "reference": reference_flag,
+            "temperature": temp_value,
+            "top_p": top_p_final,
+            "uptodate": uptodate_flag,
+            "metadata": metadata_flag,
+            "chunking_strategy": chunking_strategy
+        }
+    })
+
 
 """
 EXAMPLE of json(API) or (form) sent from frontend to backend (including the 9 answers) hi abdul:
@@ -37,6 +76,7 @@ EXAMPLE of json(API) or (form) sent from frontend to backend (including the 9 an
     'upToDate': True,
     'chunking_strategy':'slide deck'
 }
+
 """
 def embedding_reranker(language, use_case):
    
@@ -150,3 +190,18 @@ def determine_chunking_strategy(response):
         chunking_strategy = 'fixed-length'
 
     return chunking_strategy
+
+def initiate_pipeline(request, workspace_id):
+    workspace = Workspace.objects.get(workspace_id=workspace_id)
+    config = workspace.config 
+
+    embedding_model = SentenceTransformer(config.embedding_model) 
+    reranker = CrossEncoder(config.re_ranker)
+    
+
+
+
+
+
+
+    
