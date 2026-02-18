@@ -2,6 +2,7 @@ from django.shortcuts import render
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from sqlalchemy import Extract
 from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembership
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
@@ -13,7 +14,7 @@ def questionnaire(request):
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
-        data = json.loads(request.body)  # 🔥 read JSON body
+        data = json.loads(request.body)  
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
@@ -191,17 +192,71 @@ def determine_chunking_strategy(response):
 
     return chunking_strategy
 
+
+from pipeline.services.pipeline_registry import get_pipeline
+
 def initiate_pipeline(request, workspace_id):
     workspace = Workspace.objects.get(workspace_id=workspace_id)
-    config = workspace.config 
+    config = workspace.config
 
-    embedding_model = SentenceTransformer(config.embedding_model) 
-    reranker = CrossEncoder(config.re_ranker)
+    get_pipeline(workspace_id, config)
+
+    return JsonResponse({"status": "Pipeline initialized"})
+
+
+
+
+def query_handling(request, workspace_id):
+    workspace = Workspace.objects.get(workspace_id=workspace_id) # or could be from json
+    config = workspace.config
+
+    pipeline = get_pipeline(workspace_id, config)
+
+    embedding_model = pipeline["embedding_model"]
+    reranker = pipeline["reranker"]
+    temperature = pipeline["temperature"]
+    top_p = pipeline["top_p"]
+    top_k = pipeline["top_k"]
+
+    data = json.loads(request.body)
+    query = data.get("query")
+
+    embedded_query = embedding_model.encode(query)
+    #  placeholder for VDB retrieval (will return the top_k documents)
+    mock_chunks = [
+        {"text": "This is a sample chunk from document A.", "metadata": {"doc_id": 1}},
+        {"text": "Another chunk from document B.", "metadata": {"doc_id": 2}},
+    ][:top_k]
     
+   
+    # re ranker
+    pairs = [(query, chunk["text"]) for chunk in mock_chunks]
+    # ("What is the admission policy?", "Policy for domestic students."),
+    # ("What is the admission policy?", "Policy for international students.")
+   
+    scores = reranker.predict(pairs) # scores = [0.45, 0.92]
+    ranked_chunks = sorted(zip(mock_chunks, scores), key=lambda x: x[1], reverse=True)  #  [ (chunk1 , 0.92), (chunk2, 0.45) ]
+    
+    # extract  the text from top-ranked chunks
+    top_chunks_for_llm = [chunk["text"] for chunk, score in ranked_chunks][:top_k]
 
-
-
-
-
+    # build a context string for the LLM
+    context = "\n\n".join(top_chunks_for_llm) 
+    prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
 
     
+    # placeholder, replace 'llm.generate' with LLM call
+    llm_response = "This is a mock LLM response based on the top-ranked chunks."
+
+    return JsonResponse({
+        "response": llm_response
+    })
+
+
+
+
+
+
+
+  
+
