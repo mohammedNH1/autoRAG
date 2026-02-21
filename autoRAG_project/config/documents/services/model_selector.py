@@ -54,7 +54,7 @@ EMBEDDING_MODELS = {
 class ModelSelector:
     
     """
-    This class translates our questionnaire's model name into technical details .( we can say String -> real embedding model )
+    This class translates our questionnaire's model name into technical details.
     """
     
     @staticmethod
@@ -62,6 +62,10 @@ class ModelSelector:
 
         """
         Get embedding configuration from model name stored in WorkspaceConfig.
+
+        Args:
+        embedding_model_name: The value from workspace.config.embedding_model
+                            (e.g., "all-MiniLM-L6-v2", "BAAI/bge-m3") as a string .
         """
         # Handle both short names and full paths
         for key, config in EMBEDDING_MODELS.items():
@@ -78,8 +82,7 @@ class ModelSelector:
     def get_collection_name(collection_key: str) -> str:
 
         """
-        Generate collection name for a model.
-        Format: documents__<collection_key>
+        Every embed has its own collection , every emebd type not user!!
         """
         return f"documents__{collection_key}"
     
