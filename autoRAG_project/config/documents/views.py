@@ -238,3 +238,74 @@ def search_documents(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+@csrf_exempt
+def delete_document(request, document_id):
+    """
+    Delete all chunks of a document from Qdrant.
+    
+    DELETE /api/documents/<document_id>/?workspace_id=1
+    
+    Response:
+    {
+        "status": "success",
+        "document_id": 123,
+        "deleted_chunks": 5
+    }
+    """
+    if request.method != 'DELETE':
+        return JsonResponse({"error": "Only DELETE allowed"}, status=405)
+    
+    # Get workspace_id from query params
+    workspace_id = request.GET.get('workspace_id')
+    if not workspace_id:
+        return JsonResponse({"error": "workspace_id query param is required"}, status=400)
+    
+    try:
+        workspace_id = int(workspace_id)
+        workspace = Workspace.objects.get(workspace_id=workspace_id)
+    except (ValueError, Workspace.DoesNotExist):
+        return JsonResponse({"error": f"Invalid workspace_id: {workspace_id}"}, status=404)
+    
+    try:
+        document_id = int(document_id)
+    except ValueError:
+        return JsonResponse({"error": "document_id must be an integer"}, status=400)
+    
+    try:
+        # Get workspace's embedding model
+        config = workspace.config
+        embedding_model_name = config.embedding_model
+        
+        # Get model configuration
+        model_config = ModelSelector.get_model_config(embedding_model_name)
+        
+        # Initialize Qdrant
+        qdrant = QdrantService(
+            host=getattr(settings, 'QDRANT_HOST', 'localhost'),
+            port=getattr(settings, 'QDRANT_PORT', 6333)
+        )
+        
+        collection_name = ModelSelector.get_collection_name(model_config.collection_key)
+        
+        # Delete with workspace isolation
+        deleted_count = qdrant.delete_document(
+            collection_name=collection_name,
+            workspace_id=workspace_id,
+            document_id=document_id,
+        )
+        
+        logger.info(f" Deleted document {document_id} from workspace {workspace_id}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'document_id': document_id,
+            'deleted_chunks': deleted_count,
+        }, status=200)
+        
+    except Exception as e:
+        logger.error(f"❌ Delete error: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)     
