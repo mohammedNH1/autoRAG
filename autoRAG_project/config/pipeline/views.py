@@ -1,10 +1,15 @@
+from urllib import response
+
 from django.shortcuts import render
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+import requests 
 from sqlalchemy import Extract
+from autoRAG_project.config.documents.services.qdrant_service import QdrantService
 from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembership
 from sentence_transformers import SentenceTransformer, CrossEncoder
+from documents.services import QdrantService
 
 
 
@@ -222,20 +227,23 @@ def query_handling(request, workspace_id):
     query = data.get("query")
 
     embedded_query = embedding_model.encode(query)
-    #  placeholder for VDB retrieval (will return the top_k documents)
-    mock_chunks = [
-        {"text": "This is a sample chunk from document A.", "metadata": {"doc_id": 1}},
-        {"text": "Another chunk from document B.", "metadata": {"doc_id": 2}},
-    ][:top_k]
+
+    qdrant = QdrantService(host="qdrant", port=6333)
     
+    chunks = qdrant.search(
+    collection_name= pipeline["embedding_model"]+'document', # placeholder
+    workspace_id= workspace_id,         
+    query_vector=embedded_query,
+    top_k=top_k
+)
    
     # re ranker
-    pairs = [(query, chunk["text"]) for chunk in mock_chunks]
+    pairs = [(query, chunk["text"]) for chunk in chunks]
     # ("What is the admission policy?", "Policy for domestic students."),
     # ("What is the admission policy?", "Policy for international students.")
    
     scores = reranker.predict(pairs) # scores = [0.45, 0.92]
-    ranked_chunks = sorted(zip(mock_chunks, scores), key=lambda x: x[1], reverse=True)  #  [ (chunk1 , 0.92), (chunk2, 0.45) ]
+    ranked_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)  #  [ (chunk1 , 0.92), (chunk2, 0.45) ]
     
     # extract  the text from top-ranked chunks
     top_chunks_for_llm = [chunk["text"] for chunk, score in ranked_chunks][:top_k]
@@ -245,9 +253,24 @@ def query_handling(request, workspace_id):
     prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
 
     
-    # placeholder, replace 'llm.generate' with LLM call
-    llm_response = "This is a mock LLM response based on the top-ranked chunks."
+    ollama_url = "http://ollama:11434/api/generate"
+    payload = {
+    "model": "llama3",  # or "llama3-8b", depending on what you pulled
+    "prompt": prompt,
+    "temperature": temperature,
+    "top_p": top_p,
+    "options": {
+        "top_k": top_k
+    },
+    "stream": False
+}
+    response = requests.post(ollama_url, json=payload)
 
+    if response.status_code == 200:
+        
+        llm_response = response.json().get("response", "No response from LLaMA")
+    else:
+        llm_response = f"Error generating response: {response.status_code}"
     return JsonResponse({
         "response": llm_response
     })
