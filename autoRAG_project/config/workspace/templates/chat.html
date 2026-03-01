@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - AutoRAG</title>
+    <link rel="stylesheet" href="../static/css/chat.css">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../components/logo.svg" alt="Logo" width="32" height="32">
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="sidebar-icon" title="Sessions">
+                        <img src="../static/Sidebar_icons/Sessions.svg" alt="Sessions" width="24" height="24">
+                </button>
+
+                <button class="sidebar-icon" title="Members">
+                    <img src="../static/Sidebar_icons/Members.svg" alt="Members" width="24" height="24">
+
+                </button>
+
+                <button class="sidebar-icon" title="Documents">
+                    <img src="../static/Sidebar_icons/Documents.svg" alt="Documents" width="24" height="24">
+                </button>
+
+                <button class="sidebar-icon" title="Notifications">
+                    <img src="../static/Sidebar_icons/Notification.svg  " alt="Notifications" width="24" height="24">
+                </button>
+
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="sidebar-icon" title="Settings">
+                    <img src="../static/Sidebar_icons/Settings.svg" alt="Settings" width="24" height="24">
+                </button>
+
+                <button class="sidebar-icon no-blue-hover" title="Profile">
+                    <img src="../static/Sidebar_icons/Profile.svg" alt="Profile" width="24" height="24">
+                </button>
+            </div>
+        </aside>
+
+        <!-- Sessions Panel -->
+        <aside class="sessions-panel">
+            <div class="sessions-header">
+                <h3>{{ workspace_name }}</h3>
+                <span class="sessions-count">{{ sessions|length }} Total</span>
+            </div>
+
+            <div class="new-session-wrapper">
+                <button class="new-session-btn" type="button">+ New Session</button>
+            </div>
+
+            <div class="sessions-list">
+                {% for session in sessions %}
+                <div
+                    class="session-item{% if session.is_active %} active{% endif %}"
+                    data-session-id="{{ session.id }}"
+                    data-session-name="{{ session.title }}"
+                >
+                    <div class="session-indicator"></div>
+                    <span class="session-title">{{ session.title }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <h1 class="header-session" id="headerSessionName">{{ session_name }}</h1>
+                    <button
+                        class="header-session-edit-btn"
+                        type="button"
+                        title="Rename session"
+                        style="opacity:0;"
+                    >
+                        <img src="../../components/edit.svg" alt="Edit" class="header-edit-icon">
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="messages-loading">
+                    <div class="spinner"></div>
+                    <p>Loading messages...</p>
+                </div>
+            </div>
+
+            <!-- Input Composer -->
+            <div class="input-composer">
+                <div class="composer-content">
+                    <input
+                        type="text"
+                        class="message-input"
+                        id="messageInput"
+                        placeholder="Ask AutoRAG..."
+                        autocomplete="off"
+                    >
+                    <button class="send-button" id="sendButton" type="button" onclick="sendMessage()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.9429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.6563168,11.6889879 L4.13399899,2.85218561 C3.34915502,2.68508827 2.40734225,2.79640318 1.77946707,3.27046097 C0.994623095,3.89199275 0.837654304,5.10231098 1.15159189,5.88779788 L3.03521743,12.3287909 C3.03521743,12.4858883 3.19218622,12.6429857 3.50612381,12.6429857 L16.6915026,13.4284726 C16.6915026,13.4284726 17.1624089,13.4284726 17.1624089,12.9572586 L17.1624089,12.4744748 C17.1624089,12.0032608 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="composer-disclaimer">AutoRAG can make mistakes. Check our Terms & Conditions.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal" style="display: none;">
+        <div class="modal-content error">
+            <div class="modal-header">
+                <h2>❌ Error</h2>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage">An error occurred. Please try again.</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeErrorModal()" class="btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://e0b3eca3-ecc4-4870-b7b0-1a71e82840dc.mock.pstmn.io';
+        const API_ENDPOINTS = {
+            SEND_MESSAGE: '/api/chat/send',
+            CREATE_SESSION: '/api/chat/sessions'
+        };
+
+        const WORKSPACE_CONTEXT = {
+            workspace_id: 'ws_123',
+            session_id: null,
+            user_id: 'u_789'
+        };
+
+        // Current session: { session_id: string|null, isDraft: boolean, local_id: string, name: string }
+        // Draft: session_id === null, isDraft === true, local_id = uuid. Persisted: session_id set, isDraft === false.
+        let currentSession = null;
+
+        // Per-session message storage: key = session_id (persisted) or local_id (draft)
+        const messagesBySession = {};
+        const draftSessions = {};
+        let messageCounter = 1;
+        let sessionCounter = 0;
+
+        function generateLocalId() {
+            return 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
+        }
+
+        function getCurrentSessionId() {
+            return currentSession ? currentSession.session_id : null;
+        }
+
+        function getMessageStorageKey() {
+            if (!currentSession) return null;
+            return currentSession.session_id != null ? currentSession.session_id : currentSession.local_id;
+        }
+
+        function getMessagesForSession(sessionId) {
+            if (!sessionId) {
+                return [];
+            }
+            return messagesBySession[sessionId] || [];
+        }
+
+        function setMessagesForSession(sessionId, msgs) {
+            if (!sessionId) {
+                return;
+            }
+            messagesBySession[sessionId] = Array.isArray(msgs) ? msgs : [];
+        }
+
+        function isActiveSessionEmpty() {
+            const key = getMessageStorageKey();
+            if (!key) return true;
+            return getMessagesForSession(key).length === 0;
+        }
+
+        function updateHeaderEmptyState() {
+            const mainHeader = document.querySelector('.main-header');
+            if (!mainHeader) return;
+            if (isActiveSessionEmpty()) {
+                mainHeader.classList.add('header--empty-session');
+            } else {
+                mainHeader.classList.remove('header--empty-session');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            showWelcomeState();
+            initializeSessionState();
+
+            // Enter key support
+            document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            const newSessionBtn = document.querySelector('.new-session-btn');
+            if (newSessionBtn) {
+                newSessionBtn.addEventListener('click', () => {
+                    createNewSession();
+                });
+            }
+
+            const headerEditBtn = document.querySelector('.header-session-edit-btn');
+            if (headerEditBtn) {
+                headerEditBtn.addEventListener('click', () => {
+                    handleHeaderSessionRenameClick();
+                });
+            }
+
+            const headerLeft = document.querySelector('.header-left');
+            if (headerLeft && headerEditBtn) {
+                headerLeft.addEventListener('mouseenter', () => {
+                    if (!headerLeft.classList.contains('header-renaming')) {
+                        headerEditBtn.style.opacity = '1';
+                    }
+                });
+                headerLeft.addEventListener('mouseleave', () => {
+                    if (!headerLeft.classList.contains('header-renaming')) {
+                        headerEditBtn.style.opacity = '0';
+                    }
+                });
+            }
+
+            const sessionsList = document.querySelector('.sessions-list');
+            if (sessionsList) {
+                sessionsList.addEventListener('click', (event) => {
+                    const item = event.target.closest('.session-item');
+                    if (!item) return;
+
+                    const sessionId = item.dataset.sessionId;
+                    const sessionName =
+                        item.dataset.sessionName ||
+                        (item.querySelector('.session-title') || {}).textContent ||
+                        '';
+
+                    if (!sessionId) return;
+                    setActiveSession(sessionId, sessionName.trim());
+                });
+            }
+
+            // Simple example data so you can see applyBackendState output.
+            const exampleState = {
+                workspace_name: 'Demo Workspace',
+                session_name: 'Sample Active Session',
+                sessions: [
+                    { id: 'demo_1', title: 'Sample Session 1', is_active: true },
+                    { id: 'demo_2', title: 'Sample Session 2', is_active: false },
+                    { id: 'demo_3', title: 'Sample Session 3', is_active: false }
+                ]
+            };
+            applyBackendState(exampleState);
+        });
+
+        function initializeSessionState() {
+            const sessionsList = document.querySelector('.sessions-list');
+            if (!sessionsList) {
+                return;
+            }
+
+            const items = Array.from(sessionsList.querySelectorAll('.session-item'));
+            sessionCounter = items.length;
+
+            let activeItem = sessionsList.querySelector('.session-item.active');
+            if (!activeItem && items.length > 0) {
+                activeItem = items[0];
+                activeItem.classList.add('active');
+            }
+
+            if (activeItem) {
+                const sessionId = activeItem.dataset.sessionId || null;
+                const sessionName =
+                    activeItem.dataset.sessionName ||
+                    (activeItem.querySelector('.session-title') || {}).textContent ||
+                    '';
+
+                if (sessionId) {
+                    setActiveSession(sessionId, sessionName.trim());
+                }
+            }
+
+            updateSessionsCount();
+        }
+
+        function deleteDraftSession(sessionId) {
+            delete draftSessions[sessionId];
+            delete messagesBySession[sessionId];
+        }
+
+        function setHeaderDraftMode(isDraft) {
+            const mainHeader = document.querySelector('.main-header');
+            if (!mainHeader) return;
+            if (isDraft) {
+                mainHeader.classList.add('header-draft');
+            } else {
+                mainHeader.classList.remove('header-draft');
+            }
+        }
+
+        function commitDraftSession(session) {
+            if (!session || session.local_id == null) return;
+            const draft = draftSessions[session.local_id];
+            if (!draft) return;
+
+            delete draftSessions[session.local_id];
+            const sessionId = session.session_id || session.local_id;
+            const sessionName = session.name || draft.name || '';
+
+            const sessionsList = document.querySelector('.sessions-list');
+            if (sessionsList) {
+                const item = document.createElement('div');
+                item.className = 'session-item active';
+                item.dataset.sessionId = sessionId;
+                item.dataset.sessionName = sessionName;
+                item.innerHTML = `
+                    <div class="session-indicator"></div>
+                    <span class="session-title">${sessionName}</span>
+                `;
+                sessionsList.appendChild(item);
+            }
+
+            setHeaderDraftMode(false);
+            const headerSessionEl = document.getElementById('headerSessionName');
+            if (headerSessionEl) headerSessionEl.textContent = sessionName;
+            updateHeaderEmptyState();
+            updateSessionsCount();
+        }
+
+        function setActiveSession(sessionId, sessionName) {
+            const sessionsList = document.querySelector('.sessions-list');
+            if (!sessionsList) return;
+
+            if (currentSession && currentSession.isDraft && currentSession.local_id !== sessionId) {
+                const prevMessages = getMessagesForSession(currentSession.local_id);
+                if (prevMessages.length === 0) deleteDraftSession(currentSession.local_id);
+            }
+
+            sessionsList.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+            const targetItem = sessionsList.querySelector(`.session-item[data-session-id="${sessionId}"]`);
+            if (targetItem) targetItem.classList.add('active');
+
+            currentSession = { session_id: sessionId, isDraft: !!draftSessions[sessionId], local_id: sessionId, name: sessionName || '' };
+            WORKSPACE_CONTEXT.session_id = sessionId;
+            setHeaderDraftMode(currentSession.isDraft);
+
+            if (!currentSession.isDraft) {
+                const headerSessionEl = document.getElementById('headerSessionName');
+                if (headerSessionEl && sessionName) headerSessionEl.textContent = sessionName;
+            }
+
+            renderMessages();
+            updateHeaderEmptyState();
+        }
+
+        function createNewSession() {
+    const sessionsList = document.querySelector('.sessions-list');
+    if (!sessionsList) return;
+
+    sessionCounter += 1;
+    const local_id = generateLocalId();
+    const sessionName = 'New Session ' + sessionCounter;
+
+    // Abandon any previous draft that had 0 messages before switching
+    if (currentSession && currentSession.isDraft) {
+        const prevMessages = getMessagesForSession(currentSession.local_id);
+        if (prevMessages.length === 0) deleteDraftSession(currentSession.local_id);
+    }
+
+    currentSession = { session_id: null, isDraft: true, local_id: local_id, name: sessionName };
+    draftSessions[local_id] = { session_id: null, isDraft: true, local_id: local_id, name: sessionName };
+    WORKSPACE_CONTEXT.session_id = null;
+    setMessagesForSession(local_id, []);
+
+    sessionsList.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+    setHeaderDraftMode(true);
+    updateHeaderEmptyState();
+    showWelcomeState();
+}
+
+        /** If session.session_id is null: POST /api/chat/sessions with { workspace_id, user_id }, store returned session_id, set isDraft=false, migrate messages. Returns the real session_id. */
+        async function ensureSessionCreated(session) {
+            if (!session) return null;
+            if (session.session_id != null) return session.session_id;
+            const baseUrl = API_BASE_URL || '';
+            if (!baseUrl) return null;
+            const response = await fetch(baseUrl + API_ENDPOINTS.CREATE_SESSION, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    workspace_id: WORKSPACE_CONTEXT.workspace_id,
+                    user_id: WORKSPACE_CONTEXT.user_id
+                })
+            });
+            if (!response.ok) throw new Error('Session creation failed: ' + response.status);
+            const data = await response.json().catch(function () { return null; });
+            const sessionId = (data && (data.session_id != null ? data.session_id : data.id)) || null;
+            if (!sessionId) throw new Error('Session creation did not return session_id');
+            session.session_id = sessionId;
+            session.isDraft = false;
+            WORKSPACE_CONTEXT.session_id = sessionId;
+            if (session.local_id !== sessionId) {
+                messagesBySession[sessionId] = messagesBySession[session.local_id] || [];
+                delete messagesBySession[session.local_id];
+            }
+            return sessionId;
+        }
+
+        function applyBackendState(data) {
+            if (!data || typeof data !== 'object') {
+                return;
+            }
+
+            const workspaceName = data.workspace_name;
+            const sessionNameFromData = data.session_name;
+            const sessions = Array.isArray(data.sessions) ? data.sessions : null;
+
+            const sessionsHeader = document.querySelector('.sessions-header h3');
+            if (workspaceName && sessionsHeader) {
+                sessionsHeader.textContent = workspaceName;
+            }
+
+            if (sessions) {
+                const sessionsList = document.querySelector('.sessions-list');
+                if (sessionsList) {
+                    sessionsList.innerHTML = '';
+                    sessionCounter = sessions.length;
+
+                    sessions.forEach((session) => {
+                        const item = document.createElement('div');
+                        item.className = 'session-item';
+                        if (session.is_active) {
+                            item.classList.add('active');
+                        }
+                        item.dataset.sessionId = session.id;
+                        item.dataset.sessionName = session.title;
+                        item.innerHTML = `
+                            <div class="session-indicator"></div>
+                            <span class="session-title">${session.title}</span>
+                        `;
+                        sessionsList.appendChild(item);
+                    });
+                }
+            }
+
+            let activeSessionId = WORKSPACE_CONTEXT.session_id;
+            let activeSessionName = sessionNameFromData || null;
+
+            if (sessions) {
+                const explicitActive = sessions.find((s) => s.is_active);
+                const fallback = sessions[0];
+                const chosen = explicitActive || fallback;
+                if (chosen) {
+                    activeSessionId = chosen.id;
+                    activeSessionName = chosen.title;
+                }
+            }
+
+            if (activeSessionId) {
+                setActiveSession(activeSessionId, activeSessionName || '');
+            }
+
+            updateSessionsCount();
+        }
+
+        function updateSessionsCount() {
+            const sessionsList = document.querySelector('.sessions-list');
+            const countElement = document.querySelector('.sessions-count');
+
+            if (!sessionsList || !countElement) {
+                return;
+            }
+
+            const count = sessionsList.querySelectorAll('.session-item').length;
+            countElement.textContent = `${count} Total`;
+        }
+
+        function handleHeaderSessionRenameClick() {
+            enterHeaderRenameMode();
+        }
+
+        function enterHeaderRenameMode() {
+            const headerLeft = document.querySelector('.header-left');
+            const titleEl = document.getElementById('headerSessionName');
+            const penBtn = document.querySelector('.header-session-edit-btn');
+            if (!headerLeft || !titleEl || !penBtn) return;
+
+            // Already in edit mode — ignore
+            if (headerLeft.classList.contains('header-renaming')) return;
+
+            const currentName = titleEl.textContent || '';
+            headerLeft.classList.add('header-renaming');
+
+            // Build editor
+            const editor = document.createElement('div');
+            editor.className = 'header-rename-editor';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'header-rename-input';
+            input.value = currentName;
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.type = 'button';
+            confirmBtn.className = 'header-rename-confirm';
+            confirmBtn.title = 'Confirm rename';
+            confirmBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'header-rename-cancel';
+            cancelBtn.title = 'Cancel rename';
+            cancelBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+            editor.appendChild(input);
+            editor.appendChild(confirmBtn);
+            editor.appendChild(cancelBtn);
+
+            // Hide title + pen, insert editor
+            titleEl.style.display = 'none';
+            penBtn.style.display = 'none';
+            headerLeft.appendChild(editor);
+
+            input.focus();
+            input.select();
+
+            confirmBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                exitHeaderRenameMode(true);
+            });
+
+            cancelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                exitHeaderRenameMode(false);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    exitHeaderRenameMode(true);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    exitHeaderRenameMode(false);
+                }
+            });
+
+            // Click outside = discard
+            setTimeout(() => {
+                document.addEventListener('mousedown', _headerRenameOutsideHandler);
+            }, 0);
+        }
+
+        function _headerRenameOutsideHandler(e) {
+            const editor = document.querySelector('.header-rename-editor');
+            if (editor && !editor.contains(e.target)) {
+                exitHeaderRenameMode(false);
+                document.removeEventListener('mousedown', _headerRenameOutsideHandler);
+            }
+        }
+
+        function exitHeaderRenameMode(commit) {
+            const headerLeft = document.querySelector('.header-left');
+            const titleEl = document.getElementById('headerSessionName');
+            const penBtn = document.querySelector('.header-session-edit-btn');
+            const editor = document.querySelector('.header-rename-editor');
+            if (!headerLeft || !editor) return;
+
+            const input = editor.querySelector('.header-rename-input');
+            const newName = input ? input.value.trim() : '';
+
+            if (commit && newName !== '') {
+                commitHeaderRename(newName);
+            }
+
+            editor.remove();
+            if (titleEl) titleEl.style.display = '';
+            if (penBtn) {
+                penBtn.style.display = '';
+                penBtn.style.opacity = '0';
+            }
+            headerLeft.classList.remove('header-renaming');
+
+            document.removeEventListener('mousedown', _headerRenameOutsideHandler);
+        }
+
+        function commitHeaderRename(newTitle) {
+            const titleEl = document.getElementById('headerSessionName');
+            if (titleEl) titleEl.textContent = newTitle;
+
+            const currentSessionId = getCurrentSessionId();
+            if (!currentSessionId) return;
+
+            const sessionsList = document.querySelector('.sessions-list');
+            if (!sessionsList) return;
+
+            const item = sessionsList.querySelector(
+                `.session-item[data-session-id="${currentSessionId}"]`
+            );
+            if (!item) return;
+
+            item.dataset.sessionName = newTitle;
+            const spanEl = item.querySelector('.session-title');
+            if (spanEl) spanEl.textContent = newTitle;
+        }
+
+        function showWelcomeState() {
+    document.querySelector('.main-content').classList.add('welcome-mode');
+    document.getElementById('chatMessages').innerHTML = `
+        <div class="welcome-state">
+            <h2 class="welcome-title">What can I help with?</h2>
+        </div>`;
+    // Optional: focus input
+    const input = document.getElementById('messageInput');
+    if (input) input.focus();
+}
+
+        function renderMessages() {
+    const container = document.getElementById('chatMessages');
+    const storageKey = getMessageStorageKey();
+    const currentMessages = getMessagesForSession(storageKey || '');
+
+    if (!storageKey || currentMessages.length === 0) {
+        showWelcomeState();
+        updateHeaderEmptyState();
+        return;
+    }
+
+    // Has messages — normal layout
+    document.querySelector('.main-content').classList.remove('welcome-mode');
+    container.innerHTML = '';
+
+    currentMessages.forEach((msg) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${msg.sender}`;
+
+        const timestamp = msg.timestamp ? formatTime(msg.timestamp) : '';
+        const senderName = msg.sender === 'user' ? 'You' : 'AutoRAG';
+
+        messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    ${msg.sender === 'assistant' ? `<div class="message-sender">${senderName}</div>` : ''}
+                    <div class="message-content">${escapeHtml(msg.text)}</div>
+                    ${timestamp ? `<div class="message-time">${timestamp}</div>` : ''}
+                </div>
+        `;
+
+        container.appendChild(messageDiv);
+    });
+
+    scrollToBottom();
+    updateHeaderEmptyState();
+}
+
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const messageText = input.value.trim();
+
+    if (!messageText) return;
+    if (!currentSession) return;
+
+    document.querySelector('.main-content').classList.remove('welcome-mode');
+
+    const sendBtn = document.getElementById('sendButton');
+    sendBtn.disabled = true;
+    input.disabled = true;
+
+    let sessionId;
+    try {
+        sessionId = await ensureSessionCreated(currentSession);
+    } catch (e) {
+        showErrorModal('Could not create session. Please try again.');
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+        return;
+    }
+    if (!sessionId) {
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+        return;
+    }
+    if (currentSession.isDraft) {
+        commitDraftSession(currentSession);
+    }
+
+    const userMessage = {
+        id: `msg_${Date.now()}`,
+        sender: 'user',
+        text: messageText,
+        timestamp: new Date().toISOString()
+    };
+
+    let sessionMessages = getMessagesForSession(sessionId).slice();
+    sessionMessages.push(userMessage);
+    setMessagesForSession(sessionId, sessionMessages);
+    renderMessages();
+    input.value = '';
+
+    const payload = {
+        workspace_id: WORKSPACE_CONTEXT.workspace_id,
+        session_id: sessionId,
+        user_id: WORKSPACE_CONTEXT.user_id,
+        message_id: `cmsg_${String(messageCounter).padStart(3, '0')}`,
+        message: messageText
+    };
+
+    messageCounter++;
+
+    fetch(API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function (r) {
+        return r.text().then(function (text) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (!text.trim()) return null;
+            try {
+                return JSON.parse(text);
+            } catch (parseErr) {
+                throw parseErr;
+            }
+        });
+    })
+    .then(function (d) {
+        if (d && d.reply) {
+            const assistantMessage = {
+                id: d.reply.id || `msg_${Date.now()}`,
+                sender: 'assistant',
+                text: d.reply.text,
+                timestamp: d.reply.timestamp || new Date().toISOString()
+            };
+            sessionMessages = getMessagesForSession(sessionId).slice();
+            sessionMessages.push(assistantMessage);
+            setMessagesForSession(sessionId, sessionMessages);
+            renderMessages();
+        }
+    })
+    .catch(function (e) {
+        showErrorModal('Failed to send message. Please try again.');
+        var failedSessionMessages = getMessagesForSession(sessionId).slice();
+        failedSessionMessages = failedSessionMessages.filter(
+            function (m) { return m.id !== userMessage.id; }
+        );
+        setMessagesForSession(sessionId, failedSessionMessages);
+        renderMessages();
+    })
+    .finally(() => {
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+    });
+}
+
+        function showErrorModal(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorModal').style.display = 'flex';
+        }
+
+        function closeErrorModal() {
+            document.getElementById('errorModal').style.display = 'none';
+        }
+
+        function formatTime(timestamp) {
+            try {
+                const date = new Date(timestamp);
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            } catch {
+                return '';
+            }
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, (char) => map[char]);
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                const container = document.getElementById('chatMessages');
+                container.scrollTop = container.scrollHeight;
+            }, 0);
+        }
+    </script>
+</body>
+</html>

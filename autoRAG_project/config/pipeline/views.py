@@ -1,15 +1,11 @@
-from urllib import response
-
 from django.shortcuts import render
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import requests 
-from sqlalchemy import Extract
-from autoRAG_project.config.documents.services.qdrant_service import QdrantService
+import requests
+from documents.services.qdrant_service import QdrantService
 from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembership
-from sentence_transformers import SentenceTransformer, CrossEncoder
-from documents.services import QdrantService
+from pipeline.services.pipeline_registry import get_pipeline
 
 
 
@@ -198,8 +194,6 @@ def determine_chunking_strategy(response):
     return chunking_strategy
 
 
-from pipeline.services.pipeline_registry import get_pipeline
-
 def initiate_pipeline(request, workspace_id):
     workspace = Workspace.objects.get(workspace_id=workspace_id)
     config = workspace.config
@@ -209,10 +203,8 @@ def initiate_pipeline(request, workspace_id):
     return JsonResponse({"status": "Pipeline initialized"})
 
 
-
-
 def query_handling(request, workspace_id):
-    workspace = Workspace.objects.get(workspace_id=workspace_id) # or could be from json
+    workspace = Workspace.objects.get(workspace_id=workspace_id)
     config = workspace.config
 
     pipeline = get_pipeline(workspace_id, config)
@@ -229,57 +221,35 @@ def query_handling(request, workspace_id):
     embedded_query = embedding_model.encode(query)
 
     qdrant = QdrantService(host="qdrant", port=6333)
-    
+
     chunks = qdrant.search(
-    collection_name= pipeline["embedding_model"]+'document', # placeholder
-    workspace_id= workspace_id,         
-    query_vector=embedded_query,
-    top_k=top_k
-)
-   
-    # re ranker
+        collection_name=pipeline["embedding_model"] + "document",
+        workspace_id=workspace_id,
+        query_vector=embedded_query,
+        top_k=top_k,
+    )
+
     pairs = [(query, chunk["text"]) for chunk in chunks]
-    # ("What is the admission policy?", "Policy for domestic students."),
-    # ("What is the admission policy?", "Policy for international students.")
-   
-    scores = reranker.predict(pairs) # scores = [0.45, 0.92]
-    ranked_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)  #  [ (chunk1 , 0.92), (chunk2, 0.45) ]
-    
-    # extract  the text from top-ranked chunks
+    scores = reranker.predict(pairs)
+    ranked_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)
     top_chunks_for_llm = [chunk["text"] for chunk, score in ranked_chunks][:top_k]
 
-    # build a context string for the LLM
-    context = "\n\n".join(top_chunks_for_llm) 
+    context = "\n\n".join(top_chunks_for_llm)
     prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
 
-    
     ollama_url = "http://ollama:11434/api/generate"
     payload = {
-    "model": "llama3",  # or "llama3-8b", depending on what you pulled
-    "prompt": prompt,
-    "temperature": temperature,
-    "top_p": top_p,
-    "options": {
-        "top_k": top_k
-    },
-    "stream": False
-}
+        "model": "llama3",
+        "prompt": prompt,
+        "temperature": temperature,
+        "top_p": top_p,
+        "options": {"top_k": top_k},
+        "stream": False,
+    }
     response = requests.post(ollama_url, json=payload)
 
     if response.status_code == 200:
-        
         llm_response = response.json().get("response", "No response from LLaMA")
     else:
         llm_response = f"Error generating response: {response.status_code}"
-    return JsonResponse({
-        "response": llm_response
-    })
-
-
-
-
-
-
-
-  
-
+    return JsonResponse({"response": llm_response})
