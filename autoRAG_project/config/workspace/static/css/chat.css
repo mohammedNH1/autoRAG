@@ -1,32 +1,26 @@
-@media (max-width: 768px) {
-    .main-content.welcome-mode .input-composer {
-        width: 90%;
-    }
-}
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-Regular.otf') format('opentype');
-    font-weight: 400;
+src: url("../../../components/font/TheYearofHandicrafts-Regular.otf") format("opentype");    font-weight: 400;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-Medium.otf') format('opentype');
+src: url("../../../components/font/TheYearofHandicrafts-Medium.otf") format("opentype");    font-weight: 500;
     font-weight: 500;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-SemiBold.otf') format('opentype');
+src: url("../../../components/font/TheYearofHandicrafts-SemiBold.otf") format("opentype");    font-weight: 600;
     font-weight: 600;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-Bold.otf') format('opentype');
+src: url("../../../components/font/TheYearofHandicrafts-Bold.otf") format("opentype");    font-weight: 700;
     font-weight: 700;
     font-style: normal;
 }
@@ -290,11 +284,10 @@ button {
 
 
 .main-content.welcome-mode .input-composer {
-    width: 60%;
+    width: 90%;
     max-width: 560px;
     border-top: none;
     padding-top: 16px;
-    width: 90%;
 }
 
 /* Header */

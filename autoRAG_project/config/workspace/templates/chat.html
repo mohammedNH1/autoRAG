@@ -107,7 +107,7 @@
                         placeholder="Ask AutoRAG..."
                         autocomplete="off"
                     >
-                    <button class="send-button" id="sendButton" type="button" onclick="sendMessage()">
+                    <button class="send-button" id="sendButton" type="button">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.9429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.6563168,11.6889879 L4.13399899,2.85218561 C3.34915502,2.68508827 2.40734225,2.79640318 1.77946707,3.27046097 C0.994623095,3.89199275 0.837654304,5.10231098 1.15159189,5.88779788 L3.03521743,12.3287909 C3.03521743,12.4858883 3.19218622,12.6429857 3.50612381,12.6429857 L16.6915026,13.4284726 C16.6915026,13.4284726 17.1624089,13.4284726 17.1624089,12.9572586 L17.1624089,12.4744748 C17.1624089,12.0032608 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"/>
                         </svg>
@@ -166,7 +166,7 @@
 
         function getMessageStorageKey() {
             if (!currentSession) return null;
-            return currentSession.session_id != null ? currentSession.session_id : currentSession.local_id;
+            return currentSession.local_id ?? currentSession.session_id;
         }
 
         function getMessagesForSession(sessionId) {
@@ -181,6 +181,10 @@
                 return;
             }
             messagesBySession[sessionId] = Array.isArray(msgs) ? msgs : [];
+        }
+
+        function getSessionNameFromItem(item) {
+            return (item.dataset.sessionName || (item.querySelector('.session-title') || {}).textContent || '').trim();
         }
 
         function isActiveSessionEmpty() {
@@ -211,6 +215,9 @@
                     sendMessage();
                 }
             });
+
+            const sendBtn = document.getElementById('sendButton');
+            if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 
             const newSessionBtn = document.querySelector('.new-session-btn');
             if (newSessionBtn) {
@@ -247,27 +254,23 @@
                     if (!item) return;
 
                     const sessionId = item.dataset.sessionId;
-                    const sessionName =
-                        item.dataset.sessionName ||
-                        (item.querySelector('.session-title') || {}).textContent ||
-                        '';
-
                     if (!sessionId) return;
-                    setActiveSession(sessionId, sessionName.trim());
+                    setActiveSession(sessionId, getSessionNameFromItem(item));
                 });
             }
 
-            // Simple example data so you can see applyBackendState output.
-            const exampleState = {
+            // Start with empty session list and one draft so first send creates a real session (payload uses API session_id).
+            const initialState = {
                 workspace_name: 'Demo Workspace',
-                session_name: 'Sample Active Session',
-                sessions: [
-                    { id: 'demo_1', title: 'Sample Session 1', is_active: true },
-                    { id: 'demo_2', title: 'Sample Session 2', is_active: false },
-                    { id: 'demo_3', title: 'Sample Session 3', is_active: false }
-                ]
+                session_name: '',
+                sessions: []
             };
-            applyBackendState(exampleState);
+            applyBackendState(initialState);
+
+            // Ensure currentSession is never null when user can send: start with a new draft.
+            if (!currentSession) {
+                createNewSession();
+            }
         });
 
         function initializeSessionState() {
@@ -287,13 +290,8 @@
 
             if (activeItem) {
                 const sessionId = activeItem.dataset.sessionId || null;
-                const sessionName =
-                    activeItem.dataset.sessionName ||
-                    (activeItem.querySelector('.session-title') || {}).textContent ||
-                    '';
-
                 if (sessionId) {
-                    setActiveSession(sessionId, sessionName.trim());
+                    setActiveSession(sessionId, getSessionNameFromItem(activeItem));
                 }
             }
 
@@ -315,6 +313,12 @@
             }
         }
 
+        function getNextSessionTitle() {
+            const sessionsList = document.querySelector('.sessions-list');
+            const count = sessionsList ? sessionsList.querySelectorAll('.session-item').length : 0;
+            return 'Session ' + String(count + 1).padStart(2, '0');
+        }
+
         function commitDraftSession(session) {
             if (!session || session.local_id == null) return;
             const draft = draftSessions[session.local_id];
@@ -322,19 +326,27 @@
 
             delete draftSessions[session.local_id];
             const sessionId = session.session_id || session.local_id;
-            const sessionName = session.name || draft.name || '';
+            const sessionName = getNextSessionTitle();
+            session.name = sessionName;
 
             const sessionsList = document.querySelector('.sessions-list');
             if (sessionsList) {
-                const item = document.createElement('div');
-                item.className = 'session-item active';
-                item.dataset.sessionId = sessionId;
-                item.dataset.sessionName = sessionName;
-                item.innerHTML = `
-                    <div class="session-indicator"></div>
-                    <span class="session-title">${sessionName}</span>
-                `;
-                sessionsList.appendChild(item);
+                const existingItem = sessionsList.querySelector(`.session-item[data-session-id="${session.local_id}"]`);
+                if (existingItem) {
+                    existingItem.dataset.sessionId = sessionId;
+                    existingItem.dataset.sessionName = sessionName;
+                    existingItem.dataset.clientSessionId = session.local_id;
+                    existingItem.innerHTML = sessionItemInnerHtml(sessionName);
+                    existingItem.classList.add('active');
+                } else {
+                    const item = document.createElement('div');
+                    item.className = 'session-item active';
+                    item.dataset.sessionId = sessionId;
+                    item.dataset.sessionName = sessionName;
+                    item.dataset.clientSessionId = session.local_id;
+                    item.innerHTML = sessionItemInnerHtml(sessionName);
+                    sessionsList.appendChild(item);
+                }
             }
 
             setHeaderDraftMode(false);
@@ -357,7 +369,8 @@
             const targetItem = sessionsList.querySelector(`.session-item[data-session-id="${sessionId}"]`);
             if (targetItem) targetItem.classList.add('active');
 
-            currentSession = { session_id: sessionId, isDraft: !!draftSessions[sessionId], local_id: sessionId, name: sessionName || '' };
+            const clientKey = targetItem ? targetItem.dataset.clientSessionId : null;
+            currentSession = { session_id: sessionId, isDraft: !!draftSessions[sessionId], local_id: clientKey != null ? clientKey : sessionId, name: sessionName || '' };
             WORKSPACE_CONTEXT.session_id = sessionId;
             setHeaderDraftMode(currentSession.isDraft);
 
@@ -371,56 +384,59 @@
         }
 
         function createNewSession() {
-    const sessionsList = document.querySelector('.sessions-list');
-    if (!sessionsList) return;
+            const sessionsList = document.querySelector('.sessions-list');
+            if (!sessionsList) return;
 
-    sessionCounter += 1;
-    const local_id = generateLocalId();
-    const sessionName = 'New Session ' + sessionCounter;
+            sessionCounter += 1;
+            const local_id = generateLocalId();
+            const sessionName = 'New Session ' + sessionCounter;
 
-    // Abandon any previous draft that had 0 messages before switching
-    if (currentSession && currentSession.isDraft) {
-        const prevMessages = getMessagesForSession(currentSession.local_id);
-        if (prevMessages.length === 0) deleteDraftSession(currentSession.local_id);
-    }
+            if (currentSession && currentSession.isDraft) {
+                const prevMessages = getMessagesForSession(currentSession.local_id);
+                if (prevMessages.length === 0) deleteDraftSession(currentSession.local_id);
+            }
 
-    currentSession = { session_id: null, isDraft: true, local_id: local_id, name: sessionName };
-    draftSessions[local_id] = { session_id: null, isDraft: true, local_id: local_id, name: sessionName };
-    WORKSPACE_CONTEXT.session_id = null;
-    setMessagesForSession(local_id, []);
+            currentSession = { session_id: null, isDraft: true, local_id: local_id, name: sessionName };
+            draftSessions[local_id] = { session_id: null, isDraft: true, local_id: local_id, name: sessionName };
+            WORKSPACE_CONTEXT.session_id = null;
+            setMessagesForSession(local_id, []);
 
-    sessionsList.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
-    setHeaderDraftMode(true);
-    updateHeaderEmptyState();
-    showWelcomeState();
-}
+            sessionsList.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+            setHeaderDraftMode(true);
+            updateHeaderEmptyState();
+            showWelcomeState();
+        }
 
-        /** If session.session_id is null: POST /api/chat/sessions with { workspace_id, user_id }, store returned session_id, set isDraft=false, migrate messages. Returns the real session_id. */
+        /** If session.session_id is null: POST /api/chat/sessions with { workspace_id, user_id }, store returned session_id, set isDraft=false. Returns the real session_id. */
         async function ensureSessionCreated(session) {
             if (!session) return null;
             if (session.session_id != null) return session.session_id;
             const baseUrl = API_BASE_URL || '';
             if (!baseUrl) return null;
-            const response = await fetch(baseUrl + API_ENDPOINTS.CREATE_SESSION, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    workspace_id: WORKSPACE_CONTEXT.workspace_id,
-                    user_id: WORKSPACE_CONTEXT.user_id
-                })
-            });
-            if (!response.ok) throw new Error('Session creation failed: ' + response.status);
-            const data = await response.json().catch(function () { return null; });
-            const sessionId = (data && (data.session_id != null ? data.session_id : data.id)) || null;
-            if (!sessionId) throw new Error('Session creation did not return session_id');
-            session.session_id = sessionId;
-            session.isDraft = false;
-            WORKSPACE_CONTEXT.session_id = sessionId;
-            if (session.local_id !== sessionId) {
-                messagesBySession[sessionId] = messagesBySession[session.local_id] || [];
-                delete messagesBySession[session.local_id];
+            const payload = {
+                workspace_id: WORKSPACE_CONTEXT.workspace_id,
+                user_id: WORKSPACE_CONTEXT.user_id
+            };
+            console.log('CREATE_SESSION request payload:', payload);
+            try {
+                const response = await fetch(baseUrl + API_ENDPOINTS.CREATE_SESSION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json().catch(function () { return null; });
+                console.log('CREATE_SESSION response:', response.status, data);
+                if (!response.ok) throw new Error('Session creation failed: ' + response.status);
+                const sessionId = (data && (data.session_id != null ? data.session_id : data.id)) || null;
+                if (!sessionId) throw new Error('Session creation did not return session_id');
+                session.session_id = sessionId;
+                session.isDraft = false;
+                WORKSPACE_CONTEXT.session_id = sessionId;
+                return sessionId;
+            } catch (err) {
+                console.error('CREATE_SESSION error:', err);
+                throw err;
             }
-            return sessionId;
         }
 
         function applyBackendState(data) {
@@ -443,7 +459,7 @@
                     sessionsList.innerHTML = '';
                     sessionCounter = sessions.length;
 
-                    sessions.forEach((session) => {
+                    sessions.forEach((session, index) => {
                         const item = document.createElement('div');
                         item.className = 'session-item';
                         if (session.is_active) {
@@ -451,10 +467,8 @@
                         }
                         item.dataset.sessionId = session.id;
                         item.dataset.sessionName = session.title;
-                        item.innerHTML = `
-                            <div class="session-indicator"></div>
-                            <span class="session-title">${session.title}</span>
-                        `;
+                        item.dataset.clientSessionId = 'server_' + index;
+                        item.innerHTML = sessionItemInnerHtml(session.title);
                         sessionsList.appendChild(item);
                     });
                 }
@@ -621,154 +635,154 @@
         }
 
         function showWelcomeState() {
-    document.querySelector('.main-content').classList.add('welcome-mode');
-    document.getElementById('chatMessages').innerHTML = `
+            document.querySelector('.main-content').classList.add('welcome-mode');
+            document.getElementById('chatMessages').innerHTML = `
         <div class="welcome-state">
             <h2 class="welcome-title">What can I help with?</h2>
         </div>`;
-    // Optional: focus input
-    const input = document.getElementById('messageInput');
-    if (input) input.focus();
-}
+            const input = document.getElementById('messageInput');
+            if (input) input.focus();
+        }
 
         function renderMessages() {
-    const container = document.getElementById('chatMessages');
-    const storageKey = getMessageStorageKey();
-    const currentMessages = getMessagesForSession(storageKey || '');
+            const container = document.getElementById('chatMessages');
+            const storageKey = getMessageStorageKey();
+            const currentMessages = getMessagesForSession(storageKey || '');
 
-    if (!storageKey || currentMessages.length === 0) {
-        showWelcomeState();
-        updateHeaderEmptyState();
-        return;
-    }
+            if (!storageKey || currentMessages.length === 0) {
+                showWelcomeState();
+                updateHeaderEmptyState();
+                return;
+            }
 
-    // Has messages — normal layout
-    document.querySelector('.main-content').classList.remove('welcome-mode');
-    container.innerHTML = '';
+            document.querySelector('.main-content').classList.remove('welcome-mode');
+            container.innerHTML = '';
 
-    currentMessages.forEach((msg) => {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${msg.sender}`;
+            currentMessages.forEach((msg) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.sender}`;
 
-        const timestamp = msg.timestamp ? formatTime(msg.timestamp) : '';
-        const senderName = msg.sender === 'user' ? 'You' : 'AutoRAG';
+                const timestamp = msg.timestamp ? formatTime(msg.timestamp) : '';
+                const senderName = msg.sender === 'user' ? 'You' : 'AutoRAG';
 
-        messageDiv.innerHTML = `
+                messageDiv.innerHTML = `
                 <div class="message-bubble">
                     ${msg.sender === 'assistant' ? `<div class="message-sender">${senderName}</div>` : ''}
                     <div class="message-content">${escapeHtml(msg.text)}</div>
                     ${timestamp ? `<div class="message-time">${timestamp}</div>` : ''}
                 </div>
-        `;
+                `;
 
-        container.appendChild(messageDiv);
-    });
+                container.appendChild(messageDiv);
+            });
 
-    scrollToBottom();
-    updateHeaderEmptyState();
-}
-
-async function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const messageText = input.value.trim();
-
-    if (!messageText) return;
-    if (!currentSession) return;
-
-    document.querySelector('.main-content').classList.remove('welcome-mode');
-
-    const sendBtn = document.getElementById('sendButton');
-    sendBtn.disabled = true;
-    input.disabled = true;
-
-    let sessionId;
-    try {
-        sessionId = await ensureSessionCreated(currentSession);
-    } catch (e) {
-        showErrorModal('Could not create session. Please try again.');
-        sendBtn.disabled = false;
-        input.disabled = false;
-        input.focus();
-        return;
-    }
-    if (!sessionId) {
-        sendBtn.disabled = false;
-        input.disabled = false;
-        input.focus();
-        return;
-    }
-    if (currentSession.isDraft) {
-        commitDraftSession(currentSession);
-    }
-
-    const userMessage = {
-        id: `msg_${Date.now()}`,
-        sender: 'user',
-        text: messageText,
-        timestamp: new Date().toISOString()
-    };
-
-    let sessionMessages = getMessagesForSession(sessionId).slice();
-    sessionMessages.push(userMessage);
-    setMessagesForSession(sessionId, sessionMessages);
-    renderMessages();
-    input.value = '';
-
-    const payload = {
-        workspace_id: WORKSPACE_CONTEXT.workspace_id,
-        session_id: sessionId,
-        user_id: WORKSPACE_CONTEXT.user_id,
-        message_id: `cmsg_${String(messageCounter).padStart(3, '0')}`,
-        message: messageText
-    };
-
-    messageCounter++;
-
-    fetch(API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(function (r) {
-        return r.text().then(function (text) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            if (!text.trim()) return null;
-            try {
-                return JSON.parse(text);
-            } catch (parseErr) {
-                throw parseErr;
-            }
-        });
-    })
-    .then(function (d) {
-        if (d && d.reply) {
-            const assistantMessage = {
-                id: d.reply.id || `msg_${Date.now()}`,
-                sender: 'assistant',
-                text: d.reply.text,
-                timestamp: d.reply.timestamp || new Date().toISOString()
-            };
-            sessionMessages = getMessagesForSession(sessionId).slice();
-            sessionMessages.push(assistantMessage);
-            setMessagesForSession(sessionId, sessionMessages);
-            renderMessages();
+            scrollToBottom();
+            updateHeaderEmptyState();
         }
-    })
-    .catch(function (e) {
-        showErrorModal('Failed to send message. Please try again.');
-        var failedSessionMessages = getMessagesForSession(sessionId).slice();
-        failedSessionMessages = failedSessionMessages.filter(
-            function (m) { return m.id !== userMessage.id; }
-        );
-        setMessagesForSession(sessionId, failedSessionMessages);
-        renderMessages();
-    })
-    .finally(() => {
-        sendBtn.disabled = false;
-        input.disabled = false;
-        input.focus();
-    });
-}
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const messageText = input.value.trim();
+
+            if (!messageText) return;
+            if (!currentSession) return;
+
+            document.querySelector('.main-content').classList.remove('welcome-mode');
+
+            const sendBtn = document.getElementById('sendButton');
+            sendBtn.disabled = true;
+            input.disabled = true;
+
+            const wasDraft = currentSession.isDraft;
+            let sessionId;
+            try {
+                sessionId = await ensureSessionCreated(currentSession);
+            } catch (e) {
+                showErrorModal('Could not create session. Please try again.');
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+                return;
+            }
+            if (wasDraft) {
+                commitDraftSession(currentSession);
+            }
+
+            const storageKey = getMessageStorageKey();
+            const userMessage = {
+                id: `msg_${Date.now()}`,
+                sender: 'user',
+                text: messageText,
+                timestamp: new Date().toISOString()
+            };
+
+            let sessionMessages = getMessagesForSession(storageKey).slice();
+            sessionMessages.push(userMessage);
+            setMessagesForSession(storageKey, sessionMessages);
+            renderMessages();
+            input.value = '';
+
+            const payload = {
+                workspace_id: WORKSPACE_CONTEXT.workspace_id,
+                session_id: sessionId,
+                user_id: WORKSPACE_CONTEXT.user_id,
+                message_id: `cmsg_${String(messageCounter).padStart(3, '0')}`,
+                message: messageText
+            };
+
+            messageCounter++;
+
+            console.log('SEND_MESSAGE request payload:', payload);
+            fetch(API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function (r) {
+                return r.text().then(function (text) {
+                    let parsedBody = null;
+                    try {
+                        parsedBody = text.trim() ? JSON.parse(text) : null;
+                    } catch (_) {
+                        parsedBody = text;
+                    }
+                    console.log('SEND_MESSAGE response:', r.status, parsedBody);
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return parsedBody;
+                });
+            })
+            .then(function (d) {
+                if (d && d.reply) {
+                    const storageKey = getMessageStorageKey();
+                    const assistantMessage = {
+                        id: d.reply.id || `msg_${Date.now()}`,
+                        sender: 'assistant',
+                        text: d.reply.text,
+                        timestamp: d.reply.timestamp || new Date().toISOString()
+                    };
+                    sessionMessages = getMessagesForSession(storageKey).slice();
+                    sessionMessages.push(assistantMessage);
+                    setMessagesForSession(storageKey, sessionMessages);
+                    renderMessages();
+                }
+            })
+            .catch(function (e) {
+                console.error('SEND_MESSAGE error:', e);
+                showErrorModal('Failed to send message. Please try again.');
+                const storageKey = getMessageStorageKey();
+                var failedSessionMessages = getMessagesForSession(storageKey).slice();
+                failedSessionMessages = failedSessionMessages.filter(
+                    function (m) { return m.id !== userMessage.id; }
+                );
+                setMessagesForSession(storageKey, failedSessionMessages);
+                renderMessages();
+            })
+            .finally(() => {
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            });
+        }
 
         function showErrorModal(message) {
             document.getElementById('errorMessage').textContent = message;
@@ -799,6 +813,10 @@ async function sendMessage() {
                 "'": '&#039;'
             };
             return text.replace(/[&<>"']/g, (char) => map[char]);
+        }
+
+        function sessionItemInnerHtml(title) {
+            return `<div class="session-indicator"></div><span class="session-title">${escapeHtml(title)}</span>`;
         }
 
         function scrollToBottom() {
