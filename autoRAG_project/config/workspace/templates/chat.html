@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Chat - AutoRAG</title>
     <link rel="stylesheet" href="../static/css/chat.css">
 </head>
@@ -136,12 +137,17 @@
     <script>
         const API_BASE_URL = 'https://e0b3eca3-ecc4-4870-b7b0-1a71e82840dc.mock.pstmn.io';
         const API_ENDPOINTS = {
-            SEND_MESSAGE: '/api/chat/send',
-            CREATE_SESSION: '/api/chat/sessions'
+            CREATE_SESSION: '/api/chat/sessions',
+            SEND_MESSAGE: '/api/chat/send'
         };
 
+        var WORKSPACE_ID = '{{ workspace_id|default:1 }}';
+        if (typeof WORKSPACE_ID !== 'string' || WORKSPACE_ID.indexOf('{{') !== -1) {
+            WORKSPACE_ID = '1';
+        }
+
         const WORKSPACE_CONTEXT = {
-            workspace_id: 'ws_123',
+            workspace_id: WORKSPACE_ID,
             session_id: null,
             user_id: 'u_789'
         };
@@ -153,8 +159,8 @@
         // Per-session message storage: key = session_id (persisted) or local_id (draft)
         const messagesBySession = {};
         const draftSessions = {};
-        let messageCounter = 1;
         let sessionCounter = 0;
+        let messageCounter = 1;
 
         function generateLocalId() {
             return 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
@@ -228,9 +234,7 @@
 
             const headerEditBtn = document.querySelector('.header-session-edit-btn');
             if (headerEditBtn) {
-                headerEditBtn.addEventListener('click', () => {
-                    handleHeaderSessionRenameClick();
-                });
+                headerEditBtn.addEventListener('click', enterHeaderRenameMode);
             }
 
             const headerLeft = document.querySelector('.header-left');
@@ -506,10 +510,6 @@
             countElement.textContent = `${count} Total`;
         }
 
-        function handleHeaderSessionRenameClick() {
-            enterHeaderRenameMode();
-        }
-
         function enterHeaderRenameMode() {
             const headerLeft = document.querySelector('.header-left');
             const titleEl = document.getElementById('headerSessionName');
@@ -685,7 +685,13 @@
             const messageText = input.value.trim();
 
             if (!messageText) return;
-            if (!currentSession) return;
+
+            if (!currentSession) {
+                var local_id = generateLocalId();
+                currentSession = { session_id: null, isDraft: true, local_id: local_id, name: 'Session' };
+                draftSessions[local_id] = currentSession;
+                setMessagesForSession(local_id, []);
+            }
 
             document.querySelector('.main-content').classList.remove('welcome-mode');
 
@@ -694,15 +700,16 @@
             input.disabled = true;
 
             const wasDraft = currentSession.isDraft;
-            let sessionId;
-            try {
-                sessionId = await ensureSessionCreated(currentSession);
-            } catch (e) {
-                showErrorModal('Could not create session. Please try again.');
-                sendBtn.disabled = false;
-                input.disabled = false;
-                input.focus();
-                return;
+            if (wasDraft) {
+                try {
+                    await ensureSessionCreated(currentSession);
+                } catch (e) {
+                    showErrorModal('Could not create session. Please try again.');
+                    sendBtn.disabled = false;
+                    input.disabled = false;
+                    input.focus();
+                    return;
+                }
             }
             if (wasDraft) {
                 commitDraftSession(currentSession);
@@ -722,62 +729,82 @@
             renderMessages();
             input.value = '';
 
-            const payload = {
+            var thinkingEl = document.createElement('div');
+            thinkingEl.id = 'thinkingPlaceholder';
+            thinkingEl.className = 'message assistant message--thinking';
+            thinkingEl.innerHTML = '<div class="message-bubble"><div class="message-sender">AutoRAG</div><div class="message-content">Thinking…</div></div>';
+            document.getElementById('chatMessages').appendChild(thinkingEl);
+            scrollToBottom();
+
+            var payload = {
                 workspace_id: WORKSPACE_CONTEXT.workspace_id,
-                session_id: sessionId,
+                session_id: currentSession.session_id,
                 user_id: WORKSPACE_CONTEXT.user_id,
-                message_id: `cmsg_${String(messageCounter).padStart(3, '0')}`,
+                message_id: 'cmsg_' + String(messageCounter).padStart(3, '0'),
                 message: messageText
             };
-
             messageCounter++;
-
             console.log('SEND_MESSAGE request payload:', payload);
-            fetch(API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE, {
+
+            var sendUrl = API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE;
+            fetch(sendUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
             .then(function (r) {
                 return r.text().then(function (text) {
-                    let parsedBody = null;
+                    var parsed = null;
                     try {
-                        parsedBody = text.trim() ? JSON.parse(text) : null;
+                        parsed = text.trim() ? JSON.parse(text) : null;
                     } catch (_) {
-                        parsedBody = text;
+                        parsed = null;
                     }
-                    console.log('SEND_MESSAGE response:', r.status, parsedBody);
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
-                    return parsedBody;
+                    console.log('SEND_MESSAGE response:', r.status, parsed);
+                    if (!r.ok) {
+                        var err = new Error('HTTP ' + r.status + (text.trim() ? ': ' + text.trim() : ''));
+                        err.status = r.status;
+                        err.body = text;
+                        throw err;
+                    }
+                    return parsed;
                 });
             })
             .then(function (d) {
-                if (d && d.reply) {
-                    const storageKey = getMessageStorageKey();
-                    const assistantMessage = {
-                        id: d.reply.id || `msg_${Date.now()}`,
-                        sender: 'assistant',
-                        text: d.reply.text,
-                        timestamp: d.reply.timestamp || new Date().toISOString()
-                    };
-                    sessionMessages = getMessagesForSession(storageKey).slice();
-                    sessionMessages.push(assistantMessage);
-                    setMessagesForSession(storageKey, sessionMessages);
-                    renderMessages();
-                }
-            })
-            .catch(function (e) {
-                console.error('SEND_MESSAGE error:', e);
-                showErrorModal('Failed to send message. Please try again.');
-                const storageKey = getMessageStorageKey();
-                var failedSessionMessages = getMessagesForSession(storageKey).slice();
-                failedSessionMessages = failedSessionMessages.filter(
-                    function (m) { return m.id !== userMessage.id; }
-                );
-                setMessagesForSession(storageKey, failedSessionMessages);
+                var responseText = (d && d.reply && typeof d.reply.text === 'string') ? d.reply.text : ((d && typeof d.response === 'string') ? d.response : 'No response.');
+                var replyTimestamp = (d && d.reply && d.reply.timestamp) ? d.reply.timestamp : new Date().toISOString();
+                var replyId = (d && d.reply && d.reply.id) ? d.reply.id : 'msg_' + Date.now();
+                var thinkingPlaceholder = document.getElementById('thinkingPlaceholder');
+                if (thinkingPlaceholder) thinkingPlaceholder.remove();
+
+                var assistantMessage = {
+                    id: replyId,
+                    sender: 'assistant',
+                    text: responseText,
+                    timestamp: replyTimestamp
+                };
+                var key = getMessageStorageKey();
+                var msgs = getMessagesForSession(key).slice();
+                msgs.push(assistantMessage);
+                setMessagesForSession(key, msgs);
                 renderMessages();
             })
-            .finally(() => {
+            .catch(function (e) {
+                var thinkingPlaceholder = document.getElementById('thinkingPlaceholder');
+                if (thinkingPlaceholder) thinkingPlaceholder.remove();
+
+                if (e.message && e.message.indexOf('HTTP') === 0) {
+                    showErrorModal(e.body ? e.message + ' — ' + e.body : e.message);
+                } else {
+                    showErrorModal('Network error. Please try again.');
+                }
+
+                var key = getMessageStorageKey();
+                var failedMsgs = getMessagesForSession(key).slice().filter(function (m) { return m.id !== userMessage.id; });
+                setMessagesForSession(key, failedMsgs);
+                renderMessages();
+            })
+            .finally(function () {
                 sendBtn.disabled = false;
                 input.disabled = false;
                 input.focus();
