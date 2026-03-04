@@ -1,0 +1,59 @@
+{
+  "document_count": 8,
+  "selected_document": {
+    "id": 3,
+    "document_title": "Project_Report_Final.pdf",
+    "file_extension": "pdf",
+    "is_indexed": true
+  },
+  "documents": [
+    {
+      "id": 1,
+      "document_title": "Meeting_Notes_Q1.pdf",
+      "file_extension": "pdf",
+      "is_indexed": true
+    },
+    {
+      "id": 2,
+      "document_title": "API_Documentation.docx",
+      "file_extension": "docx",
+      "is_indexed": true
+    },
+    {
+      "id": 3,
+      "document_title": "Project_Report_Final.pdf",
+      "file_extension": "pdf",
+      "is_indexed": true
+    },
+    {
+      "id": 4,
+      "document_title": "app_controller.py",
+      "file_extension": "py",
+      "is_indexed": false
+    },
+    {
+      "id": 5,
+      "document_title": "Design_Spec_v2.doc",
+      "file_extension": "doc",
+      "is_indexed": true
+    },
+    {
+      "id": 6,
+      "document_title": "dashboard.tsx",
+      "file_extension": "tsx",
+      "is_indexed": false
+    },
+    {
+      "id": 7,
+      "document_title": "Budget_2026.xlsx",
+      "file_extension": "xlsx",
+      "is_indexed": true
+    },
+    {
+      "id": 8,
+      "document_title": "README.md",
+      "file_extension": "md",
+      "is_indexed": false
+    }
+  ]
+}
