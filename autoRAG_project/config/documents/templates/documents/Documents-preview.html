@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="fake-csrf-token-for-preview">
     <title>Documents - AutoRAG (Preview)</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../static/css/documents.css">
 </head>
 
@@ -91,12 +94,6 @@
                         >
                     </div>
 
-                    <button class="filter-btn" type="button" title="Filter">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-
                     <button class="upload-btn" type="button" title="Upload document" id="uploadBtn">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
@@ -114,10 +111,10 @@
         <!-- ============================================================
              FILE DETAILS PANEL — right sidebar showing selected file info
              ============================================================ -->
-        <aside class="details-panel" id="detailsPanel">
+        <aside class="details-panel hidden" id="detailsPanel">
             <div class="details-header">
                 <h2 class="details-title">File Details</h2>
-                <button class="details-menu-btn" type="button" title="More options">
+                <button class="details-overview__menu" type="button" aria-label="More options">
                     <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
                     </svg>
@@ -129,92 +126,140 @@
     </div>
 
     <script>
-        const FILE_ICONS = {
-            pdf: `<svg class="file-icon icon-pdf" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                    <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                    <text x="24" y="40" text-anchor="middle" font-size="11" font-weight="600" fill="#c0392b" font-family="inherit">PDF</text>
-                  </svg>`,
-            doc: `<svg class="file-icon icon-doc" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                    <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                    <text x="24" y="40" text-anchor="middle" font-size="10" font-weight="600" fill="#2a6fdb" font-family="inherit">DOC</text>
-                  </svg>`,
-            code: `<svg class="file-icon icon-code" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                     <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                     <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                     <path d="M18 30l-5 5 5 5M30 30l5 5-5 5" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                   </svg>`,
-            generic: `<svg class="file-icon" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                        <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                        <path d="M14 28h20M14 34h16M14 40h10" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-                      </svg>`
-        };
-
+        /* --- Constants --- */
+        const ICONS_BASE = '../../../components/icons';
+        const OVERVIEW_ICONS_BASE = ICONS_BASE + '/File overview icons';
         const CODE_EXTENSIONS = ['tsx', 'jsx', 'js', 'py', 'html', 'css'];
+        const SEL_CARD = '.doc-card';
+        const SEL_CARD_MENU = '.doc-card__menu';
 
-        function getIconForExtension(ext) {
-            if (ext === 'pdf') return FILE_ICONS.pdf;
-            if (ext === 'doc' || ext === 'docx') return FILE_ICONS.doc;
-            if (CODE_EXTENSIONS.includes(ext)) return FILE_ICONS.code;
-            return FILE_ICONS.generic;
+        /* --- Helpers --- */
+        function formatUploadedAt(raw) {
+            if (!raw || raw === '—') return '—';
+            const d = new Date(raw);
+            if (isNaN(d)) return raw;
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${dd}/${mm}/${yyyy} \u2022 ${hh}:${min}`;
         }
 
+        function getIconFilename(ext) {
+            if (ext === 'pdf') return 'pdf';
+            if (ext === 'doc' || ext === 'docx') return 'doc';
+            if (ext === 'txt') return 'txt';
+            if (CODE_EXTENSIONS.includes(ext)) return 'code';
+            return 'file';
+        }
+
+        function getDisplayName(doc) {
+            return doc.document_title != null ? String(doc.document_title) : 'Untitled';
+        }
+
+        /* --- Render functions --- */
         function renderDocumentCard(doc, isSelected) {
+            const iconName = getIconFilename(doc.file_extension);
+            const extLabel = doc.file_extension || 'file';
+            const displayName = getDisplayName(doc);
+            const titleSafe = displayName.replace(/"/g, '&quot;');
             return `
                 <article
-                    class="document-card${isSelected ? ' selected' : ''}"
+                    class="doc-card${isSelected ? ' selected' : ''}"
                     data-document-id="${doc.id}"
-                    data-filename="${doc.document_title}"
+                    data-filename="${titleSafe}"
                 >
-                    <div class="card-icon-area">
-                        ${getIconForExtension(doc.file_extension)}
+                    <div class="doc-card__preview">
+                        <img
+                            class="doc-card__icon"
+                            src="${ICONS_BASE}/${iconName}.svg"
+                            alt="${extLabel} file"
+                        />
                     </div>
-                    <div class="card-footer">
-                        <span class="card-filename" title="${doc.document_title}">
-                            ${doc.document_title}
-                        </span>
-                        <button class="card-menu-btn" type="button" title="More options">
-                            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                            </svg>
+                    <div class="doc-card__footer">
+                        <div class="doc-card__name" title="${titleSafe}">
+                            ${displayName}
+                        </div>
+                        <button class="doc-card__menu" type="button" aria-label="More options">
+                            <img
+                                class="doc-card__menu-icon"
+                                src="${ICONS_BASE}/more.svg"
+                                alt=""
+                            />
                         </button>
                     </div>
                 </article>`;
         }
 
-        function renderDetailsPanel(doc) {
-            if (!doc) {
-                return '<div class="details-empty">Select a document to view details</div>';
-            }
+        function renderOverviewRow(iconFile, label, value) {
+            return `
+                        <div class="details-overview__row">
+                            <img class="details-overview__row-icon" src="${OVERVIEW_ICONS_BASE}/${iconFile}.svg" alt="" />
+                            <div class="details-overview__row-text">
+                                <span class="details-overview__row-label">${label}</span>
+                                <span class="details-overview__row-value">${value}</span>
+                            </div>
+                        </div>`;
+        }
 
+        function renderDetailsPanel(doc) {
+            if (!doc) return '';
+
+            const detailsName = getDisplayName(doc);
+            const iconName = getIconFilename(doc.file_extension);
             const statusHtml = doc.is_indexed
                 ? `<span class="details-status indexed">
+                       Indexed
                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                            <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                        </svg>
-                       Indexed
                    </span>`
                 : '<span class="details-status pending-index">Pending</span>';
 
+            const uploadedBy = doc.uploaded_by || '—';
+            const uploadedAt = formatUploadedAt(doc.uploaded_at);
+            const totalChunks = doc.total_chunks != null ? doc.total_chunks + ' chunks' : '—';
+            const usedIn = doc.used_in_answers != null ? doc.used_in_answers + ' times' : '—';
+
             return `
                 <div class="details-body">
-                    <svg class="details-icon" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                        <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                        <path d="M14 28h20M14 34h16M14 40h10" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                    ${statusHtml}
-                    <span class="details-filename">${doc.document_title}</span>
+                    <div class="details-card">
+                        <img class="details-card__icon"
+                             src="${ICONS_BASE}/${iconName}.svg"
+                             alt="${doc.file_extension || 'file'} file" />
+                        ${statusHtml}
+                        <span class="details-filename">${detailsName}</span>
+                    </div>
+                </div>
+
+                <div class="details-overview">
+                    <div class="details-overview__header">
+                        <h3 class="details-overview__title">File Overview</h3>
+                        <button class="details-overview__menu" type="button" aria-label="More options">
+                            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="details-overview__list">
+                        ${renderOverviewRow('user', 'Uploaded by', uploadedBy)}
+                        ${renderOverviewRow('date', 'Uploaded at', uploadedAt)}
+                        ${renderOverviewRow('chunk', 'Total chunks', totalChunks)}
+                        ${renderOverviewRow('chat', 'Used in answers', usedIn)}
+                    </div>
                 </div>`;
         }
 
-        function renderPage(data) {
+        function setDetailsVisible(panel, visible) {
+            panel.classList.toggle('hidden', !visible);
+        }
+
+        function renderPage(data, grid, detailsBody) {
             document.getElementById('documentCount').textContent = data.document_count + ' Items';
 
-            const grid = document.getElementById('documentsGrid');
             const selectedId = data.selected_document ? data.selected_document.id : null;
+            setDetailsVisible(document.getElementById('detailsPanel'), !!data.selected_document);
 
             if (data.documents.length === 0) {
                 grid.innerHTML = `
@@ -232,36 +277,47 @@
                     .join('');
             }
 
-            document.getElementById('detailsBody').innerHTML = renderDetailsPanel(data.selected_document);
+            detailsBody.innerHTML = renderDetailsPanel(data.selected_document);
         }
 
+        /* --- Init + event handlers --- */
         document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('documentsGrid');
+            const detailsBody = document.getElementById('detailsBody');
+            const searchInput = document.getElementById('searchInput');
+
             fetch('../../static/data/mock-data.json')
                 .then(res => res.json())
                 .then(data => {
-                    renderPage(data);
+                    renderPage(data, grid, detailsBody);
 
-                    const grid = document.getElementById('documentsGrid');
-                    const searchInput = document.getElementById('searchInput');
+                    const detailsPanel = document.getElementById('detailsPanel');
+                    const gridWrapper = grid ? grid.closest('.documents-grid-wrapper') : null;
+                    if (gridWrapper) {
+                        gridWrapper.addEventListener('click', (e) => {
+                            if (e.target.closest(SEL_CARD_MENU)) return;
+                            const card = e.target.closest(SEL_CARD);
 
-                    if (grid) {
-                        grid.addEventListener('click', (e) => {
-                            const card = e.target.closest('.document-card');
-                            if (!card) return;
+                            grid.querySelectorAll(SEL_CARD).forEach(c => c.classList.remove('selected'));
 
-                            grid.querySelectorAll('.document-card').forEach(c => c.classList.remove('selected'));
+                            if (!card) {
+                                detailsBody.innerHTML = '';
+                                setDetailsVisible(detailsPanel, false);
+                                return;
+                            }
+
                             card.classList.add('selected');
-
                             const docId = parseInt(card.dataset.documentId);
                             const doc = data.documents.find(d => d.id === docId);
-                            document.getElementById('detailsBody').innerHTML = renderDetailsPanel(doc);
+                            detailsBody.innerHTML = renderDetailsPanel(doc);
+                            setDetailsVisible(detailsPanel, true);
                         });
                     }
 
                     if (searchInput) {
                         searchInput.addEventListener('input', () => {
                             const query = searchInput.value.toLowerCase();
-                            const cards = grid ? grid.querySelectorAll('.document-card') : [];
+                            const cards = grid ? grid.querySelectorAll(SEL_CARD) : [];
                             cards.forEach(card => {
                                 const filename = (card.dataset.filename || '').toLowerCase();
                                 card.style.display = filename.includes(query) ? '' : 'none';

@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Documents - AutoRAG</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../static/css/documents.css">
 </head>
 
@@ -115,50 +118,27 @@
 
                     {% for doc in documents %}
                     <article
-                        class="document-card{% if selected_document and selected_document.id == doc.id %} selected{% endif %}"
+                        class="doc-card{% if selected_document and selected_document.id == doc.id %} selected{% endif %}"
                         data-document-id="{{ doc.id }}"
                         data-filename="{{ doc.document_title|default:doc.file.name }}"
                     >
-                        <div class="card-icon-area">
-                            {% if doc.file_extension == 'pdf' %}
-                            <!-- PDF icon -->
-                            <svg class="file-icon icon-pdf" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                                <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                                <text x="24" y="40" text-anchor="middle" font-size="11" font-weight="600" fill="#c0392b" font-family="inherit">PDF</text>
-                            </svg>
-                            {% elif doc.file_extension == 'doc' or doc.file_extension == 'docx' %}
-                            <!-- DOC icon -->
-                            <svg class="file-icon icon-doc" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                                <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                                <text x="24" y="40" text-anchor="middle" font-size="10" font-weight="600" fill="#2a6fdb" font-family="inherit">DOC</text>
-                            </svg>
-                            {% elif doc.file_extension == 'tsx' or doc.file_extension == 'jsx' or doc.file_extension == 'js' or doc.file_extension == 'py' or doc.file_extension == 'html' or doc.file_extension == 'css' %}
-                            <!-- Code file icon -->
-                            <svg class="file-icon icon-code" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                                <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                                <path d="M18 30l-5 5 5 5M30 30l5 5-5 5" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            {% else %}
-                            <!-- Generic document icon -->
-                            <svg class="file-icon" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                                <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                                <path d="M14 28h20M14 34h16M14 40h10" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-                            </svg>
-                            {% endif %}
+                        <div class="doc-card__preview">
+                            <img
+                                class="doc-card__icon"
+                                src="../../../components/icons/{% if doc.file_extension == 'pdf' %}pdf{% elif doc.file_extension == 'doc' or doc.file_extension == 'docx' %}doc{% elif doc.file_extension == 'tsx' or doc.file_extension == 'jsx' or doc.file_extension == 'js' or doc.file_extension == 'py' or doc.file_extension == 'html' or doc.file_extension == 'css' %}code{% else %}file{% endif %}.svg"
+                                alt="{{ doc.file_extension|default:'file' }} file"
+                            />
                         </div>
-
-                        <div class="card-footer">
-                            <span class="card-filename" title="{{ doc.document_title|default:doc.file.name }}">
+                        <div class="doc-card__footer">
+                            <div class="doc-card__name" title="{{ doc.document_title|default:doc.file.name }}">
                                 {{ doc.document_title|default:doc.file.name }}
-                            </span>
-                            <button class="card-menu-btn" type="button" title="More options">
-                                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
-                                </svg>
+                            </div>
+                            <button class="doc-card__menu" type="button" aria-label="More options">
+                                <img
+                                    class="doc-card__menu-icon"
+                                    src="../../../components/icons/more.svg"
+                                    alt=""
+                                />
                             </button>
                         </div>
                     </article>
@@ -182,10 +162,10 @@
         <!-- ============================================================
              FILE DETAILS PANEL — right sidebar showing selected file info
              ============================================================ -->
-        <aside class="details-panel" id="detailsPanel">
+        <aside class="details-panel{% if not selected_document %} hidden{% endif %}" id="detailsPanel">
             <div class="details-header">
                 <h2 class="details-title">File Details</h2>
-                <button class="details-menu-btn" type="button" title="More options">
+                <button class="details-menu-btn" type="button" aria-label="More options">
                     <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
                     </svg>
@@ -194,31 +174,67 @@
 
             {% if selected_document %}
             <div class="details-body">
-                <!-- Large file icon -->
-                <svg class="details-icon" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                    <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                    <path d="M14 28h20M14 34h16M14 40h10" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-
-                {% if selected_document.is_indexed %}
-                <span class="details-status indexed">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Indexed
-                </span>
-                {% else %}
-                <span class="details-status pending-index">Pending</span>
-                {% endif %}
-
-                <span class="details-filename">
-                    {{ selected_document.document_title|default:selected_document.file.name }}
-                </span>
+                <div class="details-card">
+                    <img
+                        class="details-card__icon"
+                        src="../../../components/icons/{% if selected_document.file_extension == 'pdf' %}pdf{% elif selected_document.file_extension == 'doc' or selected_document.file_extension == 'docx' %}doc{% elif selected_document.file_extension == 'tsx' or selected_document.file_extension == 'jsx' or selected_document.file_extension == 'js' or selected_document.file_extension == 'py' or selected_document.file_extension == 'html' or selected_document.file_extension == 'css' %}code{% elif selected_document.file_extension == 'txt' %}txt{% else %}file{% endif %}.svg"
+                        alt="{{ selected_document.file_extension|default:'file' }} file"
+                    />
+                    {% if selected_document.is_indexed %}
+                    <span class="details-status indexed">
+                        Indexed
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    {% else %}
+                    <span class="details-status pending-index">Pending</span>
+                    {% endif %}
+                    <span class="details-filename">
+                        {{ selected_document.document_title|default:selected_document.file.name }}
+                    </span>
+                </div>
             </div>
-            {% else %}
-            <div class="details-empty">
-                Select a document to view details
+
+            <div class="details-overview">
+                <div class="details-overview__header">
+                    <h3 class="details-overview__title">File Overview</h3>
+                    <button class="details-overview__menu" type="button" aria-label="More options">
+                        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="details-overview__list">
+                    <div class="details-overview__row">
+                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/user.svg" alt="" />
+                        <div class="details-overview__row-text">
+                            <span class="details-overview__row-label">Uploaded by</span>
+                            <span class="details-overview__row-value">{{ selected_document.uploaded_by|default:"—" }}</span>
+                        </div>
+                    </div>
+                    <div class="details-overview__row">
+                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/date.svg" alt="" />
+                        <div class="details-overview__row-text">
+                            <span class="details-overview__row-label">Uploaded at</span>
+                            <span class="details-overview__row-value" id="uploadedAtValue" data-raw-date="{{ selected_document.uploaded_at|default:"" }}">{{ selected_document.uploaded_at|default:"—" }}</span>
+                        </div>
+                    </div>
+                    <div class="details-overview__row">
+                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/chunk.svg" alt="" />
+                        <div class="details-overview__row-text">
+                            <span class="details-overview__row-label">Total chunks</span>
+                            <span class="details-overview__row-value">{{ selected_document.total_chunks|default:"0" }} chunks</span>
+                        </div>
+                    </div>
+                    <div class="details-overview__row">
+                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/chat.svg" alt="" />
+                        <div class="details-overview__row-text">
+                            <span class="details-overview__row-label">Used in answers</span>
+                            <span class="details-overview__row-value">{{ selected_document.used_in_answers|default:"0" }} times</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             {% endif %}
         </aside>
@@ -229,25 +245,56 @@
          JAVASCRIPT — client-side interactions
          ============================================================ -->
     <script>
+        const SEL_CARD = '.doc-card';
+
+        function formatDate(raw) {
+            if (!raw) return null;
+            const d = new Date(raw);
+            if (isNaN(d)) return null;
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${dd}/${mm}/${yyyy} \u2022 ${hh}:${min}`;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const grid = document.getElementById('documentsGrid');
+            const detailsPanel = document.getElementById('detailsPanel');
             const searchInput = document.getElementById('searchInput');
 
-            if (grid) {
-                grid.addEventListener('click', (e) => {
-                    const card = e.target.closest('.document-card');
-                    if (!card) return;
+            const dateEl = document.getElementById('uploadedAtValue');
+            if (dateEl) {
+                const formatted = formatDate(dateEl.dataset.rawDate);
+                if (formatted) dateEl.textContent = formatted;
+            }
 
-                    grid.querySelectorAll('.document-card').forEach(c => c.classList.remove('selected'));
+            function setDetailPanelVisible(show) {
+                detailsPanel.classList.toggle('hidden', !show);
+            }
+
+            const gridWrapper = grid ? grid.closest('.documents-grid-wrapper') : null;
+            if (gridWrapper) {
+                gridWrapper.addEventListener('click', (e) => {
+                    const card = e.target.closest(SEL_CARD);
+
+                    grid.querySelectorAll(SEL_CARD).forEach(c => c.classList.remove('selected'));
+
+                    if (!card) {
+                        setDetailPanelVisible(false);
+                        return;
+                    }
+
                     card.classList.add('selected');
+                    setDetailPanelVisible(true);
                 });
             }
 
             if (searchInput) {
                 searchInput.addEventListener('input', () => {
                     const query = searchInput.value.toLowerCase();
-                    const cards = grid ? grid.querySelectorAll('.document-card') : [];
-
+                    const cards = grid ? grid.querySelectorAll(SEL_CARD) : [];
                     cards.forEach(card => {
                         const filename = (card.dataset.filename || '').toLowerCase();
                         card.style.display = filename.includes(query) ? '' : 'none';
