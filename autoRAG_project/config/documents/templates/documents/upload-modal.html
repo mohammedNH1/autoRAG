@@ -1,0 +1,310 @@
+<!-- Upload Modal Overlay -->
+<div class="upload-modal-overlay" id="uploadModalOverlay" style="display:none;">
+    <div class="upload-modal" id="uploadModal">
+
+        <!-- Header -->
+        <div class="upload-modal__header">
+            <div>
+                <h2 class="upload-modal__title">File Upload</h2>
+                <p class="upload-modal__subtitle">Choose a file and upload securely to proceed.</p>
+            </div>
+            <button class="upload-modal__close" type="button" id="uploadModalClose" aria-label="Close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Dropzone -->
+        <div class="upload-modal__dropzone" id="uploadDropzone">
+            <div class="upload-modal__dropzone-content">
+                <svg class="upload-modal__dropzone-illustration" width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g opacity="0.9">
+                        <rect x="18" y="12" width="38" height="48" rx="4" fill="#c7d2e0" stroke="#a0b0c4" stroke-width="1.2"/>
+                        <rect x="22" y="8" width="38" height="48" rx="4" fill="#d4dde8" stroke="#a0b0c4" stroke-width="1.2"/>
+                        <rect x="26" y="4" width="38" height="48" rx="4" fill="#e2e8f0" stroke="#a0b0c4" stroke-width="1.2"/>
+                        <path d="M38 20v16M30 28h16" stroke="#64748b" stroke-width="2.2" stroke-linecap="round"/>
+                    </g>
+                    <g transform="translate(44, 38)">
+                        <circle cx="10" cy="10" r="10" fill="#fff" stroke="#a0b0c4" stroke-width="1"/>
+                        <path d="M7 10l2 2 4-4" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                </svg>
+                <p class="upload-modal__dropzone-title">Drag and drop your files</p>
+                <p class="upload-modal__dropzone-formats">PDF, TXT, CSV, DOC, DOCX, XLS, XLSX, PPT, and PPTX formats.</p>
+                <div class="upload-modal__dropzone-actions">
+                    <button class="upload-modal__action-btn" type="button" id="uploadPickerBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Upload
+                    </button>
+                    <button class="upload-modal__action-btn" type="button" id="textInputBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                            <path d="M8 8h8M8 12h8M8 16h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Text Input
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Uploaded Files List -->
+        <div class="upload-modal__files" id="uploadFilesList" style="display:none;">
+            <h3 class="upload-modal__files-title">Uploaded Files</h3>
+            <div class="upload-modal__file-list" id="uploadFileList"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="upload-modal__footer">
+            <button class="upload-modal__btn-cancel" type="button" id="uploadModalCancel">Cancel</button>
+            <button class="upload-modal__btn-submit" type="button" id="uploadModalSubmit" disabled>Submit</button>
+        </div>
+
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="uploadFileInput" multiple accept=".pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx" style="display:none;">
+</div>
+
+<script>
+(function () {
+    const ACCEPTED_EXTENSIONS = ['pdf','txt','csv','doc','docx','xls','xlsx','ppt','pptx'];
+    const ICONS_BASE = '../../../components/icons';
+
+    const overlay   = document.getElementById('uploadModalOverlay');
+    const modal     = document.getElementById('uploadModal');
+    const closeBtn  = document.getElementById('uploadModalClose');
+    const cancelBtn = document.getElementById('uploadModalCancel');
+    const submitBtn = document.getElementById('uploadModalSubmit');
+    const dropzone  = document.getElementById('uploadDropzone');
+    const pickerBtn = document.getElementById('uploadPickerBtn');
+    const fileInput = document.getElementById('uploadFileInput');
+    const filesSection = document.getElementById('uploadFilesList');
+    const fileListEl   = document.getElementById('uploadFileList');
+
+    let files = [];
+    let fileIdCounter = 0;
+    let dragCounter = 0;
+
+    function getFileExtension(name) {
+        const parts = name.split('.');
+        return parts.length > 1 ? parts.pop().toLowerCase() : '';
+    }
+
+    function getFileIconName(ext) {
+        if (ext === 'pdf') return 'pdf';
+        if (ext === 'doc' || ext === 'docx') return 'doc';
+        if (ext === 'txt') return 'txt';
+        return 'file';
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + 'B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+    }
+
+    function openModal() {
+        overlay.style.display = '';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        resetModal();
+    }
+
+    function resetModal() {
+        files.forEach(f => { if (f.timer) clearInterval(f.timer); });
+        files = [];
+        fileIdCounter = 0;
+        dragCounter = 0;
+        filesSection.style.display = 'none';
+        fileListEl.innerHTML = '';
+        submitBtn.disabled = true;
+        dropzone.classList.remove('dragover');
+    }
+
+    function updateSubmitState() {
+        if (files.length === 0) {
+            submitBtn.disabled = true;
+            return;
+        }
+        const allDone = files.every(f => f.progress >= 100);
+        submitBtn.disabled = !allDone;
+    }
+
+    function renderFileRow(fileObj) {
+        const row = document.createElement('div');
+        row.className = 'upload-modal__file-row';
+        row.dataset.fileId = fileObj.id;
+
+        const iconName = getFileIconName(fileObj.ext);
+        const sizeStr = formatFileSize(fileObj.size);
+
+        row.innerHTML =
+            '<div class="upload-modal__file-icon">' +
+                '<img src="' + ICONS_BASE + '/' + iconName + '.svg" alt="' + fileObj.ext + '" width="32" height="32">' +
+            '</div>' +
+            '<div class="upload-modal__file-info">' +
+                '<span class="upload-modal__file-name">' + fileObj.name + '</span>' +
+                '<span class="upload-modal__file-status" data-status-id="' + fileObj.id + '">' +
+                    sizeStr + ' | 0% \u2022 Uploading' +
+                '</span>' +
+            '</div>' +
+            '<button class="upload-modal__file-delete" type="button" data-delete-id="' + fileObj.id + '" aria-label="Remove file">' +
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                    '<path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+                '</svg>' +
+            '</button>';
+
+        return row;
+    }
+
+    function updateFileStatus(fileObj) {
+        const statusEl = fileListEl.querySelector('[data-status-id="' + fileObj.id + '"]');
+        if (!statusEl) return;
+        const sizeStr = formatFileSize(fileObj.size);
+
+        if (fileObj.progress >= 100) {
+            statusEl.textContent = sizeStr + ' | 100% \u2022 Uploaded Successfully';
+            statusEl.classList.add('upload-modal__file-status--done');
+        } else {
+            const remaining = Math.max(1, Math.round((100 - fileObj.progress) * 0.7));
+            statusEl.textContent = sizeStr + ' | ' + fileObj.progress + '% \u2022 ' + remaining + ' sec left \u2728 Uploading';
+            statusEl.classList.remove('upload-modal__file-status--done');
+        }
+    }
+
+    function simulateUpload(fileObj) {
+        fileObj.timer = setInterval(function () {
+            fileObj.progress = Math.min(100, fileObj.progress + Math.floor(Math.random() * 8 + 3));
+            updateFileStatus(fileObj);
+            if (fileObj.progress >= 100) {
+                clearInterval(fileObj.timer);
+                fileObj.timer = null;
+                updateSubmitState();
+            }
+        }, 300);
+    }
+
+    function addFiles(rawFiles) {
+        let added = false;
+        for (let i = 0; i < rawFiles.length; i++) {
+            const f = rawFiles[i];
+            const ext = getFileExtension(f.name);
+            if (!ACCEPTED_EXTENSIONS.includes(ext)) continue;
+
+            const fileObj = {
+                id: ++fileIdCounter,
+                name: f.name,
+                size: f.size,
+                ext: ext,
+                progress: 0,
+                timer: null
+            };
+            files.push(fileObj);
+
+            const row = renderFileRow(fileObj);
+            fileListEl.appendChild(row);
+            simulateUpload(fileObj);
+            added = true;
+        }
+
+        if (added) {
+            filesSection.style.display = '';
+            updateSubmitState();
+        }
+    }
+
+    function removeFile(id) {
+        const idx = files.findIndex(f => f.id === id);
+        if (idx === -1) return;
+        if (files[idx].timer) clearInterval(files[idx].timer);
+        files.splice(idx, 1);
+
+        const row = fileListEl.querySelector('[data-file-id="' + id + '"]');
+        if (row) row.remove();
+
+        if (files.length === 0) {
+            filesSection.style.display = 'none';
+        }
+        updateSubmitState();
+    }
+
+    /* --- Event listeners --- */
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    modal.addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
+
+    /* Drag and drop */
+    dropzone.addEventListener('dragenter', function (e) {
+        e.preventDefault();
+        dragCounter++;
+        dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+    });
+
+    dropzone.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) {
+            dragCounter = 0;
+            dropzone.classList.remove('dragover');
+        }
+    });
+
+    dropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dragCounter = 0;
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            addFiles(e.dataTransfer.files);
+        }
+    });
+
+    /* File picker */
+    pickerBtn.addEventListener('click', function () {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files.length > 0) {
+            addFiles(fileInput.files);
+        }
+        fileInput.value = '';
+    });
+
+    /* Delete file */
+    fileListEl.addEventListener('click', function (e) {
+        const deleteBtn = e.target.closest('[data-delete-id]');
+        if (deleteBtn) {
+            removeFile(parseInt(deleteBtn.dataset.deleteId));
+        }
+    });
+
+    /* Submit */
+    submitBtn.addEventListener('click', function () {
+        if (!submitBtn.disabled) {
+            closeModal();
+        }
+    });
+
+    /* Expose open function globally */
+    window.openUploadModal = openModal;
+})();
+</script>

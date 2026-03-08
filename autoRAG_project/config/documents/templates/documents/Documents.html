@@ -50,10 +50,14 @@
                 </button>
 
                 <button class="sidebar-icon no-blue-hover" title="Profile">
-                    <img src="../../../workspace/   static/Sidebar_icons/Profile.svg" alt="Profile" width="24" height="24">
+                    <img src="../../../workspace/static/Sidebar_icons/Profile.svg" alt="Profile" width="24" height="24">
                 </button>
             </div>
         </aside>
+
+        <!-- Layout: two columns when a document is selected, full width otherwise -->
+        <!-- FIX: guard `with-sidebar` on BOTH selected_document AND documents existing -->
+        <div class="documents-layout {% if selected_document and documents %}with-sidebar{% else %}full-width{% endif %}">
 
         <!-- ============================================================
              MAIN CONTENT — header, toolbar, document grid
@@ -112,10 +116,10 @@
                 </div>
             </div>
 
-            <!-- Document Grid -->
-            <section class="documents-grid-wrapper">
+            <!-- Documents content: grid when documents exist, full-width empty state otherwise -->
+            <section class="documents-grid-wrapper" id="documentsGridWrapper">
+                {% if documents %}
                 <div class="documents-grid" id="documentsGrid">
-
                     {% for doc in documents %}
                     <article
                         class="doc-card{% if selected_document and selected_document.id == doc.id %} selected{% endif %}"
@@ -142,27 +146,31 @@
                             </button>
                         </div>
                     </article>
-                    {% empty %}
-                    <!-- Empty state when no documents exist -->
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 80px 0; color: #999;">
-                        <svg width="64" height="64" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:16px;opacity:0.4;">
-                            <path d="M4 4a4 4 0 014-4h22l14 14v38a4 4 0 01-4 4H8a4 4 0 01-4-4V4z" fill="#f5f5f5" stroke="#ccc" stroke-width="1.5"/>
-                            <path d="M30 0v10a4 4 0 004 4h10" fill="#eee" stroke="#ccc" stroke-width="1.5"/>
-                        </svg>
-                        <p style="font-size:15px;font-weight:500;margin-bottom:4px;">No documents yet</p>
-                        <p style="font-size:13px;">Upload your first document to get started.</p>
-                    </div>
                     {% endfor %}
-
                 </div>
+                {% else %}
+                <div class="documents-empty-state-container">
+                    <div class="documents-empty-state">
+                        <img class="documents-empty-state__icon" src="../../../components/icons/Document%20upload%20icon.svg" alt="" width="100" height="104">
+                        <p class="documents-empty-state__title">No documents yet</p>
+                        <p class="documents-empty-state__subtitle">Upload your first document to get started.</p>
+                    </div>
+                </div>
+                {% endif %}
             </section>
 
         </main>
 
         <!-- ============================================================
              FILE DETAILS PANEL — right sidebar showing selected file info
+             FIX: Guard on BOTH selected_document AND documents being non-empty.
+             This prevents a stale selected_document (from session/URL) from
+             rendering the details panel — and its .details-card — when the
+             documents list is actually empty. That stale card was the "ghost"
+             card users saw alongside "0 Items" and the empty state.
              ============================================================ -->
-        <aside class="details-panel{% if not selected_document %} hidden{% endif %}" id="detailsPanel">
+        {% if selected_document and documents %}
+        <aside class="details-panel" id="detailsPanel">
             <div class="details-header">
                 <h2 class="details-title">File Details</h2>
                 <button class="details-menu-btn" type="button" aria-label="More options">
@@ -172,7 +180,6 @@
                 </button>
             </div>
 
-            {% if selected_document %}
             <div class="details-body">
                 <div class="details-card">
                     <img
@@ -236,16 +243,27 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
         </aside>
+        {% endif %}
+
+        </div><!-- .documents-layout -->
 
     </div>
+
+    <!-- Upload Modal (loaded from separate file) -->
+    <div id="uploadModalContainer"></div>
 
     <!-- ============================================================
          JAVASCRIPT — client-side interactions
          ============================================================ -->
     <script>
+        const ICONS_BASE = '../../../components/icons';
         const SEL_CARD = '.doc-card';
+
+        var DOCUMENT_COUNT = '{{ document_count|default:"0" }}';
+        if (typeof DOCUMENT_COUNT !== 'string' || DOCUMENT_COUNT.indexOf('{{') !== -1) {
+            DOCUMENT_COUNT = '0';
+        }
 
         function formatDate(raw) {
             if (!raw) return null;
@@ -259,19 +277,59 @@
             return `${dd}/${mm}/${yyyy} \u2022 ${hh}:${min}`;
         }
 
+        /** Full empty-state markup for wrapper (used when raw Django tags are present, e.g. static preview). */
+        const EMPTY_STATE_WRAPPER_HTML =
+            '<div class="documents-empty-state-container">' +
+            '<div class="documents-empty-state">' +
+            '<img class="documents-empty-state__icon" src="../../../components/icons/Document%20upload%20icon.svg" alt="" width="100" height="104">' +
+            '<p class="documents-empty-state__title">No documents yet</p>' +
+            '<p class="documents-empty-state__subtitle">Upload your first document to get started.</p>' +
+            '</div></div>';
+
+        function cleanDjangoRawTags(wrapper) {
+            if (!wrapper) return;
+            const html = wrapper.innerHTML;
+            if (html.indexOf('{%') !== -1 || html.indexOf('{{') !== -1) {
+                /* Raw template was served (e.g. static preview). Replace entire content area with
+                   full-width empty-state container so the empty state is centered and no fake card remains. */
+                wrapper.innerHTML = EMPTY_STATE_WRAPPER_HTML;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            const grid = document.getElementById('documentsGrid');
+            const contentWrapper = document.getElementById('documentsGridWrapper');
             const detailsPanel = document.getElementById('detailsPanel');
             const searchInput = document.getElementById('searchInput');
+            const subtitleEl = document.querySelector('.page-subtitle');
+
+            if (subtitleEl && subtitleEl.textContent.indexOf('{{') !== -1) {
+                subtitleEl.textContent = DOCUMENT_COUNT + ' Items';
+            }
+
+            cleanDjangoRawTags(contentWrapper);
+            const grid = document.getElementById('documentsGrid');
+
+            // FIX: For the details panel, don't replace its content with the empty
+            // state message — hide the entire panel instead. The panel should never
+            // be visible when Django tags are unrendered (static preview).
+            if (detailsPanel) {
+                const panelHtml = detailsPanel.innerHTML;
+                if (panelHtml.indexOf('{%') !== -1 || panelHtml.indexOf('{{') !== -1) {
+                    detailsPanel.style.display = 'none';
+                }
+            }
 
             const dateEl = document.getElementById('uploadedAtValue');
             if (dateEl) {
-                const formatted = formatDate(dateEl.dataset.rawDate);
-                if (formatted) dateEl.textContent = formatted;
+                const rawDate = dateEl.dataset.rawDate;
+                if (rawDate && rawDate.indexOf('{{') === -1) {
+                    const formatted = formatDate(rawDate);
+                    if (formatted) dateEl.textContent = formatted;
+                }
             }
 
             function setDetailPanelVisible(show) {
-                detailsPanel.classList.toggle('hidden', !show);
+                if (detailsPanel) detailsPanel.classList.toggle('hidden', !show);
             }
 
             const gridWrapper = grid ? grid.closest('.documents-grid-wrapper') : null;
@@ -303,5 +361,6 @@
             }
         });
     </script>
+    <script src="../../static/js/upload-modal.js"></script>
 </body>
 </html>

@@ -5,7 +5,6 @@ from django.conf import settings
 import json
 import logging
 from workspace.models import Workspace
-from .services import EmbeddingService, QdrantService, ModelSelector#(Classes from documents/services )
 
 """
 Qdrant- Document Indexing(storing) and Search
@@ -16,6 +15,8 @@ RESPONSIBILITY:
 """
 
 logger = logging.getLogger(__name__)
+
+
 
 
 @csrf_exempt
