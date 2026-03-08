@@ -1,4 +1,0 @@
-Django>=4.2
-sentence-transformers
-torch
-qdrant-client==1.7.0

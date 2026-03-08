@@ -1,2 +1,79 @@
 nul
 **/nul
+
+# Byte‑compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+venv.bak/
+.pyenv/
+
+# Pytest
+.cache/
+pytest_cache/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+
+# Static files
+staticfiles/
+static/
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Docker
+*.log
+docker-compose.override.yml
+volume_data/
+# if you want to ignore build context artifacts
+**/node_modules/
+**/npm-debug.log
+
+#  others
+coverage.xml
+*.cover
+htmlcov/
+.tox/
+*.prof
+*.pid
+*.seed
+*.coveragerc
