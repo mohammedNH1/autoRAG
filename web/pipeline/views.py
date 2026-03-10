@@ -7,6 +7,10 @@ from documents.services.qdrant_service import QdrantService
 from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembership
 from pipeline.services.pipeline_registry import get_pipeline
 
+#Added by rayan to run here the questionnaire page
+def questionnaire_page(request):
+    """Backend logic here"""
+    return render(request, "questionnaire.html")
 
 
 @csrf_exempt
@@ -65,7 +69,8 @@ def questionnaire(request):
             "uptodate": uptodate_flag,
             "metadata": metadata_flag,
             "chunking_strategy": chunking_strategy
-        }
+        },
+        "received_payload": data, #Added by rayan to see the payload in the response
     })
 
 

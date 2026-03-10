@@ -70,6 +70,10 @@ def chat(request):
         "workspace_name": workspace_name,
         "session_name": active_session["title"],
         "sessions": sessions,
+        #Added by rayan
+        "workspace_id": 1,
+        "api_base_url": "",
+        #end of added by rayan
     }
 
     return render(request, "chat.html", context)

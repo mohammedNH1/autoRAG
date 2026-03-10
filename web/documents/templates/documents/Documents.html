@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../static/css/documents.css">
+    <link rel="stylesheet" href="{% static 'documents/css/documents.css' %}">
 </head>
 
 <body>
@@ -21,36 +22,35 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../../../components/logo.svg" alt="AutoRAG" width="32" height="32">
+                    <img src="{% static 'logo.svg' %}" alt="AutoRAG" width="32" height="32">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
-                <button class="sidebar-icon" title="Sessions">
-                    <img src="../../../workspace/static/Sidebar_icons/Sessions.svg" alt="Sessions" width="24" height="24">
-                </button>
+                <a href="{% url 'workspace_chat' %}" class="sidebar-icon" title="Sessions">
+                    <img src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="Sessions" width="24" height="24">
+                </a>
 
                 <button class="sidebar-icon" title="Members">
-                    <img src="../../../workspace/static/Sidebar_icons/Members.svg" alt="Members" width="24" height="24">
+                    <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="Members" width="24" height="24">
                 </button>
 
-                <!-- Active page indicator -->
-                <button class="sidebar-icon active" title="Documents">
-                    <img src="../../../workspace/static/Sidebar_icons/Documents.svg" alt="Documents" width="24" height="24">
-                </button>
+                <a href="{% url 'documents:documents_page' %}" class="sidebar-icon active" title="Documents">
+                    <img src="{% static 'Sidebar_icons/Documents.svg' %}" alt="Documents" width="24" height="24">
+                </a>
 
                 <button class="sidebar-icon" title="Notifications">
-                    <img src="../../../workspace/static/Sidebar_icons/Notification.svg" alt="Notifications" width="24" height="24">
+                    <img src="{% static 'Sidebar_icons/Notification.svg' %}" alt="Notifications" width="24" height="24">
                 </button>
             </nav>
 
             <div class="sidebar-footer">
                 <button class="sidebar-icon" title="Settings">
-                    <img src="../../../workspace/static/Sidebar_icons/Settings.svg" alt="Settings" width="24" height="24">
+                    <img src="{% static 'Sidebar_icons/Settings.svg' %}" alt="Settings" width="24" height="24">
                 </button>
 
                 <button class="sidebar-icon no-blue-hover" title="Profile">
-                    <img src="../../../workspace/static/Sidebar_icons/Profile.svg" alt="Profile" width="24" height="24">
+                    <img src="{% static 'Sidebar_icons/Profile.svg' %}" alt="Profile" width="24" height="24">
                 </button>
             </div>
         </aside>
@@ -129,7 +129,7 @@
                         <div class="doc-card__preview">
                             <img
                                 class="doc-card__icon"
-                                src="../../../components/icons/{% if doc.file_extension == 'pdf' %}pdf{% elif doc.file_extension == 'doc' or doc.file_extension == 'docx' %}doc{% elif doc.file_extension == 'tsx' or doc.file_extension == 'jsx' or doc.file_extension == 'js' or doc.file_extension == 'py' or doc.file_extension == 'html' or doc.file_extension == 'css' %}code{% else %}file{% endif %}.svg"
+                                src="{% if doc.file_extension == 'pdf' %}{% static 'icons/pdf.svg' %}{% elif doc.file_extension == 'doc' or doc.file_extension == 'docx' %}{% static 'icons/doc.svg' %}{% elif doc.file_extension == 'tsx' or doc.file_extension == 'jsx' or doc.file_extension == 'js' or doc.file_extension == 'py' or doc.file_extension == 'html' or doc.file_extension == 'css' %}{% static 'icons/code.svg' %}{% else %}{% static 'icons/file.svg' %}{% endif %}"
                                 alt="{{ doc.file_extension|default:'file' }} file"
                             />
                         </div>
@@ -140,7 +140,7 @@
                             <button class="doc-card__menu" type="button" aria-label="More options">
                                 <img
                                     class="doc-card__menu-icon"
-                                    src="../../../components/icons/more.svg"
+                                    src="{% static 'icons/more.svg' %}"
                                     alt=""
                                 />
                             </button>
@@ -151,7 +151,7 @@
                 {% else %}
                 <div class="documents-empty-state-container">
                     <div class="documents-empty-state">
-                        <img class="documents-empty-state__icon" src="../../../components/icons/Document%20upload%20icon.svg" alt="" width="100" height="104">
+                        <img class="documents-empty-state__icon" src="{% static 'icons/Document upload icon.svg' %}" alt="" width="100" height="104">
                         <p class="documents-empty-state__title">No documents yet</p>
                         <p class="documents-empty-state__subtitle">Upload your first document to get started.</p>
                     </div>
@@ -184,7 +184,7 @@
                 <div class="details-card">
                     <img
                         class="details-card__icon"
-                        src="../../../components/icons/{% if selected_document.file_extension == 'pdf' %}pdf{% elif selected_document.file_extension == 'doc' or selected_document.file_extension == 'docx' %}doc{% elif selected_document.file_extension == 'tsx' or selected_document.file_extension == 'jsx' or selected_document.file_extension == 'js' or selected_document.file_extension == 'py' or selected_document.file_extension == 'html' or selected_document.file_extension == 'css' %}code{% elif selected_document.file_extension == 'txt' %}txt{% else %}file{% endif %}.svg"
+                        src="{% if selected_document.file_extension == 'pdf' %}{% static 'icons/pdf.svg' %}{% elif selected_document.file_extension == 'doc' or selected_document.file_extension == 'docx' %}{% static 'icons/doc.svg' %}{% elif selected_document.file_extension == 'tsx' or selected_document.file_extension == 'jsx' or selected_document.file_extension == 'js' or selected_document.file_extension == 'py' or selected_document.file_extension == 'html' or selected_document.file_extension == 'css' %}{% static 'icons/code.svg' %}{% elif selected_document.file_extension == 'txt' %}{% static 'icons/txt.svg' %}{% else %}{% static 'icons/file.svg' %}{% endif %}"
                         alt="{{ selected_document.file_extension|default:'file' }} file"
                     />
                     {% if selected_document.is_indexed %}
@@ -214,28 +214,28 @@
                 </div>
                 <div class="details-overview__list">
                     <div class="details-overview__row">
-                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/user.svg" alt="" />
+                        <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/user.svg' %}" alt="" />
                         <div class="details-overview__row-text">
                             <span class="details-overview__row-label">Uploaded by</span>
                             <span class="details-overview__row-value">{{ selected_document.uploaded_by|default:"—" }}</span>
                         </div>
                     </div>
                     <div class="details-overview__row">
-                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/date.svg" alt="" />
+                        <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/date.svg' %}" alt="" />
                         <div class="details-overview__row-text">
                             <span class="details-overview__row-label">Uploaded at</span>
                             <span class="details-overview__row-value" id="uploadedAtValue" data-raw-date="{{ selected_document.uploaded_at|default:"" }}">{{ selected_document.uploaded_at|default:"—" }}</span>
                         </div>
                     </div>
                     <div class="details-overview__row">
-                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/chunk.svg" alt="" />
+                        <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/chunk.svg' %}" alt="" />
                         <div class="details-overview__row-text">
                             <span class="details-overview__row-label">Total chunks</span>
                             <span class="details-overview__row-value">{{ selected_document.total_chunks|default:"0" }} chunks</span>
                         </div>
                     </div>
                     <div class="details-overview__row">
-                        <img class="details-overview__row-icon" src="../../../components/icons/File overview icons/chat.svg" alt="" />
+                        <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/chat.svg' %}" alt="" />
                         <div class="details-overview__row-text">
                             <span class="details-overview__row-label">Used in answers</span>
                             <span class="details-overview__row-value">{{ selected_document.used_in_answers|default:"0" }} times</span>
@@ -250,20 +250,14 @@
 
     </div>
 
-    <!-- Upload Modal (loaded from separate file) -->
-    <div id="uploadModalContainer"></div>
+    <!-- Upload popup: UI and behaviour are in upload-modal.html -->
+    {% include "documents/upload-modal.html" %}
 
     <!-- ============================================================
          JAVASCRIPT — client-side interactions
          ============================================================ -->
     <script>
-        const ICONS_BASE = '../../../components/icons';
         const SEL_CARD = '.doc-card';
-
-        var DOCUMENT_COUNT = '{{ document_count|default:"0" }}';
-        if (typeof DOCUMENT_COUNT !== 'string' || DOCUMENT_COUNT.indexOf('{{') !== -1) {
-            DOCUMENT_COUNT = '0';
-        }
 
         function formatDate(raw) {
             if (!raw) return null;
@@ -277,59 +271,21 @@
             return `${dd}/${mm}/${yyyy} \u2022 ${hh}:${min}`;
         }
 
-        /** Full empty-state markup for wrapper (used when raw Django tags are present, e.g. static preview). */
-        const EMPTY_STATE_WRAPPER_HTML =
-            '<div class="documents-empty-state-container">' +
-            '<div class="documents-empty-state">' +
-            '<img class="documents-empty-state__icon" src="../../../components/icons/Document%20upload%20icon.svg" alt="" width="100" height="104">' +
-            '<p class="documents-empty-state__title">No documents yet</p>' +
-            '<p class="documents-empty-state__subtitle">Upload your first document to get started.</p>' +
-            '</div></div>';
-
-        function cleanDjangoRawTags(wrapper) {
-            if (!wrapper) return;
-            const html = wrapper.innerHTML;
-            if (html.indexOf('{%') !== -1 || html.indexOf('{{') !== -1) {
-                /* Raw template was served (e.g. static preview). Replace entire content area with
-                   full-width empty-state container so the empty state is centered and no fake card remains. */
-                wrapper.innerHTML = EMPTY_STATE_WRAPPER_HTML;
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
-            const contentWrapper = document.getElementById('documentsGridWrapper');
             const detailsPanel = document.getElementById('detailsPanel');
             const searchInput = document.getElementById('searchInput');
-            const subtitleEl = document.querySelector('.page-subtitle');
-
-            if (subtitleEl && subtitleEl.textContent.indexOf('{{') !== -1) {
-                subtitleEl.textContent = DOCUMENT_COUNT + ' Items';
-            }
-
-            cleanDjangoRawTags(contentWrapper);
             const grid = document.getElementById('documentsGrid');
 
-            // FIX: For the details panel, don't replace its content with the empty
-            // state message — hide the entire panel instead. The panel should never
-            // be visible when Django tags are unrendered (static preview).
-            if (detailsPanel) {
-                const panelHtml = detailsPanel.innerHTML;
-                if (panelHtml.indexOf('{%') !== -1 || panelHtml.indexOf('{{') !== -1) {
-                    detailsPanel.style.display = 'none';
-                }
-            }
-
             const dateEl = document.getElementById('uploadedAtValue');
-            if (dateEl) {
-                const rawDate = dateEl.dataset.rawDate;
-                if (rawDate && rawDate.indexOf('{{') === -1) {
-                    const formatted = formatDate(rawDate);
-                    if (formatted) dateEl.textContent = formatted;
-                }
+            if (dateEl && dateEl.dataset.rawDate) {
+                const formatted = formatDate(dateEl.dataset.rawDate);
+                if (formatted) dateEl.textContent = formatted;
             }
 
             function setDetailPanelVisible(show) {
                 if (detailsPanel) detailsPanel.classList.toggle('hidden', !show);
+                const layoutEl = detailsPanel ? detailsPanel.closest('.documents-layout') : document.querySelector('.documents-layout');
+                if (layoutEl) { layoutEl.classList.toggle('with-sidebar', show); layoutEl.classList.toggle('full-width', !show); }
             }
 
             const gridWrapper = grid ? grid.closest('.documents-grid-wrapper') : null;
@@ -361,6 +317,5 @@
             }
         });
     </script>
-    <script src="../../static/js/upload-modal.js"></script>
 </body>
 </html>

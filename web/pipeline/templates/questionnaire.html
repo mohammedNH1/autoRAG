@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAG Configuration</title>
-    <link rel="stylesheet" href="../static/css/questionnaire.css">
+    <link rel="stylesheet" href="{% static 'css/questionnaire.css' %}">
 </head>
 <body>
     <div class="container">
@@ -148,7 +149,6 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'https://c99c4f2d-1720-45d2-a91c-4310c76af467.mock.pstmn.io';
         const totalQ = 9;
         let currentQ = 1;
 
@@ -213,21 +213,7 @@
                 language: data.get('language')
             };
             console.log('📤 Submitting:', JSON.stringify(payload, null, 2));
-            fetch(API_BASE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(r => r.json())
-            .then(d => {
-                console.log('✓ Success:', d);
-                document.getElementById('successModal').style.display = 'flex';
-            })
-            .catch(e => {
-                console.error('❌ Error:', e);
-                document.getElementById('errorMessage').textContent = 'Error creating workspace. Please try again.';
-                document.getElementById('errorModal').style.display = 'flex';
-            });
+            document.getElementById('successModal').style.display = 'flex';
         }
 
         document.querySelectorAll('.option').forEach(btn => {
