@@ -20,6 +20,7 @@ from django.urls import include, path
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("pipeline.urls")),
+    path("documents/", include("documents.urls")), #Added by rayan to run the documents page
     path("api/documents/", include("documents.urls")),
     path("workspace/", include("workspace.urls")),
 ]

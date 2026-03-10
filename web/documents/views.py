@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 #Added by rayan to run here the documents page
 def documents_page(request):
     """Back-end logic here"""
-    return render(request, "documents/documents.html")
+    return render(request, "documents/Documents.html")
 
 
 @csrf_exempt
