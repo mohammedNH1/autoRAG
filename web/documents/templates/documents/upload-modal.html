@@ -1,5 +1,6 @@
 {% load static %}
 <script>window.UPLOAD_MODAL_ICONS_BASE = "{% static 'icons' %}";</script>
+<script>window.TEXT_INPUT_URL = "{% url 'documents:text_input_page' %}";</script>
 <!-- Upload Modal Overlay -->
 <div class="upload-modal-overlay" id="uploadModalOverlay" style="display:none;">
     <div class="upload-modal" id="uploadModal">
@@ -301,5 +302,16 @@
     const uploadBtn = document.getElementById('uploadBtn');
     if (uploadBtn) uploadBtn.addEventListener('click', openModal);
     window.openUploadModal = openModal;
+
+    /* Text Input button — redirect to the Text Input page */
+    const textInputBtn = document.getElementById('textInputBtn');
+    if (textInputBtn) {
+        textInputBtn.addEventListener('click', function () {
+            const url = (typeof window.TEXT_INPUT_URL !== 'undefined')
+                ? window.TEXT_INPUT_URL
+                : '/documents/text-input/';
+            window.location.href = url;
+        });
+    }
 })();
 </script>

@@ -1,0 +1,696 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Text Input - AutoRAG</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'documents/css/text_input.css' %}">
+</head>
+
+<body>
+<div class="ti-page">
+
+    <!-- ============================================================
+         SIDEBAR — icon rail (matches documents.html & chat.html)
+         ============================================================ -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="{% static 'logo.svg' %}" alt="AutoRAG" width="32" height="32">
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'workspace_chat' %}" class="sidebar-icon" title="Sessions">
+                <img src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="Sessions" width="24" height="24">
+            </a>
+
+            <button class="sidebar-icon" title="Members">
+                <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="Members" width="24" height="24">
+            </button>
+
+            <a href="{% url 'documents:documents_page' %}" class="sidebar-icon active" title="Documents">
+                <img src="{% static 'Sidebar_icons/Documents.svg' %}" alt="Documents" width="24" height="24">
+            </a>
+
+            <button class="sidebar-icon" title="Notifications">
+                <img src="{% static 'Sidebar_icons/Notification.svg' %}" alt="Notifications" width="24" height="24">
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="sidebar-icon" title="Settings">
+                <img src="{% static 'Sidebar_icons/Settings.svg' %}" alt="Settings" width="24" height="24">
+            </button>
+            <button class="sidebar-icon no-blue-hover" title="Profile">
+                <img src="{% static 'Sidebar_icons/Profile.svg' %}" alt="Profile" width="24" height="24">
+            </button>
+        </div>
+    </aside>
+
+    <!-- ============================================================
+         MAIN AREA
+         ============================================================ -->
+    <div class="ti-main">
+
+        <!-- FIX 2: Back to Documents link -->
+        <a href="{% url 'documents:documents_page' %}" class="ti-back-link" id="backToDocuments" title="Back to Documents">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back to Documents
+        </a>
+
+        <!-- Page Header -->
+        <header class="ti-header">
+            <h1 class="ti-header__title">Add New Post</h1>
+            <div class="ti-header__actions">
+                <!-- FIX 4: Trash icon — clears editor content with a confirm modal -->
+                <button class="ti-icon-btn" id="clearEditorBtn" title="Clear editor" aria-label="Clear editor">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Two-column layout -->
+        <div class="ti-body">
+
+            <!-- LEFT: Editor -->
+            <div class="ti-editor-col">
+
+                <!-- Editable title -->
+                <div class="ti-title-bar">
+                    <!-- FIX 5: Default value is "Title" -->
+                    <input
+                        class="ti-title-input"
+                        type="text"
+                        id="postTitle"
+                        placeholder="Enter a title..."
+                        value="Title"
+                        autocomplete="off"
+                    >
+                    <!-- FIX 6: Edit icon focuses + selects all title text -->
+                    <button class="ti-title-edit" id="titleEditBtn" aria-label="Edit title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Rich-text editor card -->
+                <div class="ti-editor-card">
+
+                    <!-- Tab bar -->
+                    <div class="ti-editor-tabs">
+                        <button class="ti-tab active">Text</button>
+                    </div>
+
+                    <!-- Formatting toolbar -->
+                    <div class="ti-toolbar">
+
+                        <!-- FIX 2: Paragraph / Header dropdown -->
+                        <div class="ti-toolbar__group ti-toolbar__group--separator ti-style-wrap">
+                            <button class="ti-toolbar__select" id="styleSelect" aria-haspopup="true" aria-expanded="false">
+                                <span id="styleLabel">Paragraph</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            <div class="ti-style-dropdown" id="styleDropdown" role="menu">
+                                <button class="ti-style-option ti-style-option--paragraph ti-style-option--active" data-tag="p"  role="menuitem">Paragraph</button>
+                                <button class="ti-style-option ti-style-option--header"    data-tag="h2" role="menuitem">Header</button>
+                                <button class="ti-style-option ti-style-option--subheader" data-tag="h3" role="menuitem">Sub-header</button>
+                            </div>
+                        </div>
+
+                        <!-- FIX 9: Text formatting group -->
+                        <div class="ti-toolbar__group ti-toolbar__group--separator">
+
+                            <!-- FIX 9c: Font color via native color picker -->
+                            <label class="ti-toolbar__btn ti-color-wrap" title="Font color">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M5 20h14M12 4L6 18h2l1.5-4h5l1.5 4h2L12 4zm-1.75 8L12 7.5l1.75 4.5h-3.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <input type="color" id="fontColorPicker" value="#1e293b" aria-label="Font color" tabindex="-1">
+                            </label>
+
+                            <!-- FIX 9d: Highlight via native color picker -->
+                            <label class="ti-toolbar__btn ti-color-wrap" title="Highlight">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M9 11l-5 7h4l1.5-2h5L16 18h4l-5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M7.5 9L12 3l4.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <line x1="4" y1="20" x2="20" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                <input type="color" id="highlightPicker" value="#facc15" aria-label="Highlight color" tabindex="-1">
+                            </label>
+
+                            <!-- FIX 9a: Bold / Italic / Underline / Strikethrough with active state -->
+                            <button class="ti-toolbar__btn" id="btnBold"      title="Bold"          data-cmd="bold"><strong>B</strong></button>
+                            <button class="ti-toolbar__btn" id="btnItalic"    title="Italic"        data-cmd="italic"><em>I</em></button>
+                            <button class="ti-toolbar__btn" id="btnUnderline" title="Underline"     data-cmd="underline"><u>U</u></button>
+                            <button class="ti-toolbar__btn" id="btnStrike"    title="Strikethrough" data-cmd="strikeThrough"><s>S</s></button>
+                        </div>
+
+                        <!-- FIX 9b: Alignment -->
+                        <div class="ti-toolbar__group ti-toolbar__group--separator">
+                            <button class="ti-toolbar__btn" title="Align left"   data-cmd="justifyLeft">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h12M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                            <button class="ti-toolbar__btn" title="Align center" data-cmd="justifyCenter">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M6 12h12M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                            <button class="ti-toolbar__btn" title="Align right"  data-cmd="justifyRight">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M9 12h12M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                        </div>
+
+                        <!-- Lists -->
+                        <div class="ti-toolbar__group ti-toolbar__group--separator">
+                            <button class="ti-toolbar__btn" title="Ordered list"   data-cmd="insertOrderedList">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10 6h11M10 12h11M10 18h11M4 6h.01M4 12l1-1v4M4 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <button class="ti-toolbar__btn" title="Unordered list" data-cmd="insertUnorderedList">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                        </div>
+
+                        <!-- Attach file — single file picker -->
+                        <div class="ti-toolbar__group">
+                            <button class="ti-toolbar__btn" id="attachFileBtn" title="Attach file" aria-label="Attach file">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.66 5.65l-9.2 9.2a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <!-- Hidden file input: no "multiple" = single file only -->
+                            <input type="file" id="attachFileInput" style="display:none;" aria-hidden="true">
+                        </div>
+
+                    </div><!-- /ti-toolbar -->
+
+                    <!-- Attached file display row (hidden until a file is chosen) -->
+                    <div class="ti-attachment-row" id="attachmentRow" style="display:none;" role="status" aria-live="polite">
+                        <div class="ti-attachment-row__icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.66 5.65l-9.2 9.2a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <span class="ti-attachment-row__name" id="attachmentName"></span>
+                        <button class="ti-attachment-row__remove" id="attachmentRemove" type="button" title="Remove attachment" aria-label="Remove attached file">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Editable body -->
+                    <div
+                        class="ti-editor-body"
+                        id="editorBody"
+                        contenteditable="true"
+                        spellcheck="true"
+                        data-placeholder="Start writing your content here..."
+                    ></div>
+
+                    <!-- FIX 1: Footer — word count + reading time updated live -->
+                    <div class="ti-editor-footer">
+                        <span class="ti-stat" id="wordCountLabel">Word Count: 0</span>
+                        <span class="ti-dot" aria-hidden="true"></span>
+                        <span class="ti-stat" id="readingTimeLabel">Reading Time: ~0 min</span>
+                    </div>
+
+                </div><!-- /ti-editor-card -->
+            </div><!-- /ti-editor-col -->
+
+            <!-- RIGHT: Publish panel -->
+            <aside class="ti-sidebar-col">
+                <div class="ti-publish-card">
+
+                    <div class="ti-publish-card__header">
+                        <h2 class="ti-publish-card__title">Publish</h2>
+                        <button class="ti-publish-card__toggle" id="publishToggle" aria-label="Collapse">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="ti-publish-card__body" id="publishBody">
+
+                        <!-- Status row (static for now) -->
+                        <div class="ti-publish-row">
+                            <div class="ti-publish-row__info">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span>Status: <strong id="statusValue">Draft</strong></span>
+                            </div>
+                            <button class="ti-publish-edit-btn">Edit</button>
+                        </div>
+
+                        <!-- FIX 8: Visibility row — inline Public / Only me selector -->
+                        <div class="ti-publish-row ti-publish-row--expandable">
+                            <div class="ti-publish-row__top">
+                                <div class="ti-publish-row__info">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                                    </svg>
+                                    <span>Visibility: <strong id="visibilityValue">Public</strong></span>
+                                </div>
+                                <button class="ti-publish-edit-btn" id="visibilityEditBtn">Edit</button>
+                            </div>
+                            <div class="ti-inline-selector" id="visibilitySelector">
+                                <button class="ti-selector-option ti-selector-option--active" data-value="Public">Public</button>
+                                <button class="ti-selector-option" data-value="Only me">Only me</button>
+                            </div>
+                        </div>
+
+                        <!-- FIX 7: Schedule row — inline date picker -->
+                        <div class="ti-publish-row ti-publish-row--expandable">
+                            <div class="ti-publish-row__top">
+                                <div class="ti-publish-row__info">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                                        <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    </svg>
+                                    <span>Schedule: <strong id="scheduleValue">Off</strong></span>
+                                </div>
+                                <button class="ti-publish-edit-btn" id="scheduleEditBtn">Edit</button>
+                            </div>
+                            <div class="ti-inline-selector" id="scheduleSelector">
+                                <input type="date" id="scheduleDateInput" class="ti-date-input">
+                                <button class="ti-selector-option" id="scheduleClearBtn">Clear</button>
+                            </div>
+                        </div>
+
+                    </div><!-- /ti-publish-card__body -->
+
+                    <!-- FIX 3: Buttons now trigger custom modal, not alert() -->
+                    <div class="ti-publish-card__footer">
+                        <button class="ti-btn ti-btn--outline" id="saveDraftBtn">Save Draft</button>
+                        <button class="ti-btn ti-btn--primary" id="publishBtn">Publish</button>
+                    </div>
+
+                </div><!-- /ti-publish-card -->
+            </aside>
+
+        </div><!-- /ti-body -->
+    </div><!-- /ti-main -->
+</div><!-- /ti-page -->
+
+
+<!-- ============================================================
+     FIX 3: Custom modal — same overlay/card pattern as the site
+     ============================================================ -->
+<div class="ti-modal-overlay" id="tiModalOverlay" role="dialog" aria-modal="true" aria-labelledby="tiModalTitle">
+    <div class="ti-modal">
+        <div class="ti-modal__icon" id="tiModalIcon"></div>
+        <h3 class="ti-modal__title" id="tiModalTitle"></h3>
+        <p  class="ti-modal__message" id="tiModalMessage"></p>
+        <div class="ti-modal__actions">
+            <button class="ti-btn ti-btn--outline  ti-modal__cancel"  id="tiModalCancel">Cancel</button>
+            <button class="ti-btn ti-btn--primary  ti-modal__confirm" id="tiModalConfirm">OK</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+(function () {
+
+    /* ── element refs ── */
+    const editor           = document.getElementById('editorBody');
+    const wordCountEl      = document.getElementById('wordCountLabel');
+    const readingEl        = document.getElementById('readingTimeLabel');
+    const postTitle        = document.getElementById('postTitle');
+    const titleEditBtn     = document.getElementById('titleEditBtn');
+    const styleSelect      = document.getElementById('styleSelect');
+    const styleLabel       = document.getElementById('styleLabel');
+    const styleDropdown    = document.getElementById('styleDropdown');
+
+
+    /* ================================================================
+       FIX 1 — Reading time: robust word count from contenteditable
+       Uses textContent (not innerText) to avoid layout quirks.
+       MutationObserver catches paste, execCommand, and innerHTML clears.
+       Reading speed = 200 wpm. Formula: Math.ceil(words / 200).
+    ================================================================ */
+    function updateStats() {
+        // textContent avoids innerText layout-flush issues in contenteditable
+        var raw   = editor.textContent || '';
+        var words = raw.trim().length === 0 ? 0 : raw.trim().split(/\s+/).filter(Boolean).length;
+        var mins  = words === 0 ? 0 : Math.ceil(words / 200);
+        wordCountEl.textContent = 'Word Count: ' + words.toLocaleString();
+        readingEl.textContent   = 'Reading Time: ~' + mins + ' min';
+    }
+    // Primary trigger: every keystroke
+    editor.addEventListener('input', updateStats);
+    // Safety net: paste, execCommand, programmatic innerHTML changes
+    if (window.MutationObserver) {
+        new MutationObserver(updateStats).observe(editor, {
+            childList: true, subtree: true, characterData: true
+        });
+    }
+    updateStats(); // initialise on load
+
+
+    /* ================================================================
+       FIX 2 — Paragraph / Header dropdown
+       Applies formatBlock to the editor and updates the label
+    ================================================================ */
+    let styleOpen = false;
+
+    styleSelect.addEventListener('click', function (e) {
+        e.stopPropagation();
+        styleOpen = !styleOpen;
+        styleDropdown.classList.toggle('ti-style-dropdown--open', styleOpen);
+        styleSelect.setAttribute('aria-expanded', styleOpen);
+    });
+
+    document.addEventListener('click', function () {
+        styleOpen = false;
+        styleDropdown.classList.remove('ti-style-dropdown--open');
+        styleSelect.setAttribute('aria-expanded', 'false');
+    });
+
+    styleDropdown.querySelectorAll('.ti-style-option').forEach(function (opt) {
+        opt.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const tag = opt.dataset.tag; // 'p' or 'h2'
+            /* Paragraph → p | Header → h2 | Sub-header → h3 */
+            var blockTag = tag === 'h2' ? 'h2' : tag === 'h3' ? 'h3' : 'p';
+            document.execCommand('formatBlock', false, blockTag);
+            styleLabel.textContent = opt.textContent;
+
+            styleDropdown.querySelectorAll('.ti-style-option').forEach(function (o) {
+                o.classList.remove('ti-style-option--active');
+            });
+            opt.classList.add('ti-style-option--active');
+
+            styleOpen = false;
+            styleDropdown.classList.remove('ti-style-dropdown--open');
+            editor.focus();
+        });
+    });
+
+
+    /* ================================================================
+       FIX 3 — Custom modal  (replaces alert())
+    ================================================================ */
+    const modalOverlay = document.getElementById('tiModalOverlay');
+    const modalTitle   = document.getElementById('tiModalTitle');
+    const modalMessage = document.getElementById('tiModalMessage');
+    const modalIcon    = document.getElementById('tiModalIcon');
+    const modalConfirm = document.getElementById('tiModalConfirm');
+    const modalCancel  = document.getElementById('tiModalCancel');
+
+    function showModal(opts) {
+        modalTitle.textContent   = opts.title   || '';
+        modalMessage.textContent = opts.message || '';
+        modalConfirm.textContent = opts.confirmLabel || 'OK';
+        modalCancel.textContent  = 'Cancel';
+
+        /* icon */
+        /* draft uses an SVG document icon; others use text glyphs */
+        /* Document icon for draft — stroked page with lines */
+        var DRAFT_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" '
+                      + 'xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+                      + '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" '
+                      + 'stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'
+                      + '<polyline points="14 2 14 8 20 8" '
+                      + 'stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'
+                      + '<line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+                      + '<line x1="8" y1="17" x2="16" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+                      + '<line x1="8" y1="9"  x2="10" y2="9"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+                      + '</svg>';
+        var ICONS = { success: '&#10003;', danger: '!', confirm: '?' };
+        if (opts.type === 'draft') {
+            modalIcon.innerHTML   = DRAFT_SVG;
+        } else {
+            modalIcon.innerHTML   = ICONS[opts.type] || '&#10003;';
+        }
+        modalIcon.className   = 'ti-modal__icon ti-modal__icon--' + (opts.type || 'success');
+
+        /* show/hide cancel */
+        modalCancel.style.display = opts.type === 'confirm' ? '' : 'none';
+
+        /* callbacks */
+        modalConfirm.onclick = function () {
+            closeModal();
+            if (typeof opts.onConfirm === 'function') opts.onConfirm();
+        };
+        modalCancel.onclick = closeModal;
+        modalOverlay.onclick = function (e) {
+            if (e.target === modalOverlay) closeModal();
+        };
+
+        modalOverlay.classList.add('ti-modal-overlay--visible');
+    }
+
+    function closeModal() {
+        modalOverlay.classList.remove('ti-modal-overlay--visible');
+    }
+
+
+    /* ================================================================
+       FIX 4 — Delete icon: clear editor with confirm modal
+    ================================================================ */
+    document.getElementById('clearEditorBtn').addEventListener('click', function () {
+        showModal({
+            title:        'Clear editor?',
+            message:      'This will remove all content. This cannot be undone.',
+            type:         'confirm',
+            confirmLabel: 'Clear',
+            onConfirm: function () {
+                editor.innerHTML = '';
+                postTitle.value  = 'Title';
+                updateStats();
+            }
+        });
+    });
+
+
+    /* ================================================================
+       FIX 6 — Title edit icon: focus + select all
+    ================================================================ */
+    titleEditBtn.addEventListener('click', function () {
+        postTitle.focus();
+        postTitle.select();
+    });
+
+
+    /* ================================================================
+       FIX 7 — Schedule: inline calendar date picker
+    ================================================================ */
+    const scheduleEditBtn   = document.getElementById('scheduleEditBtn');
+    const scheduleSelector  = document.getElementById('scheduleSelector');
+    const scheduleDateInput = document.getElementById('scheduleDateInput');
+    const scheduleValue     = document.getElementById('scheduleValue');
+    const scheduleClearBtn  = document.getElementById('scheduleClearBtn');
+
+    scheduleEditBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const open = scheduleSelector.classList.toggle('ti-inline-selector--open');
+        if (open) scheduleDateInput.focus();
+        // Close visibility if open
+        visibilitySelector.classList.remove('ti-inline-selector--open');
+    });
+
+    scheduleDateInput.addEventListener('change', function () {
+        if (!scheduleDateInput.value) return;
+        const d     = new Date(scheduleDateInput.value + 'T00:00:00');
+        const label = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        scheduleValue.textContent = label;
+        scheduleSelector.classList.remove('ti-inline-selector--open');
+    });
+
+    scheduleClearBtn.addEventListener('click', function () {
+        scheduleDateInput.value   = '';
+        scheduleValue.textContent = 'Off';
+        scheduleSelector.classList.remove('ti-inline-selector--open');
+    });
+
+
+    /* ================================================================
+       FIX 8 — Visibility: inline Public / Only me selector
+    ================================================================ */
+    const visibilityEditBtn  = document.getElementById('visibilityEditBtn');
+    const visibilitySelector = document.getElementById('visibilitySelector');
+    const visibilityValue    = document.getElementById('visibilityValue');
+
+    visibilityEditBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        visibilitySelector.classList.toggle('ti-inline-selector--open');
+        // Close schedule if open
+        scheduleSelector.classList.remove('ti-inline-selector--open');
+    });
+
+    visibilitySelector.querySelectorAll('.ti-selector-option').forEach(function (opt) {
+        opt.addEventListener('click', function () {
+            visibilityValue.textContent = opt.dataset.value;
+            visibilitySelector.querySelectorAll('.ti-selector-option').forEach(function (o) {
+                o.classList.remove('ti-selector-option--active');
+            });
+            opt.classList.add('ti-selector-option--active');
+            visibilitySelector.classList.remove('ti-inline-selector--open');
+        });
+    });
+
+    /* Close selectors when clicking elsewhere */
+    document.addEventListener('click', function () {
+        visibilitySelector.classList.remove('ti-inline-selector--open');
+        scheduleSelector.classList.remove('ti-inline-selector--open');
+    });
+
+
+    /* ================================================================
+       FIX 9a — Bold / Italic / Underline / Strike
+       execCommand with queryCommandState for accurate active state
+    ================================================================ */
+    const FORMAT_MAP = {
+        bold:          document.getElementById('btnBold'),
+        italic:        document.getElementById('btnItalic'),
+        underline:     document.getElementById('btnUnderline'),
+        strikeThrough: document.getElementById('btnStrike')
+    };
+
+    function syncFormatStates() {
+        Object.keys(FORMAT_MAP).forEach(function (cmd) {
+            const btn = FORMAT_MAP[cmd];
+            if (!btn) return;
+            try { btn.classList.toggle('ti-toolbar__btn--active', document.queryCommandState(cmd)); }
+            catch (e) {}
+        });
+    }
+
+    Object.keys(FORMAT_MAP).forEach(function (cmd) {
+        const btn = FORMAT_MAP[cmd];
+        if (!btn) return;
+        btn.addEventListener('mousedown', function (e) {
+            e.preventDefault(); // keeps editor focused
+            document.execCommand(cmd, false, null);
+            syncFormatStates();
+        });
+    });
+
+    editor.addEventListener('keyup',   syncFormatStates);
+    editor.addEventListener('mouseup', syncFormatStates);
+
+    /* ================================================================
+       FIX 9b — Alignment
+    ================================================================ */
+    ['justifyLeft','justifyCenter','justifyRight'].forEach(function (cmd) {
+        var btn = document.querySelector('[data-cmd="' + cmd + '"]');
+        if (!btn) return;
+        btn.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            document.execCommand(cmd, false, null);
+        });
+    });
+
+    /* ================================================================
+       FIX 9c — Font color
+    ================================================================ */
+    document.getElementById('fontColorPicker').addEventListener('input', function () {
+        editor.focus();
+        document.execCommand('foreColor', false, this.value);
+    });
+
+    /* ================================================================
+       FIX 9d — Highlight
+    ================================================================ */
+    document.getElementById('highlightPicker').addEventListener('input', function () {
+        editor.focus();
+        document.execCommand('hiliteColor', false, this.value);
+    });
+
+    /* Lists */
+    ['insertOrderedList','insertUnorderedList'].forEach(function (cmd) {
+        var btn = document.querySelector('[data-cmd="' + cmd + '"]');
+        if (!btn) return;
+        btn.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            document.execCommand(cmd, false, null);
+        });
+    });
+
+
+    /* ================================================================
+       ATTACH FILE — single-file picker, frontend state only
+       Flow: button click → trigger hidden input → show file row → remove
+    ================================================================ */
+    var attachFileBtn    = document.getElementById('attachFileBtn');
+    var attachFileInput  = document.getElementById('attachFileInput');
+    var attachmentRow    = document.getElementById('attachmentRow');
+    var attachmentName   = document.getElementById('attachmentName');
+    var attachmentRemove = document.getElementById('attachmentRemove');
+
+    // 1. Clicking the toolbar button opens the OS file picker
+    attachFileBtn.addEventListener('click', function () {
+        attachFileInput.value = ''; // reset so re-selecting the same file fires 'change'
+        attachFileInput.click();
+    });
+
+    // 2. File selected — display name, replace any previous attachment
+    attachFileInput.addEventListener('change', function () {
+        var file = attachFileInput.files[0];
+        if (!file) return;
+
+        // Truncate long names to keep the row tidy (max 48 chars)
+        var displayName = file.name.length > 48
+            ? file.name.slice(0, 44) + '...' + file.name.slice(file.name.lastIndexOf('.'))
+            : file.name;
+
+        attachmentName.textContent = displayName;
+        attachmentRow.style.display = '';
+        attachFileBtn.classList.add('ti-toolbar__btn--active'); // highlight button when file is attached
+    });
+
+    // 3. Remove button — clear state and hide the row
+    attachmentRemove.addEventListener('click', function () {
+        attachFileInput.value = '';
+        attachmentName.textContent = '';
+        attachmentRow.style.display = 'none';
+        attachFileBtn.classList.remove('ti-toolbar__btn--active');
+    });
+
+
+    /* ================================================================
+       Publish panel collapse
+    ================================================================ */
+    const publishToggle = document.getElementById('publishToggle');
+    const publishBody   = document.getElementById('publishBody');
+    let publishOpen     = true;
+
+    publishToggle.addEventListener('click', function () {
+        publishOpen = !publishOpen;
+        publishBody.style.display     = publishOpen ? '' : 'none';
+        publishToggle.style.transform = publishOpen ? '' : 'rotate(180deg)';
+    });
+
+    /* Save Draft */
+    document.getElementById('saveDraftBtn').addEventListener('click', function () {
+        showModal({ title: 'Draft saved', message: 'Your draft has been saved successfully.', type: 'draft' });
+    });
+
+    /* Publish */
+    document.getElementById('publishBtn').addEventListener('click', function () {
+        showModal({ title: 'Published!', message: 'Your post has been published successfully.', type: 'success' });
+    });
+
+})();
+</script>
+</body>
+</html>

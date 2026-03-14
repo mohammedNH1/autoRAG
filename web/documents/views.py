@@ -21,6 +21,10 @@ def documents_page(request):
     """Back-end logic here"""
     return render(request, "documents/Documents.html")
 
+#Added by rayan to run here the text input page
+def text_input_page(request):
+    """Back-end logic here"""
+    return render(request, "documents/text_input.html")
 
 @csrf_exempt
 def index_document_chunk(request):
