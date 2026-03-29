@@ -49,9 +49,8 @@ local_settings.py
 db.sqlite3
 media/
 
-# Static files
+# Static files (collectstatic output only; app static/ dirs are tracked)
 staticfiles/
-static/
 
 # VS Code
 .vscode/
