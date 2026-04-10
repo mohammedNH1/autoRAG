@@ -15,7 +15,7 @@ from qdrant_client.models import (
 import uuid
 import logging
 
-from model_selector import ModelSelector, EmbeddingModelConfig
+from .model_selector import ModelSelector, EmbeddingModelConfig 
 
 logger = logging.getLogger(__name__)
 
