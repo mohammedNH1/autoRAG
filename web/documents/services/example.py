@@ -1,4 +1,4 @@
-python# Simple example showing how 3 services work together
+# Simple example showing how 3 services work together
 
 from documents.services import ModelSelector, EmbeddingService, QdrantService
 
