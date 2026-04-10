@@ -225,9 +225,9 @@ def query_handling(request, workspace_id):
 
     embedded_query = embedding_model.encode(query)
 
-    qdrant = QdrantService(host="qdrant", port=6333)
+    qdrant = QdrantService(host="qdrant", port=6333) 
 
-    chunks = qdrant.search(
+    chunks = qdrant.search( 
         collection_name=pipeline["embedding_model"] + "document",
         workspace_id=workspace_id,
         query_vector=embedded_query,
@@ -252,7 +252,7 @@ def query_handling(request, workspace_id):
         "stream": False,
     }
     response = requests.post(ollama_url, json=payload)
-
+    
     if response.status_code == 200:
         llm_response = response.json().get("response", "No response from LLaMA")
     else:

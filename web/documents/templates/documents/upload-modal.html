@@ -61,257 +61,309 @@
 </div>
 
 <script>
-(function () {
-    const ACCEPTED_EXTENSIONS = ['pdf','txt','csv','doc','docx','xls','xlsx','ppt','pptx'];
-    const ICONS_BASE = (typeof window.UPLOAD_MODAL_ICONS_BASE !== 'undefined' ? window.UPLOAD_MODAL_ICONS_BASE : '../../../components/icons');
+            (function () {
+                const ACCEPTED_EXTENSIONS = ['pdf','txt','csv','doc','docx','xls','xlsx','ppt','pptx'];
+                const ICONS_BASE = (typeof window.UPLOAD_MODAL_ICONS_BASE !== 'undefined' ? window.UPLOAD_MODAL_ICONS_BASE : '../../../components/icons');
 
-    const overlay   = document.getElementById('uploadModalOverlay');
-    const modal     = document.getElementById('uploadModal');
-    const closeBtn  = document.getElementById('uploadModalClose');
-    const cancelBtn = document.getElementById('uploadModalCancel');
-    const submitBtn = document.getElementById('uploadModalSubmit');
-    const dropzone  = document.getElementById('uploadDropzone');
-    const pickerBtn = document.getElementById('uploadPickerBtn');
-    const fileInput = document.getElementById('uploadFileInput');
-    const filesSection = document.getElementById('uploadFilesList');
-    const fileListEl   = document.getElementById('uploadFileList');
+                const overlay   = document.getElementById('uploadModalOverlay');
+                const modal     = document.getElementById('uploadModal');
+                const closeBtn  = document.getElementById('uploadModalClose');
+                const cancelBtn = document.getElementById('uploadModalCancel');
+                const submitBtn = document.getElementById('uploadModalSubmit');
+                const dropzone  = document.getElementById('uploadDropzone');
+                const pickerBtn = document.getElementById('uploadPickerBtn');
+                const fileInput = document.getElementById('uploadFileInput');
+                const filesSection = document.getElementById('uploadFilesList');
+                const fileListEl   = document.getElementById('uploadFileList');
 
-    if (!overlay || !modal) return;
+                if (!overlay || !modal) return;
 
-    let files = [];
-    let fileIdCounter = 0;
-    let dragCounter = 0;
+                let files = [];
+                let fileIdCounter = 0;
+                let dragCounter = 0;
 
-    function getFileExtension(name) {
-        const parts = name.split('.');
-        return parts.length > 1 ? parts.pop().toLowerCase() : '';
-    }
+                function getFileExtension(name) {
+                    const parts = name.split('.');
+                    return parts.length > 1 ? parts.pop().toLowerCase() : '';
+                }
 
-    function getFileIconName(ext) {
-        if (ext === 'pdf') return 'pdf';
-        if (ext === 'doc' || ext === 'docx') return 'doc';
-        if (ext === 'txt') return 'txt';
-        return 'file';
-    }
+                function getFileIconName(ext) {
+                    if (ext === 'pdf') return 'pdf';
+                    if (ext === 'doc' || ext === 'docx') return 'doc';
+                    if (ext === 'txt') return 'txt';
+                    return 'file';
+                }
 
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + 'B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
-    }
+                function formatFileSize(bytes) {
+                    if (bytes < 1024) return bytes + 'B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+                }
 
-    function openModal() {
-        overlay.style.display = '';
-        document.body.style.overflow = 'hidden';
-    }
+                function getCookie(name) {
+                    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                    return match ? match[2] : '';
+                }
 
-    function closeModal() {
-        overlay.style.display = 'none';
-        document.body.style.overflow = '';
-        resetModal();
-    }
+                function openModal() {
+                    overlay.style.display = '';
+                    document.body.style.overflow = 'hidden';
+                }
 
-    function resetModal() {
-        files.forEach(f => { if (f.timer) clearInterval(f.timer); });
-        files = [];
-        fileIdCounter = 0;
-        dragCounter = 0;
-        filesSection.style.display = 'none';
-        fileListEl.innerHTML = '';
-        submitBtn.disabled = true;
-        dropzone.classList.remove('dragover');
-    }
+                function closeModal() {
+                    overlay.style.display = 'none';
+                    document.body.style.overflow = '';
+                    resetModal();
+                }
 
-    function updateSubmitState() {
-        if (files.length === 0) {
-            submitBtn.disabled = true;
-            return;
-        }
-        const allDone = files.every(f => f.progress >= 100);
-        submitBtn.disabled = !allDone;
-    }
+                function resetModal() {
+                    files.forEach(f => { if (f.timer) clearInterval(f.timer); });
+                    files = [];
+                    fileIdCounter = 0;
+                    dragCounter = 0;
+                    filesSection.style.display = 'none';
+                    fileListEl.innerHTML = '';
+                    submitBtn.disabled = true;
+                    dropzone.classList.remove('dragover');
+                }
 
-    function renderFileRow(fileObj) {
-        const row = document.createElement('div');
-        row.className = 'upload-modal__file-row';
-        row.dataset.fileId = fileObj.id;
+                function updateSubmitState() {
+                    if (files.length === 0) {
+                        submitBtn.disabled = true;
+                        return;
+                    }
+                    const allDone = files.every(f => f.progress >= 100);
+                    submitBtn.disabled = !allDone;
+                }
 
-        const iconName = getFileIconName(fileObj.ext);
-        const sizeStr = formatFileSize(fileObj.size);
+                function renderFileRow(fileObj) {
+                    const row = document.createElement('div');
+                    row.className = 'upload-modal__file-row';
+                    row.dataset.fileId = fileObj.id;
 
-        row.innerHTML =
-            '<div class="upload-modal__file-icon">' +
-                '<img src="' + ICONS_BASE + '/' + iconName + '.svg" alt="' + fileObj.ext + '" width="32" height="32">' +
-            '</div>' +
-            '<div class="upload-modal__file-info">' +
-                '<span class="upload-modal__file-name">' + fileObj.name + '</span>' +
-                '<span class="upload-modal__file-status" data-status-id="' + fileObj.id + '">' +
-                    sizeStr + ' | 0% \u2022 Uploading' +
-                '</span>' +
-            '</div>' +
-            '<button class="upload-modal__file-delete" type="button" data-delete-id="' + fileObj.id + '" aria-label="Remove file">' +
-                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-                    '<path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
-                '</svg>' +
-            '</button>';
+                    const iconName = getFileIconName(fileObj.ext);
+                    const sizeStr = formatFileSize(fileObj.size);
 
-        return row;
-    }
+                    row.innerHTML =
+                        '<div class="upload-modal__file-icon">' +
+                            '<img src="' + ICONS_BASE + '/' + iconName + '.svg" alt="' + fileObj.ext + '" width="32" height="32">' +
+                        '</div>' +
+                        '<div class="upload-modal__file-info">' +
+                            '<span class="upload-modal__file-name">' + fileObj.name + '</span>' +
+                            '<span class="upload-modal__file-status" data-status-id="' + fileObj.id + '">' +
+                                sizeStr + ' | 0% \u2022 Uploading' +
+                            '</span>' +
+                        '</div>' +
+                        '<button class="upload-modal__file-delete" type="button" data-delete-id="' + fileObj.id + '" aria-label="Remove file">' +
+                            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                                '<path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+                            '</svg>' +
+                        '</button>';
 
-    function updateFileStatus(fileObj) {
-        const statusEl = fileListEl.querySelector('[data-status-id="' + fileObj.id + '"]');
-        if (!statusEl) return;
-        const sizeStr = formatFileSize(fileObj.size);
+                    return row;
+                }
 
-        if (fileObj.progress >= 100) {
-            statusEl.textContent = sizeStr + ' | 100% \u2022 Uploaded Successfully';
-            statusEl.classList.add('upload-modal__file-status--done');
-        } else {
-            const remaining = Math.max(1, Math.round((100 - fileObj.progress) * 0.7));
-            statusEl.textContent = sizeStr + ' | ' + fileObj.progress + '% \u2022 ' + remaining + ' sec left \u2728 Uploading';
-            statusEl.classList.remove('upload-modal__file-status--done');
-        }
-    }
+                function updateFileStatus(fileObj) {
+                    const statusEl = fileListEl.querySelector('[data-status-id="' + fileObj.id + '"]');
+                    if (!statusEl) return;
+                    const sizeStr = formatFileSize(fileObj.size);
 
-    function simulateUpload(fileObj) {
-        fileObj.timer = setInterval(function () {
-            fileObj.progress = Math.min(100, fileObj.progress + Math.floor(Math.random() * 8 + 3));
-            updateFileStatus(fileObj);
-            if (fileObj.progress >= 100) {
-                clearInterval(fileObj.timer);
-                fileObj.timer = null;
-                updateSubmitState();
-            }
-        }, 300);
-    }
+                    if (fileObj.progress >= 100) {
+                        statusEl.textContent = sizeStr + ' | 100% \u2022 Uploaded Successfully';
+                        statusEl.classList.add('upload-modal__file-status--done');
+                    } else {
+                        const remaining = Math.max(1, Math.round((100 - fileObj.progress) * 0.7));
+                        statusEl.textContent = sizeStr + ' | ' + fileObj.progress + '% \u2022 ' + remaining + ' sec left \u2728 Uploading';
+                        statusEl.classList.remove('upload-modal__file-status--done');
+                    }
+                }
 
-    function addFiles(rawFiles) {
-        let added = false;
-        for (let i = 0; i < rawFiles.length; i++) {
-            const f = rawFiles[i];
-            const ext = getFileExtension(f.name);
-            if (!ACCEPTED_EXTENSIONS.includes(ext)) continue;
+                function simulateUpload(fileObj) {
+                    fileObj.timer = setInterval(function () {
+                        fileObj.progress = Math.min(100, fileObj.progress + Math.floor(Math.random() * 8 + 3));
+                        updateFileStatus(fileObj);
+                        if (fileObj.progress >= 100) {
+                            clearInterval(fileObj.timer);
+                            fileObj.timer = null;
+                            updateSubmitState();
+                        }
+                    }, 300);
+                }
 
-            const fileObj = {
-                id: ++fileIdCounter,
-                name: f.name,
-                size: f.size,
-                ext: ext,
-                progress: 0,
-                timer: null
-            };
-            files.push(fileObj);
+                function addFiles(rawFiles) {
+                    let added = false;
+                    for (let i = 0; i < rawFiles.length; i++) {
+                        const f = rawFiles[i];
+                        const ext = getFileExtension(f.name);
+                        if (!ACCEPTED_EXTENSIONS.includes(ext)) continue;
 
-            const row = renderFileRow(fileObj);
-            fileListEl.appendChild(row);
-            simulateUpload(fileObj);
-            added = true;
-        }
+                        const fileObj = {
+                            id: ++fileIdCounter,
+                            name: f.name,
+                            size: f.size,
+                            ext: ext,
+                            file: f,        // ← store the real File object
+                            progress: 0,
+                            timer: null
+                        };
+                        files.push(fileObj);
 
-        if (added) {
-            filesSection.style.display = '';
-            updateSubmitState();
-        }
-    }
+                        const row = renderFileRow(fileObj);
+                        fileListEl.appendChild(row);
+                        simulateUpload(fileObj);
+                        added = true;
+                    }
 
-    function removeFile(id) {
-        const idx = files.findIndex(f => f.id === id);
-        if (idx === -1) return;
-        if (files[idx].timer) clearInterval(files[idx].timer);
-        files.splice(idx, 1);
+                    if (added) {
+                        filesSection.style.display = '';
+                        updateSubmitState();
+                    }
+                }
 
-        const row = fileListEl.querySelector('[data-file-id="' + id + '"]');
-        if (row) row.remove();
+                function removeFile(id) {
+                    const idx = files.findIndex(f => f.id === id);
+                    if (idx === -1) return;
+                    if (files[idx].timer) clearInterval(files[idx].timer);
+                    files.splice(idx, 1);
 
-        if (files.length === 0) {
-            filesSection.style.display = 'none';
-        }
-        updateSubmitState();
-    }
+                    const row = fileListEl.querySelector('[data-file-id="' + id + '"]');
+                    if (row) row.remove();
 
-    /* --- Event listeners --- */
+                    if (files.length === 0) {
+                        filesSection.style.display = 'none';
+                    }
+                    updateSubmitState();
+                }
 
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
+                /* --- Event listeners --- */
 
-    overlay.addEventListener('click', function (e) {
-        if (e.target === overlay) closeModal();
-    });
+                closeBtn.addEventListener('click', closeModal);
+                cancelBtn.addEventListener('click', closeModal);
 
-    modal.addEventListener('click', function (e) {
-        e.stopPropagation();
-    });
+                overlay.addEventListener('click', function (e) {
+                    if (e.target === overlay) closeModal();
+                });
 
-    /* Drag and drop */
-    dropzone.addEventListener('dragenter', function (e) {
-        e.preventDefault();
-        dragCounter++;
-        dropzone.classList.add('dragover');
-    });
+                modal.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
 
-    dropzone.addEventListener('dragover', function (e) {
-        e.preventDefault();
-    });
+                /* Drag and drop */
+                dropzone.addEventListener('dragenter', function (e) {
+                    e.preventDefault();
+                    dragCounter++;
+                    dropzone.classList.add('dragover');
+                });
 
-    dropzone.addEventListener('dragleave', function (e) {
-        e.preventDefault();
-        dragCounter--;
-        if (dragCounter <= 0) {
-            dragCounter = 0;
-            dropzone.classList.remove('dragover');
-        }
-    });
+                dropzone.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                });
 
-    dropzone.addEventListener('drop', function (e) {
-        e.preventDefault();
-        dragCounter = 0;
-        dropzone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            addFiles(e.dataTransfer.files);
-        }
-    });
+                dropzone.addEventListener('dragleave', function (e) {
+                    e.preventDefault();
+                    dragCounter--;
+                    if (dragCounter <= 0) {
+                        dragCounter = 0;
+                        dropzone.classList.remove('dragover');
+                    }
+                });
 
-    /* File picker */
-    pickerBtn.addEventListener('click', function () {
-        fileInput.click();
-    });
+                dropzone.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    dragCounter = 0;
+                    dropzone.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        addFiles(e.dataTransfer.files);
+                    }
+                });
 
-    fileInput.addEventListener('change', function () {
-        if (fileInput.files.length > 0) {
-            addFiles(fileInput.files);
-        }
-        fileInput.value = '';
-    });
+                /* File picker */
+                pickerBtn.addEventListener('click', function () {
+                    fileInput.click();
+                });
 
-    /* Delete file */
-    fileListEl.addEventListener('click', function (e) {
-        const deleteBtn = e.target.closest('[data-delete-id]');
-        if (deleteBtn) {
-            removeFile(parseInt(deleteBtn.dataset.deleteId));
-        }
-    });
+                fileInput.addEventListener('change', function () {
+                    if (fileInput.files.length > 0) {
+                        addFiles(fileInput.files);
+                    }
+                    fileInput.value = '';
+                });
 
-    /* Submit */
-    submitBtn.addEventListener('click', function () {
-        if (!submitBtn.disabled) {
-            closeModal();
-        }
-    });
+                /* Delete file */
+                fileListEl.addEventListener('click', function (e) {
+                    const deleteBtn = e.target.closest('[data-delete-id]');
+                    if (deleteBtn) {
+                        removeFile(parseInt(deleteBtn.dataset.deleteId));
+                    }
+                });
 
-    /* Expose open function globally */
-    const uploadBtn = document.getElementById('uploadBtn');
-    if (uploadBtn) uploadBtn.addEventListener('click', openModal);
-    window.openUploadModal = openModal;
+                /* Submit — actually send files to the backend */
+                submitBtn.addEventListener('click', async function () {
+                    if (submitBtn.disabled) return;
+                        
+                    const workspaceId = (typeof window.WORKSPACE_ID !== 'undefined') ? window.WORKSPACE_ID : null;
+                    if (!workspaceId) {
+                        console.error('window.WORKSPACE_ID is not set.');
+                        return;
+                    }
 
-    /* Text Input button — redirect to the Text Input page */
-    const textInputBtn = document.getElementById('textInputBtn');
-    if (textInputBtn) {
-        textInputBtn.addEventListener('click', function () {
-            const url = (typeof window.TEXT_INPUT_URL !== 'undefined')
-                ? window.TEXT_INPUT_URL
-                : '/documents/text-input/';
-            window.location.href = url;
-        });
-    }
-})();
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Uploading…';
+
+                    let allSuccess = true;
+
+                    for (const fileObj of files) {
+                        const formData = new FormData();
+                        formData.append('file', fileObj.file);
+                        formData.append('workspace_id', workspaceId);
+
+                        try {
+                            const response = await fetch('/documents/upload/', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': getCookie('csrftoken'),
+                                },
+                                body: formData,
+                            });
+
+                            if (!response.ok) {
+                                const err = await response.json().catch(() => ({}));
+                                console.error('Upload error for', fileObj.name, err);
+                                allSuccess = false;
+                            } else {
+                                const data = await response.json();
+                                console.log('Uploaded successfully:', fileObj.name, data);
+                            }
+                        } catch (err) {
+                            console.error('Network error uploading', fileObj.name, err);
+                            allSuccess = false;
+                        }
+                    }
+
+                    if (allSuccess) {
+                        closeModal();
+                        // Optional: reload the page to show newly uploaded documents
+                        window.location.reload();
+                    } else {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Retry';
+                    }
+                });
+
+                /* Expose open function globally */
+                const uploadBtn = document.getElementById('uploadBtn');
+                if (uploadBtn) uploadBtn.addEventListener('click', openModal);
+                window.openUploadModal = openModal;
+
+                /* Text Input button — redirect to the Text Input page */
+                const textInputBtn = document.getElementById('textInputBtn');
+                if (textInputBtn) {
+                    textInputBtn.addEventListener('click', function () {
+                        const url = (typeof window.TEXT_INPUT_URL !== 'undefined')
+                            ? window.TEXT_INPUT_URL
+                            : '/documents/text-input/';
+                        window.location.href = url;
+                    });
+                }
+            })();
 </script>

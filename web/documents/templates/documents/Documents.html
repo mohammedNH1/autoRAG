@@ -224,7 +224,7 @@
                         <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/date.svg' %}" alt="" />
                         <div class="details-overview__row-text">
                             <span class="details-overview__row-label">Uploaded at</span>
-                            <span class="details-overview__row-value" id="uploadedAtValue" data-raw-date="{{ selected_document.uploaded_at|default:"" }}">{{ selected_document.uploaded_at|default:"—" }}</span>
+                            <span class="details-overview__row-value" id="uploadedAtValue" data-raw-date="{{ selected_document.upload_time|default:"" }}">{{ selected_document.uploaded_at|default:"—" }}</span>
                         </div>
                     </div>
                     <div class="details-overview__row">
@@ -251,6 +251,8 @@
     </div>
 
     <!-- Upload popup: UI and behaviour are in upload-modal.html -->
+      
+        <script>window.WORKSPACE_ID = 1;</script>
     {% include "documents/upload-modal.html" %}
 
     <!-- ============================================================

@@ -4,7 +4,7 @@ from workspace.models import Workspace
 
 # This method defines the upload path for documents, organizing them by workspace ID making a folder for each workspace.
 def document_upload_path(instance, filename):
-    return f"documents/workspace_{instance.workspace.id}/{filename}"
+    return f"documents/workspace_{instance.workspace_id}/{filename}"
 
 # ----------------------
 # Document Table

@@ -1,32 +1,132 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import json
 import logging
+
+from .models import Document
+from .services import parsing_service
+from .services.embedding_service import EmbeddingService
+from .services.model_selector import ModelSelector
+from .services.qdrant_service import QdrantService
+
 from workspace.models import Workspace
-
-"""
-Qdrant- Document Indexing(storing) and Search
-
-RESPONSIBILITY:
-- POST /api/documents/index/   - Save chunks to Qdrant
-- POST /api/documents/search/  - Search Qdrant
-"""
+import time
 
 logger = logging.getLogger(__name__)
 
-#Added by rayan to run here the documents page
+
 def documents_page(request):
-    """Back-end logic here"""
-    return render(request, "documents/Documents.html")
+    """
+    Render the documents page.
+    Workspace is resolved from (in priority order):
+      1. ?workspace_id=<id> query param
+      2. request.session['workspace_id']
+    """
+    workspace_id = request.GET.get("workspace_id") or request.session.get("workspace_id")
+    workspace = None
 
-#Added by rayan to run here the text input page
+    if workspace_id:
+        try:
+            #print(f'here is the workspaceID {workspace_id}')
+            workspace = Workspace.objects.get(workspace_id=workspace_id)
+            # Keep it in session so subsequent requests don't need the query param
+            request.session["workspace_id"] = workspace.workspace_id
+        except Workspace.DoesNotExist:
+            pass
+
+    # If still no workspace, fall back to the first workspace for this user
+    if workspace is None and request.user.is_authenticated:
+        workspace = Workspace.objects.filter().first()  # adjust filter as needed
+        if workspace:
+            request.session["workspace_id"] = workspace.workspace_id
+
+    documents = Document.objects.filter(workspace=workspace).order_by("-upload_time") if workspace else []
+
+    document_count = len(documents)
+
+    return render(request, "documents/Documents.html", {
+        "workspace": workspace,
+        "documents": documents,
+        "document_count": document_count,
+    })
+
+
 def text_input_page(request):
-    """Back-end logic here"""
-    return render(request, "documents/text_input.html")
+    workspace_id = request.GET.get("workspace_id") or request.session.get("workspace_id")
+    workspace = None
 
-@csrf_exempt
+    if workspace_id:
+        try:
+            workspace = Workspace.objects.get(workspace_id=workspace_id)
+        except Workspace.DoesNotExist:
+            pass
+
+    return render(request, "documents/text_input.html", {
+        "workspace": workspace,
+    })
+
+
+def save_file(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+
+    pdf_file = request.FILES.get("file")
+    workspace_id = request.POST.get("workspace_id")
+
+    if not pdf_file:
+        return JsonResponse({"error": "No file uploaded"}, status=400)
+
+    if not workspace_id:
+        return JsonResponse({"error": "No workspace_id"}, status=400)
+
+    workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
+
+    # --- Qdrant setup ---
+    workspace_embedding_model = workspace.config.embedding_model
+    model_config = ModelSelector.get_model_config(workspace_embedding_model)
+
+    qdrant = QdrantService(host="qdrant_test", port=6333)
+    collection_name = qdrant.ensure_collection(model_config)
+
+    # --- Save document ---
+    doc = Document(
+        document_title=pdf_file.name,
+        workspace=workspace,
+        uploaded_by=request.user if request.user.is_authenticated else None,
+    )
+    doc.file = pdf_file
+    doc.save()
+
+    # --- Parse uploaded file ---
+    all_chunks = parsing_service.parse_pdf_into_chunks(doc.file.path)
+
+    # --- Embed and index chunks ---
+    for chunk in all_chunks:
+        text = chunk["text"]
+        metadata = chunk["metadata"]
+
+        vector = EmbeddingService.embed_text(
+            text=text,
+            model_name=model_config.model_name
+        )
+
+        qdrant.index_document_chunk(
+            collection_name=collection_name,
+            workspace_id=workspace.workspace_id,
+            document_id=doc.id,
+            chunk_id=metadata['chunk_index'],
+            text=text,
+            vector=vector,
+            additional_metadata={
+                "page": metadata['page'],
+                "language": metadata['language'],
+            }
+        )
+
+    return JsonResponse({"message": "Uploaded and indexed successfully", "document_id": doc.id})
+
+
 def index_document_chunk(request):
     """
     Index(store) a pre-chunked document chunk into Qdrant.
@@ -125,7 +225,6 @@ def index_document_chunk(request):
         }, status=500)
 
 
-@csrf_exempt
 def search_documents(request):
     """
     Search for similar documents using semantic search.
@@ -247,7 +346,6 @@ def search_documents(request):
             'message': str(e)
         }, status=500)
 
-@csrf_exempt
 def delete_document(request, document_id):
     """
     Delete all chunks of a document from Qdrant.
