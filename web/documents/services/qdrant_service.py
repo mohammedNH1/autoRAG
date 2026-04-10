@@ -15,7 +15,7 @@ from qdrant_client.models import (
 import uuid
 import logging
 
-from .model_selector import ModelSelector, EmbeddingModelConfig
+from model_selector import ModelSelector, EmbeddingModelConfig
 
 logger = logging.getLogger(__name__)
 
@@ -170,13 +170,13 @@ class QdrantService:
         )
         
         # Execute search with mandatory filter
-        search_result = self.client.search(
+        search_result = self.client.query_points(
             collection_name=collection_name,
-            query_vector=query_vector,
+            query=query_vector,
             query_filter=workspace_filter,  # Enforces workspace isolation
             limit=top_k,
             score_threshold=score_threshold,
-        )
+        ).points
         
         # Format results
         results = []
