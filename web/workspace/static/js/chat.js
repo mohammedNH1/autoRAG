@@ -11,7 +11,8 @@
   const WORKSPACE_CONTEXT = {
     workspace_id: WORKSPACE_ID,
     session_id: null,
-    user_id: 'u_789'
+    // Sourced from request.user.id injected by the template; falls back to '' if unauthenticated.
+    user_id: (typeof cfg.userId === 'string' ? cfg.userId : '')
   };
 
   // Draft = no real session yet (session_id === null, isDraft === true). First send creates session via backend then sends message with returned session_id.
@@ -259,11 +260,16 @@
     showWelcomeState();
   }
 
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+  }
+
   async function ensureSessionCreated(session) {
     if (!session) return null;
     if (session.session_id != null) return session.session_id;
+    // Empty string is valid — it means relative URLs (Django default). Do not bail out on ''.
     const baseUrl = API_BASE_URL || '';
-    if (!baseUrl) return null;
     const payload = {
       workspace_id: WORKSPACE_CONTEXT.workspace_id,
       user_id: WORKSPACE_CONTEXT.user_id
@@ -271,7 +277,7 @@
     try {
       const response = await fetch(baseUrl + API_ENDPOINTS.CREATE_SESSION, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify(payload)
       });
       const data = await response.json().catch(function () { return null; });
@@ -527,7 +533,24 @@
     renderMessages();
     input.value = '';
 
+    // message payload
+    const chatPayload = {
+      workspace_id: String(WORKSPACE_CONTEXT.workspace_id),
+      session_id: String(currentSession.session_id || currentSession.local_id),
+      user_id: WORKSPACE_CONTEXT.user_id,
+      message_id: 'cmsg_' + String(messageCounter).padStart(3, '0'),
+      message: messageText
+    };
+    messageCounter++;
+
     if (cfg.frontendOnly) {
+      // Fire-and-forget in demo mode — real reply is simulated below.
+      fetch(API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chatPayload)
+      }).catch(function (e) { console.warn('SEND_MESSAGE (frontend-only) failed:', e); });
+
       var thinkingEl = document.createElement('div');
       thinkingEl.id = 'thinkingPlaceholder';
       thinkingEl.className = 'message assistant message--thinking';
@@ -578,20 +601,13 @@
     document.getElementById('chatMessages').appendChild(thinkingEl);
     scrollToBottom();
 
-    var payload = {
-      workspace_id: String(WORKSPACE_CONTEXT.workspace_id),
-      session_id: String(currentSession.session_id),
-      user_id: WORKSPACE_CONTEXT.user_id,
-      message_id: 'cmsg_' + String(messageCounter).padStart(3, '0'),
-      message: messageText
-    };
-    messageCounter++;
+    // Refresh session_id now that ensureSessionCreated may have populated it.
+    chatPayload.session_id = String(currentSession.session_id || currentSession.local_id);
 
-    var sendUrl = API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE;
-    fetch(sendUrl, {
+    fetch(API_BASE_URL + API_ENDPOINTS.SEND_MESSAGE, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify(chatPayload)
     })
       .then(function (r) {
         return r.text().then(function (text) {

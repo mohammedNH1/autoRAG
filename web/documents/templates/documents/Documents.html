@@ -251,9 +251,35 @@
     </div>
 
     <!-- Upload popup: UI and behaviour are in upload-modal.html -->
-      
-        <script>window.WORKSPACE_ID = 1;</script>
+
+        <script>window.WORKSPACE_ID = '{{ workspace.workspace_id|default:"" }}';</script>
     {% include "documents/upload-modal.html" %}
+
+    <!-- Doc card action menu (shared dropdown for the ⋯ button on each card) -->
+    <div class="doc-action-menu" id="docActionMenu" style="display:none;" role="menu">
+        <button class="doc-action-menu__item doc-action-menu__item--danger" type="button" id="docActionDelete" role="menuitem">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Delete</span>
+        </button>
+    </div>
+
+    <!-- Delete confirmation modal (reuses .upload-modal styles) -->
+    <div class="upload-modal-overlay" id="deleteModalOverlay" style="display:none;">
+        <div class="upload-modal" style="max-width:420px;">
+            <div class="upload-modal__header">
+                <div>
+                    <h2 class="upload-modal__title">Delete file?</h2>
+                    <p class="upload-modal__subtitle">Are you sure you want to delete <span id="deleteModalFilename" style="color:#333;font-weight:600;"></span>? This action cannot be undone.</p>
+                </div>
+            </div>
+            <div class="upload-modal__footer">
+                <button class="upload-modal__btn-cancel" type="button" id="deleteModalCancel">Cancel</button>
+                <button class="upload-modal__btn-submit upload-modal__btn-submit--danger" type="button" id="deleteModalConfirm">Delete</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ============================================================
          JAVASCRIPT — client-side interactions
@@ -306,6 +332,83 @@
                     setDetailPanelVisible(true);
                 });
             }
+
+            /* Delete flow: ⋯ opens a small dropdown → confirm → POST /documents/delete/. */
+            const actionMenu = document.getElementById('docActionMenu');
+            let activeCard = null;
+
+            if (grid) {
+                // Capture phase so the card-selection handler doesn't also fire
+                grid.addEventListener('click', (e) => {
+                    const menuBtn = e.target.closest('.doc-card__menu');
+                    if (!menuBtn) return;
+                    e.stopPropagation();
+                    activeCard = menuBtn.closest(SEL_CARD);
+                    const r = menuBtn.getBoundingClientRect();
+                    actionMenu.style.display = 'block';
+                    actionMenu.style.top = (r.bottom + window.scrollY + 6) + 'px';
+                    actionMenu.style.left = (r.right + window.scrollX - actionMenu.offsetWidth) + 'px';
+                }, true);
+            }
+
+            document.addEventListener('click', (e) => {
+                if (actionMenu.style.display === 'block' && !e.target.closest('#docActionMenu') && !e.target.closest('.doc-card__menu')) {
+                    actionMenu.style.display = 'none';
+                }
+            });
+
+            const deleteOverlay = document.getElementById('deleteModalOverlay');
+            const deleteConfirmBtn = document.getElementById('deleteModalConfirm');
+            let cardToDelete = null;
+
+            document.getElementById('docActionDelete').addEventListener('click', () => {
+                actionMenu.style.display = 'none';
+                if (!activeCard) return;
+                cardToDelete = activeCard;
+                activeCard = null;
+                document.getElementById('deleteModalFilename').textContent = cardToDelete.dataset.filename || '';
+                deleteOverlay.style.display = '';
+            });
+
+            document.getElementById('deleteModalCancel').addEventListener('click', () => {
+                deleteOverlay.style.display = 'none';
+                cardToDelete = null;
+            });
+            deleteOverlay.addEventListener('click', (e) => {
+                if (e.target === deleteOverlay) { deleteOverlay.style.display = 'none'; cardToDelete = null; }
+            });
+
+            deleteConfirmBtn.addEventListener('click', async () => {
+                if (!cardToDelete || deleteConfirmBtn.disabled) return;
+                // Mirror upload-modal: bail out if workspace context is missing rather than send 'undefined'.
+                const workspaceId = (typeof window.WORKSPACE_ID !== 'undefined' && window.WORKSPACE_ID !== '') ? window.WORKSPACE_ID : null;
+                if (!workspaceId) {
+                    console.error('window.WORKSPACE_ID is not set.');
+                    alert('Workspace not loaded. Please refresh the page.');
+                    return;
+                }
+                deleteConfirmBtn.disabled = true;
+                deleteConfirmBtn.textContent = 'Deleting…';
+                const csrf = (document.cookie.match(/(^| )csrftoken=([^;]+)/) || [])[2] || '';
+                try {
+                    const res = await fetch('/documents/delete/', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ document_id: cardToDelete.dataset.documentId, workspace_id: workspaceId }),
+                    });
+                    if (!res.ok) throw new Error(res.status);
+                    cardToDelete.remove();
+                    cardToDelete = null;
+                    deleteOverlay.style.display = 'none';
+                    if (grid.querySelectorAll(SEL_CARD).length === 0) window.location.reload();
+                } catch (err) {
+                    console.error(err);
+                    alert('Failed to delete the file. Please try again.');
+                } finally {
+                    deleteConfirmBtn.disabled = false;
+                    deleteConfirmBtn.textContent = 'Delete';
+                }
+            });
 
             if (searchInput) {
                 searchInput.addEventListener('input', () => {

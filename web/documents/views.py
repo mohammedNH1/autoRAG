@@ -86,7 +86,10 @@ def save_file(request):
     workspace_embedding_model = workspace.config.embedding_model
     model_config = ModelSelector.get_model_config(workspace_embedding_model)
 
-    qdrant = QdrantService(host="qdrant_test", port=6333)
+    qdrant = QdrantService(
+        host=getattr(settings, 'QDRANT_HOST', 'localhost'),
+        port=getattr(settings, 'QDRANT_PORT', 6333)
+    )
     collection_name = qdrant.ensure_collection(model_config)
 
     # --- Save document ---

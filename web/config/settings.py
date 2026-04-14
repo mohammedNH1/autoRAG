@@ -131,5 +131,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ============================================
 # QDRANT CONFIGURATION
 # ============================================
-QDRANT_HOST = 'localhost'
+QDRANT_HOST = 'qdrant'
 QDRANT_PORT = 6333

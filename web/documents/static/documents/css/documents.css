@@ -1100,3 +1100,54 @@ button {
         justify-content: center;
     }
 }
+
+/* ============================================================
+   DOC CARD ACTION MENU (⋯ dropdown) + danger confirm button
+   ============================================================ */
+.doc-action-menu {
+    position: absolute;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #eceef1;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 6px;
+    z-index: 1100;
+}
+
+.doc-action-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    color: #333;
+}
+
+.doc-action-menu__item:hover {
+    background: #f5f6f8;
+}
+
+.doc-action-menu__item--danger {
+    color: #ef4444;
+}
+
+.doc-action-menu__item--danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.upload-modal__btn-submit--danger {
+    background-color: #ef4444;
+}
+
+.upload-modal__btn-submit--danger:not(:disabled):hover {
+    background-color: #dc2626;
+}
