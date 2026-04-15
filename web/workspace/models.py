@@ -1,5 +1,6 @@
-from django.db import models
 
+from django.db import models
+import uuid
 
 # ----------------------
 # User Table
@@ -95,3 +96,60 @@ class WorkspaceConfig(models.Model):
 
     def __str__(self):
         return f"Config {self.config_id} for Workspace {self.workspace.workspace_id}"
+    
+
+# ----------------------
+# Session Table
+# ----------------------
+class Session(models.Model):
+    
+
+    session_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="sessions"
+    )
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sessions"
+    )
+    
+    title = models.CharField(max_length=150, default="New Session")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Session {self.session_id} in Workspace {self.workspace.workspace_id}"
+
+
+# ----------------------
+# Message Table
+# ----------------------
+class Message(models.Model):
+    class Meta:
+        ordering = ['timestamp']
+
+    SENDER_CHOICES = [
+        ('user', 'User'),
+        ('assistant', 'Assistant'),
+    ]
+
+    message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    session = models.ForeignKey(
+        Session,
+        on_delete=models.CASCADE,
+        related_name="messages"
+    )
+    
+    sender = models.CharField(max_length=10, choices=SENDER_CHOICES)
+    text = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender} message in Session {self.session.session_id}"    

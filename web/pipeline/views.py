@@ -6,6 +6,8 @@ import requests
 from documents.services.qdrant_service import QdrantService
 from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembership
 from pipeline.services.pipeline_registry import get_pipeline
+from workspace.models import Message, Session
+import uuid
 
 #Added by rayan to run here the questionnaire page
 def questionnaire_page(request):
@@ -207,11 +209,33 @@ def initiate_pipeline(request, workspace_id):
 
     return JsonResponse({"status": "Pipeline initialized"})
 
-
-def query_handling(request, workspace_id):
+def chat_page(request, workspace_id):
     workspace = Workspace.objects.get(workspace_id=workspace_id)
-    config = workspace.config
+    get_pipeline(workspace_id, workspace.config)
+    return render(request, "chat.html", {"workspace_id": workspace_id})
 
+
+@csrf_exempt
+def query_handling(request):
+
+    embedding_model_mapping = {
+        "all-MiniLM-L6-v2": "minilm",
+        "all-mpnet-base-v2": "mpnet",
+        "intfloat/e5-large-v2": "e5_large",
+        "BAAI/bge-m3": "bge_m3",
+    }
+
+    data = json.loads(request.body)
+
+    workspace_id = data.get("workspace_id")
+    session_id = data.get("session_id")   # (used safely below if exists)
+    user_id = data.get("user_id")
+    query = data.get("message")
+
+    workspace = Workspace.objects.get(workspace_id=workspace_id)
+
+    config = workspace.config
+    embedding_model_name = config.embedding_model
     pipeline = get_pipeline(workspace_id, config)
 
     embedding_model = pipeline["embedding_model"]
@@ -220,15 +244,37 @@ def query_handling(request, workspace_id):
     top_p = pipeline["top_p"]
     top_k = pipeline["top_k"]
 
-    data = json.loads(request.body)
-    query = data.get("query")
+    # -------------------------
+    # Session (SAFE ADD, minimal change)
+    # -------------------------
+    session = None
+    if session_id:
+        session = Session.objects.filter(session_id=session_id).first()
+
+    if not session:
+        session = Session.objects.create(
+            session_id=session_id if session_id else uuid.uuid4(),
+            workspace=workspace,
+            user_id=user_id,
+            title="New Session"
+        )
+
+    # -------------------------
+    # SAVE USER MESSAGE (NEW)
+    # -------------------------
+    Message.objects.create(
+        message_id=str(uuid.uuid4()),
+        session=session,
+        sender="user",
+        text=query
+    )
 
     embedded_query = embedding_model.encode(query)
 
-    qdrant = QdrantService(host="qdrant", port=6333) 
+    qdrant = QdrantService(host="qdrant", port=6333)
 
-    chunks = qdrant.search( 
-        collection_name=pipeline["embedding_model"] + "document",
+    chunks = qdrant.search(
+        collection_name=f"documents__{embedding_model_mapping[embedding_model_name]}",
         workspace_id=workspace_id,
         query_vector=embedded_query,
         top_k=top_k,
@@ -236,10 +282,12 @@ def query_handling(request, workspace_id):
 
     pairs = [(query, chunk["text"]) for chunk in chunks]
     scores = reranker.predict(pairs)
+
     ranked_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)
     top_chunks_for_llm = [chunk["text"] for chunk, score in ranked_chunks][:top_k]
 
     context = "\n\n".join(top_chunks_for_llm)
+
     prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
 
     ollama_url = "http://ollama:11434/api/generate"
@@ -251,10 +299,32 @@ def query_handling(request, workspace_id):
         "options": {"top_k": top_k},
         "stream": False,
     }
+
     response = requests.post(ollama_url, json=payload)
-    
+
     if response.status_code == 200:
         llm_response = response.json().get("response", "No response from LLaMA")
     else:
         llm_response = f"Error generating response: {response.status_code}"
+
+    # -------------------------
+    # SAVE ASSISTANT MESSAGE (NEW)
+    # -------------------------
+    Message.objects.create(
+        message_id=str(uuid.uuid4()),
+        session=session,
+        sender="assistant",
+        text=llm_response
+    )
+
     return JsonResponse({"response": llm_response})
+
+@csrf_exempt
+def create_session(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    import uuid
+    session_id = str(uuid.uuid4())
+    
+    return JsonResponse({'session_id': session_id})

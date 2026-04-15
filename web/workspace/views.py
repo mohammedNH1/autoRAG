@@ -1,5 +1,7 @@
 from django.shortcuts import render
 
+from workspace.models import Workspace
+
 
 def chat(request):
     """
@@ -77,3 +79,9 @@ def chat(request):
     }
 
     return render(request, "chat.html", context)
+from pipeline.services.pipeline_registry import get_pipeline
+
+def chat_page(request, workspace_id):
+    workspace = Workspace.objects.get(workspace_id=workspace_id)
+    get_pipeline(workspace_id, workspace.config)
+    return render(request, "chat.html", {"workspace_id": workspace_id})
