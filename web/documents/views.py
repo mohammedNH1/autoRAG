@@ -349,12 +349,16 @@ def search_documents(request):
             'message': str(e)
         }, status=500)
 
-def delete_document(request, document_id):
+def delete_document(request):
     """
-    Delete all chunks of a document from Qdrant.
-    
-    DELETE /api/documents/<document_id>/?workspace_id=1
-    
+    Delete all chunks of a document from Qdrant and remove the DB record.
+
+    POST /documents/delete/
+    {
+        "document_id": 123,
+        "workspace_id": 1
+    }
+
     Response:
     {
         "status": "success",
@@ -362,23 +366,29 @@ def delete_document(request, document_id):
         "deleted_chunks": 5
     }
     """
-    if request.method != 'DELETE':
-        return JsonResponse({"error": "Only DELETE allowed"}, status=405)
-    
-    # Get workspace_id from query params
-    workspace_id = request.GET.get('workspace_id')
-    if not workspace_id:
-        return JsonResponse({"error": "workspace_id query param is required"}, status=400)
-    
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    workspace_id = data.get('workspace_id')
+    document_id  = data.get('document_id')
+
+    if not workspace_id or document_id is None:
+        return JsonResponse({"error": "workspace_id and document_id are required"}, status=400)
+
     try:
         workspace_id = int(workspace_id)
         workspace = Workspace.objects.get(workspace_id=workspace_id)
     except (ValueError, Workspace.DoesNotExist):
         return JsonResponse({"error": f"Invalid workspace_id: {workspace_id}"}, status=404)
-    
+
     try:
         document_id = int(document_id)
-    except ValueError:
+    except (ValueError, TypeError):
         return JsonResponse({"error": "document_id must be an integer"}, status=400)
     
     try:
@@ -404,13 +414,16 @@ def delete_document(request, document_id):
             document_id=document_id,
         )
         
-        logger.info(f" Deleted document {document_id} from workspace {workspace_id}")
-        
+        # Also remove the DB record
+        Document.objects.filter(id=document_id, workspace=workspace).delete()
+
+        logger.info(f"Deleted document {document_id} from workspace {workspace_id}")
+
         return JsonResponse({
-            'status': 'success',
-            'document_id': document_id,
-            'deleted_chunks': deleted_count,
-        }, status=200)
+        'status': 'success',
+        'document_id': document_id,
+        'deleted_chunks': str(deleted_count),  # convert to string
+    }, status=200)
         
     except Exception as e:
         logger.error(f"❌ Delete error: {str(e)}", exc_info=True)
@@ -447,4 +460,4 @@ def fixed_chunking(sentences: list[str], chunk_size: int, overlap: int = 0) -> l
         chunks.append(" ".join(chunk))        # merge into single string
         i += step                             # move window forward
 
-    return chunks         
+    return chunks
