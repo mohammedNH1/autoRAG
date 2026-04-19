@@ -102,7 +102,11 @@ def save_file(request):
     doc.save()
 
     # --- Parse uploaded file ---
-    all_chunks = parsing_service.parse_pdf_into_chunks(doc.file.path)
+    all_chunks = chunk_document(
+    file_path = doc.file.path,
+    model_key = model_config.collection_key,
+    strategy  = request.POST.get("strategy", "simple"),
+ )
 
     # --- Embed and index chunks ---
     for chunk in all_chunks:
@@ -434,30 +438,20 @@ def delete_document(request):
 
 
 
-def fixed_chunking(sentences: list[str], chunk_size: int, overlap: int = 0) -> list[str]: #for now this its place 
+def chunk_document(file_path: str, model_key: str, strategy: str = 'simple') -> list[dict]:
     """
-    Split sentences into fixed-size chunks with optional overlap.
-    Returns a list of text chunks ready for embedding.
+    Single entry point for all chunking strategies.
+    Replaces fixed_chunking — call this from save_file instead.
+
+    Args:
+        file_path:  Path to the uploaded PDF.
+        model_key:  Key from EMBEDDING_MODELS — determines tokenizer + token limit.
+        strategy:   'simple' | 'large' | 'semantic' | 'structure'
+
+    Returns list of chunk dicts ready for embedding and indexing.
     """
-
-    # Return empty list if no input
-    if not sentences:
-        return []
-
-    # Validate parameters
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be greater than 0")
-    if overlap < 0 or overlap >= chunk_size:
-        raise ValueError("overlap must be >= 0 and < chunk_size")
-
-    chunks = []
-    step = chunk_size - overlap  # how much we move forward each iteration
-    i = 0
-
-    # Slide over sentences using fixed window
-    while i < len(sentences):
-        chunk = sentences[i:i + chunk_size]   # take chunk_size sentences
-        chunks.append(" ".join(chunk))        # merge into single string
-        i += step                             # move window forward
-
-    return chunks
+    return parsing_service.parse_pdf_into_chunks(
+        file_path = file_path,
+        model_key = model_key,
+        strategy  = strategy,
+    )
