@@ -8,6 +8,7 @@ from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembersh
 from pipeline.services.pipeline_registry import get_pipeline
 from workspace.models import Message, Session
 import uuid
+from django.core.exceptions import ValidationError
 
 #Added by rayan to run here the questionnaire page
 def questionnaire_page(request):
@@ -213,8 +214,6 @@ def chat_page(request, workspace_id):
     workspace = Workspace.objects.get(workspace_id=workspace_id)
     get_pipeline(workspace_id, workspace.config)
     return render(request, "chat.html", {"workspace_id": workspace_id})
-
-
 @csrf_exempt
 def query_handling(request):
 
@@ -228,7 +227,7 @@ def query_handling(request):
     data = json.loads(request.body)
 
     workspace_id = data.get("workspace_id")
-    session_id = data.get("session_id")   # (used safely below if exists)
+    session_id = data.get("session_id")
     user_id = data.get("user_id")
     query = data.get("message")
 
@@ -245,25 +244,26 @@ def query_handling(request):
     top_k = pipeline["top_k"]
 
     # -------------------------
-    # Session (SAFE ADD, minimal change)
+    # Session
     # -------------------------
     session = None
     if session_id:
-        session = Session.objects.filter(session_id=session_id).first()
+        try:
+            session = Session.objects.filter(session_id=session_id).first()
+        except (ValueError, ValidationError):
+            session = None
 
     if not session:
         session = Session.objects.create(
-            session_id=session_id if session_id else uuid.uuid4(),
             workspace=workspace,
             user_id=user_id,
             title="New Session"
         )
 
     # -------------------------
-    # SAVE USER MESSAGE (NEW)
+    # Save User Message
     # -------------------------
     Message.objects.create(
-        message_id=str(uuid.uuid4()),
         session=session,
         sender="user",
         text=query
@@ -308,16 +308,18 @@ def query_handling(request):
         llm_response = f"Error generating response: {response.status_code}"
 
     # -------------------------
-    # SAVE ASSISTANT MESSAGE (NEW)
+    # Save Assistant Message
     # -------------------------
     Message.objects.create(
-        message_id=str(uuid.uuid4()),
         session=session,
         sender="assistant",
         text=llm_response
     )
 
-    return JsonResponse({"response": llm_response})
+    return JsonResponse({
+        "response": llm_response,
+        "session_id": str(session.session_id)
+    })
 
 @csrf_exempt
 def create_session(request):
