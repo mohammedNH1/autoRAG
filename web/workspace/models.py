@@ -88,11 +88,13 @@ class WorkspaceConfig(models.Model):
     embedding_model = models.CharField(max_length=100)
     chunking_strategy = models.CharField(max_length=50)
     distance_metric = models.CharField(max_length=50)
+    is_citation = models.BooleanField(default=False)
     
     # LLM parameters
     temperature = models.FloatField(default=0.7)
     top_p = models.FloatField(default=1.0)
     top_k = models.IntegerField(default=5)
+    
 
     def __str__(self):
         return f"Config {self.config_id} for Workspace {self.workspace.workspace_id}"
