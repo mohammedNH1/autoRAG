@@ -6,6 +6,10 @@ import arabic_reshaper        # for fixing Arabic character shapes for NLP/embed
 from transformers import AutoTokenizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,  # used by: paragraph, hierarchical
+    CharacterTextSplitter,           # used by: structure, page
+)
 
 
 # ─────────────────────────────────────────────
@@ -20,35 +24,37 @@ BGE  = AutoTokenizer.from_pretrained('BAAI/bge-m3')        # covers BGE-M3 (mult
 # ─────────────────────────────────────────────
 # EMBEDDING MODEL CONFIG
 # Each model carries its own tokenizer and token limit.
+# Pass the model key to parse_pdf_into_chunks — everything
+# else (tokenizer, max_tokens) is resolved automatically.
 # ─────────────────────────────────────────────
 
 @dataclass
 class EmbeddingModelConfig:
-    model_name:     str
-    tokenizer:      object  # the loaded tokenizer instance (BERT or BGE)
-    max_tokens:     int     # safe token limit for chunking with this model
+    model_name:  str
+    tokenizer:   object  # the loaded tokenizer instance (BERT or BGE)
+    max_tokens:  int     # safe token limit for chunking with this model
 
 
 EMBEDDING_MODELS = {
     'minilm': EmbeddingModelConfig(
-        model_name     = 'sentence-transformers/all-MiniLM-L6-v2',
-        tokenizer      = BERT,
-        max_tokens     = 256,   # MiniLM hard limit — trained on 256 tokens
+        model_name  = 'MiniLM',
+        tokenizer   = BERT,
+        max_tokens  = 256,   # MiniLM hard limit — trained on 256 tokens
     ),
     'mpnet': EmbeddingModelConfig(
-        model_name     = 'sentence-transformers/all-mpnet-base-v2',
-        tokenizer      = BERT,
-        max_tokens     = 384,   # window is 512 but quality drops at edges, 384 is safer
+        model_name  = 'mpnet',
+        tokenizer   = BERT,
+        max_tokens  = 384,   # window is 512 but quality drops at edges, 384 is safer
     ),
     'e5_large': EmbeddingModelConfig(
-        model_name     = 'intfloat/e5-large-v2',
-        tokenizer      = BERT,
-        max_tokens     = 512,   # full context window, E5 uses it well
+        model_name  = 'e5-large',
+        tokenizer   = BERT,
+        max_tokens  = 512,   # full context window, E5 uses it well
     ),
     'bge_m3': EmbeddingModelConfig(
-        model_name     = 'BAAI/bge-m3',
-        tokenizer      = BGE,
-        max_tokens     = 512,   # supports 8192 but 512 gives better RAG retrieval precision
+        model_name  = 'bge-m3',
+        tokenizer   = BGE,
+        max_tokens  = 512,   # supports 8192 but 512 gives better RAG retrieval precision
     ),
 }
 
@@ -84,19 +90,6 @@ def fix_arabic_characters(sentence: str) -> str:
 
 
 def process_mixed_language_text(raw_text: str) -> str:
-    """
-    Process text that may contain both Arabic and English sentences.
-
-    Splits the text into sentences, then checks each sentence individually.
-    Arabic sentences are reshaped to fix character joining.
-    English sentences are left unchanged.
-
-    This sentence-level approach avoids mistakenly reshaping English text
-    when a page contains both languages.
-
-    Returns the fully processed text as a single string.
-    """
-    # Split on punctuation followed by whitespace, or on newlines
     sentences = re.split(r'(?<=[.!?؟।])\s+|\n', raw_text)
 
     processed_sentences = []
@@ -105,52 +98,61 @@ def process_mixed_language_text(raw_text: str) -> str:
             sentence = fix_arabic_characters(sentence)
         processed_sentences.append(sentence)
 
-    return " ".join(processed_sentences)
+    return "\n\n".join(processed_sentences)  # preserve paragraph breaks
 
 
 def clean_extracted_text(text: str) -> str:
-    text = re.sub(r'\n+', '\n', text)   # collapse multiple newlines into one
-    text = re.sub(r' +', ' ', text)     # collapse multiple spaces into one
-    return text.strip()                  # remove leading/trailing whitespace
+     text = re.sub(r'\n{3,}', '\n\n', text)  # keep double newlines, collapse only 3+
+     text = re.sub(r' +', ' ', text)          # collapse multiple spaces into one
+     return text.strip()
 
 
 # ─────────────────────────────────────────────
 # SHARED HELPER
-# Used by strategies that produce variable-length chunks
-# to guarantee nothing exceeds the model's token limit
+# Final accurate token check — used by all strategies
+# that produce variable-length chunks
 # ─────────────────────────────────────────────
 
 def enforce_token_limit(chunks: list[str], tokenizer, max_tokens: int) -> list[str]:
     """
     Safety pass: if any chunk exceeds max_tokens, split it further.
 
+    LangChain splits by character count (chunk_size = max_tokens * 4).
+    This is an approximation — 1 token ≈ 4 chars in English but varies.
+    enforce_token_limit() does the final accurate check using the real tokenizer.
+
     Args:
         chunks:     List of text chunks to check.
-        tokenizer:  The model's tokenizer — used to count tokens accurately.
+        tokenizer:  The model's tokenizer.
         max_tokens: The model's token limit from EmbeddingModelConfig.
+
     Returns a new list of chunks, all within the token limit.
     """
     safe_chunks = []
     for chunk in chunks:
         tokens = tokenizer.encode(chunk, add_special_tokens=False)
         if len(tokens) <= max_tokens:
-            safe_chunks.append(chunk)           # fits — keep as-is
+            safe_chunks.append(chunk)
         else:
             # Too long — split into token-accurate sub-chunks
             for i in range(0, len(tokens), max_tokens):
-                sub_chunk = tokenizer.decode(tokens[i: i + max_tokens])
-                safe_chunks.append(sub_chunk)
+                sub_chunk = tokenizer.decode(
+                    tokens[i: i + max_tokens],
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=True
+)
     return safe_chunks
 
 
 # ─────────────────────────────────────────────
 # CHUNKING — STRATEGY 1
 # Simple overlapping word-based chunks
+# Best for: quick baseline, short uniform documents
 # ─────────────────────────────────────────────
 
 def split_text_into_chunks(text: str, chunk_size: int = 100, overlap: int = 10) -> list[str]:
     """
-    Split a long text into smaller overlapping chunks for embedding.
+    Split a long text into smaller overlapping word-based chunks.
 
     Args:
         text:       The full text to split.
@@ -173,6 +175,7 @@ def split_text_into_chunks(text: str, chunk_size: int = 100, overlap: int = 10) 
 # ─────────────────────────────────────────────
 # CHUNKING — STRATEGY 2
 # Large overlapping token-aware chunks
+# Best for: long dense docs, legal/technical text
 # ─────────────────────────────────────────────
 
 def split_text_large_overlap(text: str, tokenizer, max_tokens: int, overlap_tokens: int = 128) -> list[str]:
@@ -189,12 +192,13 @@ def split_text_large_overlap(text: str, tokenizer, max_tokens: int, overlap_toke
     Returns a list of text chunk strings.
     """
     tokens = tokenizer.encode(text, add_special_tokens=False)
-    step   = max_tokens - overlap_tokens  # how far to advance each iteration
+    step   = max_tokens - overlap_tokens
     chunks = []
 
     for start_index in range(0, len(tokens), step):
         chunk_tokens = tokens[start_index: start_index + max_tokens]
-        chunk        = tokenizer.decode(chunk_tokens)
+        chunk        = tokenizer.decode(chunk_tokens, skip_special_tokens=True,
+                                        clean_up_tokenization_spaces=True)  # ← add this
         chunks.append(chunk)
 
     return chunks
@@ -203,127 +207,215 @@ def split_text_large_overlap(text: str, tokenizer, max_tokens: int, overlap_toke
 # ─────────────────────────────────────────────
 # CHUNKING — STRATEGY 3
 # Semantic chunking
+# Best for: mixed-topic docs, articles, reports
 # ─────────────────────────────────────────────
+# ── module level — loads once when the file is imported ──
+SENTENCE_MODEL = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2') #design choice , need discussion  
+
 
 def split_text_semantic(text: str, tokenizer, max_tokens: int,
                         threshold: float = 0.5, min_sentences: int = 3) -> list[str]:
     """
-    Split text into chunks based on semantic similarity between sentences.
-
-    How it works:
-        1. Split text into individual sentences.
-        2. Embed every sentence using MiniLM (fast, good enough for boundary detection).
-        3. Compare each sentence to the next using cosine similarity.
-        4. When similarity drops below the threshold, a topic shift is detected
-           and a new chunk begins.
-        5. enforce_token_limit() ensures no semantic chunk exceeds the model's
-           token budget — semantic boundaries don't guarantee token count.
+    Split text based on semantic similarity between sentences.
+    Uses MiniLM for boundary detection, then enforce_token_limit() for size.
 
     Args:
         text:          The full text to split.
-        tokenizer:     From EmbeddingModelConfig.tokenizer — used for token limit check.
-        max_tokens:    From EmbeddingModelConfig.max_tokens — used for token limit check.
-        threshold:     Cosine similarity cutoff (0.0–1.0).
-                       Lower = more chunks. Higher = fewer, larger chunks.
+        tokenizer:     From EmbeddingModelConfig.tokenizer — for token limit check.
+        max_tokens:    From EmbeddingModelConfig.max_tokens — for token limit check.
+        threshold:     Cosine similarity cutoff. Lower = more chunks.
         min_sentences: Minimum sentences before a chunk boundary is allowed.
 
     Returns a list of text chunk strings, all within max_tokens.
     """
-    # Split into sentences on common punctuation
     sentences = re.split(r'(?<=[.!?؟])\s+', text)
     sentences = [s.strip() for s in sentences if s.strip()]
 
     if len(sentences) <= min_sentences:
-        return [text]  # too short to bother splitting
+        return [text]
 
-    # MiniLM used for boundary detection only — fast and accurate enough.
-    # The actual RAG embedding uses whichever model the user picked.
-    embed_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-    embeddings  = embed_model.encode(sentences, show_progress_bar=False)
-
+    embeddings    = SENTENCE_MODEL.encode(sentences, show_progress_bar=False)
     chunks        = []
     current_chunk = [sentences[0]]
 
     for i in range(1, len(sentences)):
-        # Compare current sentence embedding to the previous one
         sim = cosine_similarity(
             embeddings[i - 1].reshape(1, -1),
             embeddings[i].reshape(1, -1)
         )[0][0]
 
-        # Low similarity = topic shift = start a new chunk
-        # But respect min_sentences to avoid micro-chunks
         if sim < threshold and len(current_chunk) >= min_sentences:
             chunks.append(" ".join(current_chunk))
             current_chunk = [sentences[i]]
         else:
             current_chunk.append(sentences[i])
 
-    # Flush the last chunk
     if current_chunk:
         chunks.append(" ".join(current_chunk))
 
-    # Semantic boundaries don't guarantee token count — enforce the model's limit
     return enforce_token_limit(chunks, tokenizer, max_tokens)
 
 
 # ─────────────────────────────────────────────
 # CHUNKING — STRATEGY 4
 # Document-structure chunking
+# LangChain: CharacterTextSplitter on double newlines
+# Best for: structured PDFs with clear section breaks
 # ─────────────────────────────────────────────
 
 def split_text_by_structure(text: str, tokenizer, max_tokens: int) -> list[str]:
     """
-    Split text using document structure signals (headings, section breaks).
+    Split text on double newlines using LangChain CharacterTextSplitter.
+
+    Why LangChain:
+        CharacterTextSplitter splits strictly on a chosen separator (\n\n).
+        This maps directly to section/paragraph breaks in structured documents.
+        Simpler and more reliable than manual heading regex detection.
 
     How it works:
-        1. Detect structural boundaries: headings (short ALL-CAPS or numbered lines),
-           double newlines (paragraph breaks), horizontal rules.
-        2. Accumulate lines into a section until a boundary is hit.
-        3. enforce_token_limit() splits any oversized sections using the model's
-           actual tokenizer — more accurate than word counting.
+        1. CharacterTextSplitter splits on \n\n (section boundary).
+        2. chunk_size = max_tokens * 4 (approx chars — 1 token ≈ 4 chars).
+        3. enforce_token_limit() does a final accurate token check.
 
     Args:
         text:       The full text to split.
-        tokenizer:  From EmbeddingModelConfig.tokenizer — used for token limit check.
-        max_tokens: From EmbeddingModelConfig.max_tokens — used for token limit check.
+        tokenizer:  From EmbeddingModelConfig.tokenizer — for token limit check.
+        max_tokens: From EmbeddingModelConfig.max_tokens.
 
     Returns a list of text chunk strings, all within max_tokens.
     """
-    # Patterns that signal a new section is starting
-    heading_pattern = re.compile(
-        r'^(\d+[\.\)]\s+\w)'           # numbered: "1. Introduction" or "2) Scope"
-        r'|^([A-Z][A-Z\s]{4,})$'       # ALL CAPS heading: "BACKGROUND", "DEFINITIONS"
-        r'|^(#{1,3}\s)'                 # markdown-style: "## Section"
-        r'|^(={3,}|-{3,})$',           # horizontal rule: "===" or "---"
-        re.MULTILINE
+    splitter = CharacterTextSplitter(
+        separator       = "\n\n",          # split on double newline = section break
+        chunk_size      = max_tokens * 4,  # approx chars — 1 token ≈ 4 chars in English
+        chunk_overlap   = 0,               # no overlap — each section is self-contained
+        length_function = len,
     )
+    chunks = splitter.split_text(text)
+    return enforce_token_limit(chunks, tokenizer, max_tokens)
 
-    lines    = text.split('\n')
-    sections = []
-    current  = []
 
-    for line in lines:
-        stripped = line.strip()
+# ─────────────────────────────────────────────
+# CHUNKING — STRATEGY 5
+# Page-based chunking
+# LangChain: CharacterTextSplitter on single newlines
+# Best for: slides, reports — each page is a self-contained unit
+# ─────────────────────────────────────────────
 
-        is_heading       = bool(heading_pattern.match(stripped))
-        is_blank         = stripped == ''
-        is_section_break = is_heading or (is_blank and len(current) > 2)
+def split_text_by_page(page_text: str, tokenizer, max_tokens: int) -> list[str]:
+    """
+    Treat each PDF page as one chunk, split further only if too long.
 
-        if is_section_break and current:
-            sections.append('\n'.join(current).strip())
-            current = []
+    Why LangChain:
+        CharacterTextSplitter with separator="\n" keeps the page as one chunk
+        unless it exceeds the limit — then splits on line boundaries cleanly.
+        Better than enforce_token_limit alone which cuts mid-sentence.
 
-        if stripped:  # skip blank lines themselves, keep content
-            current.append(stripped)
+    How it works:
+        1. Try to keep the full page as one chunk.
+        2. If too long, split on \n (line boundaries).
+        3. enforce_token_limit() does a final accurate token check.
 
-    # Flush the last section
-    if current:
-        sections.append('\n'.join(current).strip())
+    Args:
+        page_text:  The full cleaned text of one PDF page.
+        tokenizer:  From EmbeddingModelConfig.tokenizer — for token limit check.
+        max_tokens: From EmbeddingModelConfig.max_tokens.
 
-    # Filter empty sections then enforce the model's token limit
-    sections = [s for s in sections if s.strip()]
-    return enforce_token_limit(sections, tokenizer, max_tokens)
+    Returns a list of text chunk strings, all within max_tokens.
+    """
+    if not page_text.strip():
+        return []
+
+    splitter = CharacterTextSplitter(
+        separator       = "\n",            # split on line breaks when page is too long
+        chunk_size      = max_tokens * 4,  # approx chars
+        chunk_overlap   = 0,
+        length_function = len,
+    )
+    chunks = splitter.split_text(page_text)
+    return enforce_token_limit(chunks, tokenizer, max_tokens)
+
+
+# ─────────────────────────────────────────────
+# CHUNKING — STRATEGY 6
+# Paragraph-based chunking
+# LangChain: RecursiveCharacterTextSplitter with paragraph fallback
+# Best for: articles, books, essays
+# ─────────────────────────────────────────────
+
+def split_text_by_paragraph(text: str, tokenizer, max_tokens: int) -> list[str]:
+    """
+    Split text at paragraph boundaries using LangChain RecursiveCharacterTextSplitter.
+
+    Why LangChain:
+        RecursiveCharacterTextSplitter tries separators in order:
+        \n\n → \n → " " → ""
+        This solves the problem where split(\n\n) alone produced one giant chunk
+        because PyMuPDF extractions often have no double newlines.
+        LangChain falls back to single newline automatically — no manual fix needed.
+
+    How it works:
+        1. Try \n\n (paragraph break) first.
+        2. If chunks still too large, try \n (line break).
+        3. If still too large, try " " (word break).
+        4. enforce_token_limit() does a final accurate token check.
+
+    Args:
+        text:       The full text to split.
+        tokenizer:  From EmbeddingModelConfig.tokenizer — for token limit check.
+        max_tokens: From EmbeddingModelConfig.max_tokens.
+
+    Returns a list of text chunk strings, all within max_tokens.
+    """
+    splitter = RecursiveCharacterTextSplitter(
+        separators      = ["\n\n", "\n", " ", ""],  # paragraph → line → word → char
+        chunk_size      = max_tokens * 4,            # approx chars
+        chunk_overlap   = 50,                        # small overlap to avoid cutting mid-idea
+        length_function = len,
+    )
+    chunks = splitter.split_text(text)
+    return enforce_token_limit(chunks, tokenizer, max_tokens)
+
+
+# ─────────────────────────────────────────────
+# CHUNKING — STRATEGY 7
+# Hierarchical chunking
+# LangChain: RecursiveCharacterTextSplitter with sentence-aware separators
+# Best for: long structured docs — legal cases, technical manuals
+# ─────────────────────────────────────────────
+
+def split_text_hierarchical(text: str, tokenizer, max_tokens: int) -> list[str]:
+    """
+    Two-level split: sections then sentences, using LangChain RecursiveCharacterTextSplitter.
+
+    Why LangChain:
+        RecursiveCharacterTextSplitter tries separators from coarsest to finest:
+        \n\n (section) → \n (line) → ". " (sentence) → " " (word)
+        This naturally implements the two-level hierarchy without manual heading
+        detection — works even when PDFs have no headings at all.
+        chunk_overlap=128 ensures context carries across boundaries.
+
+    How it works:
+        1. Try \n\n first — catches section/paragraph breaks.
+        2. Fall back to \n — catches line breaks within sections.
+        3. Fall back to ". " — catches sentence boundaries.
+        4. Fall back to " " — word boundaries as last resort.
+        5. enforce_token_limit() does a final accurate token check.
+
+    Args:
+        text:       The full text to split.
+        tokenizer:  From EmbeddingModelConfig.tokenizer — for token counting.
+        max_tokens: From EmbeddingModelConfig.max_tokens.
+
+    Returns a list of text chunk strings, all within max_tokens.
+    """
+    splitter = RecursiveCharacterTextSplitter(
+        separators      = ["\n\n", "\n", ". ", " ", ""],  # coarse → fine hierarchy
+        chunk_size      = max_tokens * 4,                  # approx chars
+        chunk_overlap   = 128,                             # overlap preserves cross-boundary context
+        length_function = len,
+    )
+    chunks = splitter.split_text(text)
+    return enforce_token_limit(chunks, tokenizer, max_tokens)
 
 
 # ─────────────────────────────────────────────
@@ -331,19 +423,18 @@ def split_text_by_structure(text: str, tokenizer, max_tokens: int) -> list[str]:
 # ─────────────────────────────────────────────
 
 def extract_text_from_page(page) -> tuple[str, str]:
-    """
-    Extract and process text from a single PDF page.
+    # Use "blocks" to preserve paragraph boundaries
+    blocks = page.get_text("blocks")  # returns list of (x0,y0,x1,y1,text,block_no,block_type)
 
-    Handles both Arabic and English content, including mixed-language pages.
-    Uses sentence-level language detection to reshape only Arabic sentences.
+    if not blocks:
+        return "", "en"
 
-    Returns a tuple of:
-        - processed text (str)
-        - dominant language code (str), e.g. 'ar' or 'en'
-    """
-    raw_text = page.get_text()
+    # Join blocks with double newline — each block is a paragraph
+    raw_text = "\n\n".join(
+        b[4].strip() for b in blocks
+        if b[4].strip() and b[6] == 0  # b[6]==0 means text block, not image
+    )
 
-    # Skip pages with no extractable text (e.g. scanned image pages)
     if not raw_text.strip():
         return "", "en"
 
@@ -351,46 +442,38 @@ def extract_text_from_page(page) -> tuple[str, str]:
     dominant_language = detect_dominant_language(processed_text)
 
     return processed_text, dominant_language
-
-
 # ─────────────────────────────────────────────
 # MAIN PIPELINE
 # ─────────────────────────────────────────────
 
 def parse_pdf_into_chunks(
     file_path:  str,
-    model_key:  str   = 'all-MiniLM-L6-v2',  # key from EMBEDDING_MODELS
-    strategy:   str   = 'simple',             # simple | large | semantic | structure
-    chunk_size: int   = 100,                  # [simple] words per chunk
-    overlap:    int   = 10,                   # [simple] overlapping words
-    threshold:  float = 0.5,                  # [semantic] cosine similarity cutoff
+    model_key:  str   = 'minilm',   # key from EMBEDDING_MODELS
+    strategy:   str   = 'simple',   # simple | large | semantic | structure | page | paragraph | hierarchical
+    chunk_size: int   = 100,        # [simple] words per chunk
+    overlap:    int   = 10,         # [simple] overlapping words
+    threshold:  float = 0.5,        # [semantic] cosine similarity cutoff
 ) -> list[dict]:
     """
     Full pipeline: extract text from a PDF and split into chunks for RAG.
 
-    Tokenizer and max_tokens are resolved automatically from model_key —
-    no need to pass them manually.
-
-    For each page:
-        1. Extract raw text using PyMuPDF
-        2. Fix Arabic character shaping (if needed)
-        3. Clean up whitespace
-        4. Split using the chosen strategy with the correct tokenizer
-        5. Store each chunk with its metadata
+    Tokenizer and max_tokens are resolved automatically from model_key.
 
     Args:
         file_path:  Path to the PDF file.
-        model_key:  Key from EMBEDDING_MODELS. Determines which tokenizer
-                    and max_tokens to use. One of:
-                        'all-MiniLM-L6-v2'     (256 tokens, BERT tokenizer)
-                        'all-mpnet-base-v2'    (384 tokens, BERT tokenizer)
-                        'intfloat/e5-large-v2' (512 tokens, BERT tokenizer)
-                        'BAAI/bge-m3'          (512 tokens, BGE  tokenizer)
+        model_key:  Key from EMBEDDING_MODELS. One of:
+                        'minilm'    (256 tokens, BERT tokenizer)
+                        'mpnet'     (384 tokens, BERT tokenizer)
+                        'e5_large'  (512 tokens, BERT tokenizer)
+                        'bge_m3'    (512 tokens, BGE  tokenizer)
         strategy:   Chunking strategy. One of:
-                        'simple'    — word-based overlap (fast, no tokenizer needed)
-                        'large'     — token-aware large overlap
-                        'semantic'  — topic-boundary detection
-                        'structure' — heading/section-aware splitting
+                        'simple'       — word-based overlap, fast baseline
+                        'large'        — token-aware large overlap, best for legal/technical
+                        'semantic'     — topic-boundary detection, best for mixed-topic docs
+                        'structure'    — LangChain split on \n\n, best for structured PDFs
+                        'page'         — LangChain split on \n, best for slides/reports
+                        'paragraph'    — LangChain recursive \n\n→\n→word, best for articles/books
+                        'hierarchical' — LangChain recursive \n\n→\n→sentence, best for long structured docs
         chunk_size: [simple only] words per chunk.
         overlap:    [simple only] overlapping words between chunks.
         threshold:  [semantic only] cosine similarity cutoff for topic boundary.
@@ -409,7 +492,6 @@ def parse_pdf_into_chunks(
             }
         }
     """
-    # Resolve tokenizer and max_tokens from config — no manual passing needed
     if model_key not in EMBEDDING_MODELS:
         raise ValueError(f"Unknown model_key '{model_key}'. Choose from: {list(EMBEDDING_MODELS.keys())}")
 
@@ -424,7 +506,6 @@ def parse_pdf_into_chunks(
         page_text, dominant_language = extract_text_from_page(page)
         cleaned_text = clean_extracted_text(page_text)
 
-        # Skip pages that are empty after cleaning
         if not cleaned_text:
             continue
 
@@ -441,10 +522,18 @@ def parse_pdf_into_chunks(
         elif strategy == 'structure':
             page_chunks = split_text_by_structure(cleaned_text, tokenizer, max_tokens)
 
-        else:
-            raise ValueError(f"Unknown strategy '{strategy}'. Choose: simple, large, semantic, structure")
+        elif strategy == 'page':
+            page_chunks = split_text_by_page(cleaned_text, tokenizer, max_tokens)
 
-        # ── Store chunks with metadata ────────────────────────
+        elif strategy == 'paragraph':
+            page_chunks = split_text_by_paragraph(cleaned_text, tokenizer, max_tokens)
+
+        elif strategy == 'hierarchical':
+            page_chunks = split_text_hierarchical(cleaned_text, tokenizer, max_tokens)
+
+        else:
+            raise ValueError(f"Unknown strategy '{strategy}'. Choose: simple, large, semantic, structure, page, paragraph, hierarchical")
+
         for chunk_index, chunk_text in enumerate(page_chunks):
             if not chunk_text.strip():
                 continue
@@ -452,12 +541,12 @@ def parse_pdf_into_chunks(
                 "text": chunk_text,
                 "metadata": {
                     "source":      file_path,
-                    "page":        page_number + 1,  # convert to 1-based page numbering
+                    "page":        page_number + 1,
                     "language":    dominant_language,
-                    "chunk_index": chunk_index,       # 0-based index within the page
+                    "chunk_index": chunk_index,
                     "strategy":    strategy,
-                    "model":       model_key,         # which embedding model this chunk is for
-                    "token_limit": max_tokens,        # max tokens enforced for this model
+                    "model":       model_key,
+                    "token_limit": max_tokens,
                 }
             })
 
@@ -470,37 +559,11 @@ def parse_pdf_into_chunks(
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
+    from pathlib import Path
+    FILE = str(Path(__file__).parent / "singapore-court-case1.pdf")
 
-    FILE = "singapore-court-case1.pdf"
+    strategies = ['simple', 'large', 'semantic', 'structure', 'page', 'paragraph', 'hierarchical']
 
-    # ── Strategy 1: simple — no tokenizer needed ────────────
-    chunks_simple = parse_pdf_into_chunks(
-        FILE, model_key='all-MiniLM-L6-v2', strategy='simple', chunk_size=100, overlap=10
-    )
-    print(f"[simple / MiniLM]     Total chunks: {len(chunks_simple)}")
-
-    # ── Strategy 2: large overlap — BGE tokenizer, 512 tokens ─
-    chunks_large = parse_pdf_into_chunks(
-        FILE, model_key='BAAI/bge-m3', strategy='large'
-    )
-    print(f"[large / BGE-M3]      Total chunks: {len(chunks_large)}")
-
-    # ── Strategy 3: semantic — BERT tokenizer, 384 tokens ───
-    chunks_semantic = parse_pdf_into_chunks(
-        FILE, model_key='all-mpnet-base-v2', strategy='semantic', threshold=0.5
-    )
-    print(f"[semantic / MPNet]    Total chunks: {len(chunks_semantic)}")
-
-    # ── Strategy 4: structure — BERT tokenizer, 512 tokens ──
-    chunks_structure = parse_pdf_into_chunks(
-        FILE, model_key='intfloat/e5-large-v2', strategy='structure'
-    )
-    print(f"[structure / E5]      Total chunks: {len(chunks_structure)}")
-
-    # ── Preview first 3 chunks ───────────────────────────────
-    print("\n── Preview (semantic / MPNet) ──────────────────────")
-    for chunk in chunks_semantic[:3]:
-        m = chunk['metadata']
-        print(f"Page {m['page']} | Lang: {m['language']} | Model: {m['model']} | Limit: {m['token_limit']} tokens")
-        print(chunk["text"])
-        print("─" * 50)
+    for strategy in strategies:
+        chunks = parse_pdf_into_chunks(FILE, model_key='minilm', strategy=strategy)
+        print(f"[{strategy:<12}] Total chunks: {len(chunks)}")

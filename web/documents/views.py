@@ -446,7 +446,7 @@ def chunk_document(file_path: str, model_key: str, strategy: str = 'simple') -> 
     Args:
         file_path:  Path to the uploaded PDF.
         model_key:  Key from EMBEDDING_MODELS — determines tokenizer + token limit.
-        strategy:   'simple' | 'large' | 'semantic' | 'structure'
+        strategy: # simple | large | semantic | structure | page | paragraph | hierarchical
 
     Returns list of chunk dicts ready for embedding and indexing.
     """
