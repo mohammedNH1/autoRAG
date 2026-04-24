@@ -128,6 +128,7 @@ def save_file(request):
             additional_metadata={
                 "page": metadata['page'],
                 "language": metadata['language'],
+                "source":   metadata['source'],
             }
         )
 
