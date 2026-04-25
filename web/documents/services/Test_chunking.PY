@@ -1,11 +1,19 @@
 import parsing_service
+import fitz  # PyMuPDF
 
 from pathlib import Path
 
-PDF_FILE = Path(__file__).parent / "singapore-court-case1.pdf"
+PDF_FILE = Path(__file__).parent / "1706.03762v7.pdf"
 MODEL_KEY = "minilm"
-STRATEGY  = "structure" # simple, large, semantic, structure
-PREVIEW   = 3
+STRATEGY  = "hierarchical" # simple | large | semantic | structure | page | paragraph | hierarchical
+PREVIEW   = 10
+
+
+doc = fitz.open("/app/web/documents/services/1706.03762v7.pdf")
+page = doc[0]
+raw = page.get_text()
+print(repr(raw[:500]))  # show exact characters including \n
+doc.close()
 
 def test_chunking(pdf_file, model_key, strategy, preview):
     print(f"\n{'─' * 50}")
@@ -28,7 +36,7 @@ def test_chunking(pdf_file, model_key, strategy, preview):
 
     for i, chunk in enumerate(chunks[:preview]):
         m = chunk['metadata']
-        print(f"[Chunk {i}] Page {m['page']} | Lang: {m['language']} | Tokens limit: {m['token_limit']}")
+        print(chunk)
         print(f"{chunk['text'][:300]}")
         print(f"{'─' * 50}")
 

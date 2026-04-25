@@ -28,6 +28,7 @@ def questionnaire(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     # Extract values from JSON
+    
     language = data.get("language")
     use_case = data.get("use_case")
     reference_value = data.get("reference")
@@ -36,6 +37,7 @@ def questionnaire(request):
     uptodate_value = data.get("uptodate")
     metadata_value = data.get("metadata")
     chunking_value = data.get("chunking_strategy")
+    is_citation_value = data.get("is_citation", False)
 
     # Process logic
     embedding_config = embedding_reranker(language, use_case)
@@ -67,7 +69,8 @@ def questionnaire(request):
         distance_metric="cosine", # placeholder, (is it always cosine?)
         temperature=temp_value,
         top_p=top_p_final,
-        top_k=k_value
+        top_k=k_value,
+        is_citation=is_citation_value,
     )
     return JsonResponse({
         "status": "success",
@@ -222,6 +225,7 @@ def chat_page(request, workspace_id):
     workspace = Workspace.objects.get(workspace_id=workspace_id)
     get_pipeline(workspace_id, workspace.config)
     return render(request, "chat.html", {"workspace_id": workspace_id})
+
 @csrf_exempt
 @login_required
 def query_handling(request):
@@ -240,7 +244,7 @@ def query_handling(request):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    workspace_id = data.get("workspace_id")
+    workspace_id = int(data.get("workspace_id"))
     session_id = data.get("session_id")
     query = (data.get("message") or "").strip()
 
@@ -270,6 +274,7 @@ def query_handling(request):
 
     config = workspace.config
     embedding_model_name = config.embedding_model
+    is_citation = config.is_citation                  # ← read citation flag
     pipeline = get_pipeline(workspace_id, config)
 
     embedding_model = pipeline["embedding_model"]
@@ -314,7 +319,7 @@ def query_handling(request):
         text=query
     )
 
-    embedded_query = embedding_model.encode(query)
+    embedded_query = EmbeddingService.embed_text(query, embedding_model_name)
 
     qdrant = QdrantService(host="qdrant", port=6333)
 
@@ -322,18 +327,56 @@ def query_handling(request):
         collection_name=f"documents__{embedding_model_mapping[embedding_model_name]}",
         workspace_id=workspace_id,
         query_vector=embedded_query,
-        top_k=top_k,
+        top_k=top_k * 10,
     )
-
-    pairs = [(query, chunk["text"]) for chunk in chunks]
+    print("this is the chunks before reranking:", len(chunks))
+    pairs = [(query, chunk["payload"]["text"]) for chunk in chunks]
     scores = reranker.predict(pairs)
 
     ranked_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)
-    top_chunks_for_llm = [chunk["text"] for chunk, score in ranked_chunks][:top_k]
 
+    print("\n\n========== RERANK DEBUG ==========\n")
+    for i, (chunk, score) in enumerate(ranked_chunks[:5]):
+        print(f"{i+1}. Score: {score:.4f}")
+        print(chunk['payload']["text"][:100])
+        print("-" * 50)
+    print("\n========== END DEBUG ==========\n\n")
+
+    top_ranked = ranked_chunks[:top_k]
+    top_chunks_for_llm = [chunk['payload']["text"] for chunk, score in top_ranked]
     context = "\n\n".join(top_chunks_for_llm)
 
-    prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
+    # -------------------------
+    # Citations (only if is_citation=True)
+    # -------------------------
+    sources = []
+    if is_citation:
+        seen = set()
+        for chunk, score in top_ranked:
+            payload     = chunk['payload']
+            document_id = payload.get("document_id")
+            page        = payload.get("page")
+            source      = payload.get("source", f"Document {document_id}")
+            key = (document_id, page)
+            if key not in seen:
+                seen.add(key)
+                sources.append({
+                    "document_id": document_id,
+                    "page":        page,
+                    "source":      source,
+                })
+
+        source_lines = "\n".join(
+            f"- {s['source']}, page {s['page']}" for s in sources
+        )
+        prompt = (
+            f"Answer the following question based on the context below.\n"
+            f"At the end of your answer, cite the sources used from this list:\n{source_lines}\n\n"
+            f"Context:\n{context}\n\n"
+            f"Question: {query}"
+        )
+    else:
+        prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
 
     ollama_url = "http://ollama:11434/api/generate"
     payload = {
