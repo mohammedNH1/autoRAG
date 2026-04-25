@@ -19,7 +19,7 @@
             </div>
 
             <nav class="sidebar-nav">
-                <a href="{% url 'workspace_chat' %}" class="sidebar-icon active" title="Sessions">
+                <a href="{% url 'chat_page' workspace_id %}" class="sidebar-icon active" title="Sessions">
                     <img src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="Sessions" width="24" height="24">
                 </a>
 
@@ -27,7 +27,7 @@
                     <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="Members" width="24" height="24">
                 </button>
 
-                <a href="{% url 'documents:documents_page' %}" class="sidebar-icon" title="Documents">
+                <a href="{% url 'documents:documents_page' workspace_id %}" class="sidebar-icon" title="Documents">
                     <img src="{% static 'Sidebar_icons/Documents.svg' %}" alt="Documents" width="24" height="24">
                 </a>
 
@@ -61,14 +61,15 @@
 
             <div class="sessions-list">
                 {% for session in sessions %}
-                <div
-                    class="session-item{% if session.is_active %} active{% endif %}"
-                    data-session-id="{{ session.id }}"
+                <a
+                    class="session-item{% if active_session and session.session_id == active_session.session_id %} active{% endif %}"
+                    href="{% url 'chat_session' workspace_id session.session_id %}"
+                    data-session-id="{{ session.session_id }}"
                     data-session-name="{{ session.title }}"
                 >
                     <div class="session-indicator"></div>
                     <span class="session-title">{{ session.title }}</span>
-                </div>
+                </a>
                 {% endfor %}
             </div>
         </aside>
@@ -91,11 +92,8 @@
             </header>
 
             <!-- Chat Messages -->
-            <div class="chat-messages" id="chatMessages">
-                <div class="messages-loading">
-                    <div class="spinner"></div>
-                    <p>Loading messages...</p>
-                </div>
+            <div class="chat-messages" id="chatMessages" data-active-session-id="{{ active_session_id }}">
+                {# Rendered client-side by chat.js from window.CHAT_CONFIG.initialMessages. #}
             </div>
 
             <!-- Input Composer -->
@@ -134,11 +132,16 @@
         </div>
     </div>
 
+    {{ initial_messages_json|json_script:"initial-messages-data" }}
     <script>
         window.CHAT_CONFIG = {
             apiBaseUrl: '{{ api_base_url|default:"" }}',
             workspaceId: '{{ workspace_id|default:1 }}',
             userId: '{{ request.user.id|default:"" }}',
+            activeSessionId: '{{ active_session_id|default:"" }}',
+            createSessionUrl: '{{ create_session_url }}',
+            workspaceChatRootUrl: '{{ workspace_chat_root_url }}',
+            initialMessages: JSON.parse(document.getElementById('initial-messages-data').textContent || '[]'),
             frontendOnly: false
         };
     </script>

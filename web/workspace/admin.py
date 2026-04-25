@@ -1,18 +1,5 @@
-
-
-# Register your models here.
-# admin.site.register(User)
-# admin.site.register(Workspace)
-# admin.site.register(WorkspaceMembership)
-# admin.site.register(WorkspaceConfig)
-
 from django.contrib import admin
-from .models import User, Workspace, WorkspaceMembership, WorkspaceConfig , Session, Message
-
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ("user_id", "name", "email")
-    search_fields = ("name", "email")
+from .models import Workspace, WorkspaceMembership, WorkspaceConfig, Session, Message
 
 
 @admin.register(Workspace)
@@ -38,7 +25,8 @@ class SessionAdmin(admin.ModelAdmin):
     list_display = ("session_id", "workspace", "user", "title", "created_at")
     list_filter = ("workspace", "user")
     search_fields = ("session_id", "title")
-    readonly_fields = ("session_id", "created_at")    
+    readonly_fields = ("session_id", "created_at")
+
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
