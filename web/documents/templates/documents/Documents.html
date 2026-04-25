@@ -27,7 +27,7 @@
             </div>
 
             <nav class="sidebar-nav">
-                <a href="{% url 'workspace_chat' %}" class="sidebar-icon" title="Sessions">
+                <a href="{% url 'chat_page' workspace.workspace_id %}" class="sidebar-icon" title="Sessions">
                     <img src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="Sessions" width="24" height="24">
                 </a>
 
@@ -35,7 +35,7 @@
                     <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="Members" width="24" height="24">
                 </button>
 
-                <a href="{% url 'documents:documents_page' %}" class="sidebar-icon active" title="Documents">
+                <a href="{% url 'documents:documents_page' workspace.workspace_id %}" class="sidebar-icon active" title="Documents">
                     <img src="{% static 'Sidebar_icons/Documents.svg' %}" alt="Documents" width="24" height="24">
                 </a>
 

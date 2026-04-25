@@ -1,6 +1,6 @@
 {% load static %}
 <script>window.UPLOAD_MODAL_ICONS_BASE = "{% static 'icons' %}";</script>
-<script>window.TEXT_INPUT_URL = "{% url 'documents:text_input_page' %}";</script>
+<script>window.TEXT_INPUT_URL = "{% url 'documents:text_input_page' workspace.workspace_id %}";</script>
 <!-- Upload Modal Overlay -->
 <div class="upload-modal-overlay" id="uploadModalOverlay" style="display:none;">
     <div class="upload-modal" id="uploadModal">
@@ -300,17 +300,19 @@
                 /* Submit — actually send files to the backend */
                 submitBtn.addEventListener('click', async function () {
                     if (submitBtn.disabled) return;
-                        
-                    const workspaceId = (typeof window.WORKSPACE_ID !== 'undefined') ? window.WORKSPACE_ID : null;
+
+                    const workspaceId = (typeof window.WORKSPACE_ID !== 'undefined' && window.WORKSPACE_ID !== '')
+                        ? window.WORKSPACE_ID
+                        : null;
                     if (!workspaceId) {
-                        console.error('window.WORKSPACE_ID is not set.');
+                        alert('Workspace not loaded. Please refresh the page.');
                         return;
                     }
 
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Uploading…';
 
-                    let allSuccess = true;
+                    const failures = [];
 
                     for (const fileObj of files) {
                         const formData = new FormData();
@@ -328,23 +330,24 @@
 
                             if (!response.ok) {
                                 const err = await response.json().catch(() => ({}));
+                                const msg = err.error || ('HTTP ' + response.status);
                                 console.error('Upload error for', fileObj.name, err);
-                                allSuccess = false;
+                                failures.push(fileObj.name + ': ' + msg);
                             } else {
                                 const data = await response.json();
                                 console.log('Uploaded successfully:', fileObj.name, data);
                             }
                         } catch (err) {
                             console.error('Network error uploading', fileObj.name, err);
-                            allSuccess = false;
+                            failures.push(fileObj.name + ': network error');
                         }
                     }
 
-                    if (allSuccess) {
+                    if (failures.length === 0) {
                         closeModal();
-                        // Optional: reload the page to show newly uploaded documents
                         window.location.reload();
                     } else {
+                        alert('Upload failed:\n\n' + failures.join('\n'));
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Retry';
                     }

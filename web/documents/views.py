@@ -16,51 +16,21 @@ import time
 logger = logging.getLogger(__name__)
 
 
-def documents_page(request):
-    """
-    Render the documents page.
-    Workspace is resolved from (in priority order):
-      1. ?workspace_id=<id> query param
-      2. request.session['workspace_id']
-    """
-    workspace_id = request.GET.get("workspace_id") or request.session.get("workspace_id")
-    workspace = None
+def documents_page(request, workspace_id):
+    """Render the documents page for a specific workspace."""
+    workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
 
-    if workspace_id:
-        try:
-            #print(f'here is the workspaceID {workspace_id}')
-            workspace = Workspace.objects.get(workspace_id=workspace_id)
-            # Keep it in session so subsequent requests don't need the query param
-            request.session["workspace_id"] = workspace.workspace_id
-        except Workspace.DoesNotExist:
-            pass
-
-    # If still no workspace, fall back to the first workspace for this user
-    if workspace is None and request.user.is_authenticated:
-        workspace = Workspace.objects.filter().first()  # adjust filter as needed
-        if workspace:
-            request.session["workspace_id"] = workspace.workspace_id
-
-    documents = Document.objects.filter(workspace=workspace).order_by("-upload_time") if workspace else []
-
-    document_count = len(documents)
+    documents = Document.objects.filter(workspace=workspace).order_by("-upload_time")
 
     return render(request, "documents/Documents.html", {
         "workspace": workspace,
         "documents": documents,
-        "document_count": document_count,
+        "document_count": documents.count(),
     })
 
 
-def text_input_page(request):
-    workspace_id = request.GET.get("workspace_id") or request.session.get("workspace_id")
-    workspace = None
-
-    if workspace_id:
-        try:
-            workspace = Workspace.objects.get(workspace_id=workspace_id)
-        except Workspace.DoesNotExist:
-            pass
+def text_input_page(request, workspace_id):
+    workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
 
     return render(request, "documents/text_input.html", {
         "workspace": workspace,
@@ -81,6 +51,12 @@ def save_file(request):
         return JsonResponse({"error": "No workspace_id"}, status=400)
 
     workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
+
+    if not hasattr(workspace, 'config'):
+        return JsonResponse(
+            {"error": "This workspace has no configuration yet. Complete the questionnaire first."},
+            status=400,
+        )
 
     # --- Qdrant setup ---
     workspace_embedding_model = workspace.config.embedding_model

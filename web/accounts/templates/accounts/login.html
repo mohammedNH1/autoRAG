@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Login — AutoRAG</title>
+    <link rel="stylesheet" href="{% static 'css/accounts.css' %}">
+</head>
+<body>
+
+<div class="auth-page">
+
+    <!-- ── Left Panel ── -->
+    <div class="auth-left">
+        <div class="auth-left__decoration">
+            <img
+                src="https://www.figma.com/api/mcp/asset/d33e8cbd-253e-4cef-9548-037d41cf557c"
+                alt=""
+                aria-hidden="true"
+            >
+        </div>
+        <div class="auth-left__content">
+            <h1 class="auth-logo">AutoRAG</h1>
+            <p class="auth-tagline">Retrieve your information faster!</p>
+        </div>
+    </div>
+
+    <!-- ── Right Panel ── -->
+    <div class="auth-right">
+        <div class="auth-form-container">
+
+            <h2 class="auth-title">Hello Again!</h2>
+            <p class="auth-subtitle">Welcome Back</p>
+
+            <form class="auth-form" method="post" action="">
+                {% csrf_token %}
+
+                <!-- Email -->
+                <label class="auth-field">
+                    <span class="auth-field__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z" fill="#333"/>
+                        </svg>
+                    </span>
+                    <input
+                        class="auth-field__input"
+                        type="email"
+                        name="email"
+                        placeholder="Email Address"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <!-- Password -->
+                <label class="auth-field">
+                    <span class="auth-field__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 8H17V6C17 3.24 14.76 1 12 1C9.24 1 7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15C10 13.9 10.9 13 12 13C13.1 13 14 13.9 14 15C14 16.1 13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9C13.71 2.9 15.1 4.29 15.1 6V8Z" fill="#333"/>
+                        </svg>
+                    </span>
+                    <input
+                        class="auth-field__input"
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+
+                <button type="submit" class="auth-btn">Login</button>
+            </form>
+
+            <div class="auth-links">
+                <a href="#">Forgot Password?</a>
+                <a href="{% url 'accounts:signup' %}">You don't have an account yet?</a>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

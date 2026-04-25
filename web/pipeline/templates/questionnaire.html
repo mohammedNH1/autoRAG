@@ -177,22 +177,9 @@
 
         function submit() {
             const data = new FormData(document.getElementById('form'));
-            
-            // Map temperature to numeric value
-            const tempMap = {
-                'precise': 0.2,
-                'balanced': 0.5,
-                'creative': 0.7
-            };
-            
-            // Map top_p to numeric value
-            const topPMap = {
-                'strict': 0.2,
-                'balanced': 0.5,
-                'exploratory': 0.9
-            };
-            
-            // Map chunking strategy to readable format
+
+            // Map chunking strategy to readable format expected by the backend
+            // (pipeline/views.py -> determine_chunking_strategy)
             const chunkingMap = {
                 'slide_deck': 'slide deck',
                 'meeting_notes': 'meeting notes',
@@ -200,20 +187,63 @@
                 'research_paper': 'research paper',
                 'policy': 'policy'
             };
-            
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const workspaceId = urlParams.get('workspace_id');
+
+            // Keys below mirror pipeline/views.py:questionnaire exactly.
+            // Raw string values are sent; the backend re-maps them to numerics.
             const payload = {
-                reference: data.get('reference') === 'yes',
-                temprature: tempMap[data.get('temperature')] || 0.5,
-                top_p: topPMap[data.get('top_p')] || 0.5,
-                upToDate: data.get('upToDate') === 'yes',
-                chunking_strategy: chunkingMap[data.get('chunking_strategy')] || data.get('chunking_strategy'),
-                document_info: data.get('document_info'),
-                speed_quality: data.get('speed_quality'),
-                main_idea_or_related: data.get('main_idea_or_related'),
-                language: data.get('language')
+                language: data.get('language'),
+                use_case: data.get('speed_quality'),
+                reference: data.get('reference'),
+                temperature: data.get('temperature'),
+                top_p: data.get('top_p'),
+                uptodate: data.get('upToDate'),
+                metadata: data.get('document_info'),
+                chunking_strategy: chunkingMap[data.get('chunking_strategy')] || data.get('chunking_strategy')
             };
-            console.log('📤 Submitting:', JSON.stringify(payload, null, 2));
-            document.getElementById('successModal').style.display = 'flex';
+
+            // If a workspace_id was passed via the URL, attach it to the payload
+            // so the backend view can look up the existing Workspace record
+            // (created from the modal) and add the RAG config to it, instead
+            // of creating a brand-new workspace from scratch.
+            if (workspaceId) {
+                payload.workspace_id = parseInt(workspaceId, 10); // convert string to integer for the backend
+            }
+
+            // Log the final payload to the console for debugging purposes
+            console.log('Submitting:', JSON.stringify(payload, null, 2));
+
+            // Send the questionnaire answers to the Django backend endpoint
+            fetch('/submit-answers/', {
+                method: 'POST', // POST request with JSON body
+                headers: { 'Content-Type': 'application/json' }, // tell server we're sending JSON
+                body: JSON.stringify(payload), // serialize the payload object to a JSON string
+            })
+            .then(function (res) { return res.json(); }) // parse the JSON response from the server
+            .then(function (result) {
+                // If the backend returned a success status, show the success modal
+                if (result.status === 'success') {
+                    document.getElementById('successModal').style.display = 'flex';
+                    // After 1.5 seconds, redirect the user back to the workspace list
+                    // page so they can see their newly-configured workspace in the grid
+                    setTimeout(function () {
+                        window.location.href = '/workspace/';
+                    }, 1500);
+                } else {
+                    // If the backend returned an error, display the error message
+                    // inside the error modal so the user knows what went wrong
+                    document.getElementById('errorMessage').textContent = result.error || 'Something went wrong';
+                    document.getElementById('errorModal').style.display = 'flex';
+                }
+            })
+            .catch(function () {
+                // If the fetch itself failed (network issue, server unreachable, etc.),
+                // show a generic network error message in the error modal
+                document.getElementById('errorMessage').textContent = 'Network error. Please try again.';
+                document.getElementById('errorModal').style.display = 'flex';
+            });
         }
 
         document.querySelectorAll('.option').forEach(btn => {

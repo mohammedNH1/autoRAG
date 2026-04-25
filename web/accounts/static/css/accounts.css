@@ -1,0 +1,249 @@
+/* ============================================
+   Accounts (Login / Signup) — Figma Design
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+/* ── Page Layout ── */
+
+.auth-page {
+    display: flex;
+    min-height: 100vh;
+    background: #fff;
+}
+
+/* ── Left Panel ── */
+
+.auth-left {
+    width: 60%;
+    background: linear-gradient(to bottom, #0575e6 0%, #02298a 84.788%, #021b79 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-left__decoration {
+    position: absolute;
+    left: -204px;
+    top: 76px;
+    width: 617px;
+    height: 1222px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.auth-left__decoration img {
+    transform: rotate(-90deg);
+    width: 1222px;
+    height: 617px;
+    max-width: none;
+    flex-shrink: 0;
+    opacity: 0.9;
+}
+
+.auth-left__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 23px;
+    color: #fff;
+    text-align: center;
+}
+
+.auth-logo {
+    font-family: 'Year of Handicrafts', sans-serif;
+    font-weight: 700;
+    font-size: 54px;
+    line-height: 1;
+    color: #fff;
+}
+
+.auth-tagline {
+    font-family: 'Year of Handicrafts', sans-serif;
+    font-weight: 500;
+    font-size: 20px;
+    line-height: 25px;
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* ── Right Panel ── */
+
+.auth-right {
+    width: 40%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 36px;
+}
+
+.auth-form-container {
+    width: 500px;
+    max-width: 100%;
+}
+
+.auth-title {
+    font-family: 'Year of Handicrafts', sans-serif;
+    font-weight: 700;
+    font-size: 54px;
+    color: #333;
+    line-height: 1.1;
+    margin-bottom: 8px;
+}
+
+.auth-subtitle {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 36px;
+}
+
+/* ── Form ── */
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-field {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 30px;
+    padding: 18px 26px;
+    height: 70px;
+}
+
+.auth-field__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    opacity: 0.3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+}
+
+.auth-field__icon svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+.auth-field__input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: #333;
+    width: 100%;
+}
+
+.auth-field__input::placeholder {
+    color: #333;
+    opacity: 0.3;
+}
+
+.auth-btn {
+    width: 100%;
+    height: 67px;
+    background: #0575e6;
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.2s ease;
+}
+
+.auth-btn:hover {
+    background: #0463ca;
+}
+
+.auth-btn:active {
+    background: #0353ae;
+}
+
+/* ── Bottom Links ── */
+
+.auth-links {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.auth-links a {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: #333;
+    opacity: 0.7;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.auth-links a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 900px) {
+    .auth-left {
+        display: none;
+    }
+    .auth-right {
+        width: 100%;
+        padding: 40px 24px;
+    }
+}

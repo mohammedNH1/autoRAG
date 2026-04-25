@@ -2,9 +2,10 @@ from django.shortcuts import render
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 import requests
 from documents.services.qdrant_service import QdrantService
-from workspace.models import Workspace, WorkspaceConfig, User, WorkspaceMembership
+from workspace.models import Workspace, WorkspaceConfig, WorkspaceMembership
 from pipeline.services.pipeline_registry import get_pipeline
 from workspace.models import Message, Session
 import uuid
@@ -46,8 +47,15 @@ def questionnaire(request):
     metadata_flag = add_metadata(metadata_value)
     chunking_strategy = determine_chunking_strategy(chunking_value)
     
-    # save to DB
-    workspace = Workspace.objects.create()
+    # Use existing workspace if workspace_id provided, otherwise create new
+    workspace_id = data.get("workspace_id")
+    if workspace_id:
+        try:
+            workspace = Workspace.objects.get(workspace_id=workspace_id)
+        except Workspace.DoesNotExist:
+            workspace = Workspace.objects.create()
+    else:
+        workspace = Workspace.objects.create()
 
     # 2️⃣ Create WorkspaceConfig linked via OneToOne
     WorkspaceConfig.objects.create(
@@ -215,7 +223,10 @@ def chat_page(request, workspace_id):
     get_pipeline(workspace_id, workspace.config)
     return render(request, "chat.html", {"workspace_id": workspace_id})
 @csrf_exempt
+@login_required
 def query_handling(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
 
     embedding_model_mapping = {
         "all-MiniLM-L6-v2": "minilm",
@@ -224,14 +235,38 @@ def query_handling(request):
         "BAAI/bge-m3": "bge_m3",
     }
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
     workspace_id = data.get("workspace_id")
     session_id = data.get("session_id")
-    user_id = data.get("user_id")
-    query = data.get("message")
+    query = (data.get("message") or "").strip()
 
-    workspace = Workspace.objects.get(workspace_id=workspace_id)
+    if not workspace_id or not query:
+        return JsonResponse(
+            {'error': 'workspace_id and message are required'}, status=400
+        )
+
+    try:
+        workspace = Workspace.objects.get(workspace_id=workspace_id)
+    except Workspace.DoesNotExist:
+        return JsonResponse({'error': 'Workspace not found'}, status=404)
+
+    is_member = (
+        workspace.workspace_owner_id == request.user.id
+        or WorkspaceMembership.objects.filter(
+            workspace=workspace, user=request.user
+        ).exists()
+    )
+    if not is_member:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    if not hasattr(workspace, 'config'):
+        return JsonResponse(
+            {'error': 'Workspace is not configured yet'}, status=400
+        )
 
     config = workspace.config
     embedding_model_name = config.embedding_model
@@ -244,21 +279,31 @@ def query_handling(request):
     top_k = pipeline["top_k"]
 
     # -------------------------
-    # Session
+    # Session — must belong to this user + workspace; otherwise start a new one.
     # -------------------------
     session = None
     if session_id:
         try:
-            session = Session.objects.filter(session_id=session_id).first()
+            session = Session.objects.filter(
+                session_id=session_id,
+                workspace=workspace,
+                user=request.user,
+            ).first()
         except (ValueError, ValidationError):
             session = None
 
     if not session:
         session = Session.objects.create(
             workspace=workspace,
-            user_id=user_id,
-            title="New Session"
+            user=request.user,
+            title="New Session",
         )
+
+    # Auto-title from the first user message, ChatGPT-style.
+    is_first_message = not session.messages.exists()
+    if is_first_message and session.title == "New Session":
+        session.title = (query[:60] + "…") if len(query) > 60 else query
+        session.save(update_fields=["title"])
 
     # -------------------------
     # Save User Message
@@ -318,15 +363,7 @@ def query_handling(request):
 
     return JsonResponse({
         "response": llm_response,
-        "session_id": str(session.session_id)
+        "session_id": str(session.session_id),
+        "session_title": session.title,
+        "session_created": is_first_message,
     })
-
-@csrf_exempt
-def create_session(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
-    import uuid
-    session_id = str(uuid.uuid4())
-    
-    return JsonResponse({'session_id': session_id})
