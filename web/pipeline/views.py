@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 import requests
 from documents.services.qdrant_service import QdrantService
+from documents.services.embedding_service import EmbeddingService
 from workspace.models import Workspace, WorkspaceConfig, WorkspaceMembership
 from pipeline.services.pipeline_registry import get_pipeline
 from workspace.models import Message, Session
@@ -380,7 +381,7 @@ def query_handling(request):
 
     ollama_url = "http://ollama:11434/api/generate"
     payload = {
-        "model": "llama3",
+        "model": "llama3:8b-instruct-q4_0",
         "prompt": prompt,
         "temperature": temperature,
         "top_p": top_p,

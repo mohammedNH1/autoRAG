@@ -132,7 +132,7 @@
         </div>
     </div>
 
-    {{ initial_messages_json|json_script:"initial-messages-data" }}
+    {{ initial_messages|json_script:"initial-messages-data" }}
     <script>
         window.CHAT_CONFIG = {
             apiBaseUrl: '{{ api_base_url|default:"" }}',

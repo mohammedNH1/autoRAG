@@ -123,7 +123,7 @@ def chat_page(request, workspace_id, session_id=None):
         "active_session": active_session,
         "active_session_id": str(active_session.session_id) if active_session else "",
         "session_name": active_session.title if active_session else "New Session",
-        "initial_messages_json": json.dumps(initial_messages),
+        "initial_messages": initial_messages,
         "create_session_url": reverse('create_session', args=[workspace_id]),
         "workspace_chat_root_url": reverse('chat_page', args=[workspace_id]),
         "api_base_url": "",

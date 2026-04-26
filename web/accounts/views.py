@@ -5,8 +5,6 @@ from django.contrib import messages
 
 
 def login_view(request):
-    if request.user.is_authenticated:
-        return redirect("workspace_list")
 
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
