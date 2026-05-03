@@ -24,6 +24,7 @@ urlpatterns = [
     path("documents/", include("documents.urls")), #Added by rayan to run the documents page
     path("api/documents/", include("documents.urls")),
     path("workspace/", include("workspace.urls")),
+    path("decoder/", include("decoder.urls")),
 ]
 
 from django.conf import settings
