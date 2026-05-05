@@ -6,47 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Chat - AutoRAG</title>
-    <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=20260506">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260506">
 </head>
 <body>
     <div class="chat-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="{% static 'logo.svg' %}" alt="Logo" width="32" height="32">
-                </div>
-            </div>
-
-            <nav class="sidebar-nav">
-                <a href="{% url 'chat_page' workspace_id %}" class="sidebar-icon active" title="Sessions">
-                    <img src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="Sessions" width="24" height="24">
-                </a>
-
-                <button class="sidebar-icon" title="Members">
-                    <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="Members" width="24" height="24">
-                </button>
-
-                <a href="{% url 'documents:documents_page' workspace_id %}" class="sidebar-icon" title="Documents">
-                    <img src="{% static 'Sidebar_icons/Documents.svg' %}" alt="Documents" width="24" height="24">
-                </a>
-
-                <button class="sidebar-icon" title="Notifications">
-                    <img src="{% static 'Sidebar_icons/Notification.svg' %}" alt="Notifications" width="24" height="24">
-                </button>
-
-            </nav>
-
-            <div class="sidebar-footer">
-                <button class="sidebar-icon" title="Settings">
-                    <img src="{% static 'Sidebar_icons/Settings.svg' %}" alt="Settings" width="24" height="24">
-                </button>
-
-                <button class="sidebar-icon no-blue-hover" title="Profile">
-                    <img src="{% static 'Sidebar_icons/Profile.svg' %}" alt="Profile" width="24" height="24">
-                </button>
-            </div>
-        </aside>
+        {% include "workspace/includes/sidebar.html" with active_nav="sessions" %}
 
         <!-- Sessions Panel -->
         <aside class="sessions-panel">

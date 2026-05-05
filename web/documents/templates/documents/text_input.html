@@ -11,48 +11,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'documents/css/text_input.css' %}">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260506">
 </head>
 
 <body>
 <div class="ti-page">
 
-    <!-- ============================================================
-         SIDEBAR — icon rail (matches documents.html & chat.html)
-         ============================================================ -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <img src="{% static 'logo.svg' %}" alt="AutoRAG" width="32" height="32">
-            </div>
-        </div>
-
-        <nav class="sidebar-nav">
-            <a href="{% url 'chat_page' workspace.workspace_id %}" class="sidebar-icon" title="Sessions">
-                <img src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="Sessions" width="24" height="24">
-            </a>
-
-            <button class="sidebar-icon" title="Members">
-                <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="Members" width="24" height="24">
-            </button>
-
-            <a href="{% url 'documents:documents_page' workspace.workspace_id %}" class="sidebar-icon active" title="Documents">
-                <img src="{% static 'Sidebar_icons/Documents.svg' %}" alt="Documents" width="24" height="24">
-            </a>
-
-            <button class="sidebar-icon" title="Notifications">
-                <img src="{% static 'Sidebar_icons/Notification.svg' %}" alt="Notifications" width="24" height="24">
-            </button>
-        </nav>
-
-        <div class="sidebar-footer">
-            <button class="sidebar-icon" title="Settings">
-                <img src="{% static 'Sidebar_icons/Settings.svg' %}" alt="Settings" width="24" height="24">
-            </button>
-            <button class="sidebar-icon no-blue-hover" title="Profile">
-                <img src="{% static 'Sidebar_icons/Profile.svg' %}" alt="Profile" width="24" height="24">
-            </button>
-        </div>
-    </aside>
+    {% include "workspace/includes/sidebar.html" with active_nav="documents" %}
 
     <!-- ============================================================
          MAIN AREA
