@@ -155,8 +155,21 @@ def train(args):
 
     # ------------------------------------------------------------------
     # 1. Tokenizer
+    # When fine-tuning, load the tokenizer FROM the checkpoint so the
+    # encoding matches the model vocab (e.g. r50k_base for GPT-2).
+    # When pre-training from scratch, use the default cl100k_base.
     # ------------------------------------------------------------------
-    tokenizer = TiktokenWrapper()
+    if is_finetuning:
+        tokenizer_path = os.path.join(args.resume_from, "tokenizer.json")
+        if os.path.exists(tokenizer_path):
+            tokenizer = TiktokenWrapper.load(tokenizer_path)
+            print(f"[train] Tokenizer       : loaded from checkpoint ({tokenizer.encoding_name})")
+        else:
+            tokenizer = TiktokenWrapper()
+            print(f"[train] Tokenizer       : default ({tokenizer.encoding_name})")
+    else:
+        tokenizer = TiktokenWrapper()
+        print(f"[train] Tokenizer       : default ({tokenizer.encoding_name})")
     print(f"[train] Vocab size      : {tokenizer.vocab_size}")
 
     # ------------------------------------------------------------------

@@ -3,52 +3,53 @@ decoder/tokenizer.py
 ---------------------
 Tokenizer wrapper around tiktoken (OpenAI's BPE tokenizer).
 
-Uses the "cl100k_base" encoding — the same one used by GPT-4 and GPT-3.5.
-Vocabulary size: 100,277 tokens.
+Supports two encodings:
+  "cl100k_base"  → GPT-4 / GPT-3.5  (100,277 tokens)  ← default
+  "r50k_base"    → GPT-2             (50,257 tokens)   ← used with load_gpt2.py
 
 No training or vocab file needed. tiktoken downloads the encoding table
 once and caches it locally (~5 MB).
 
 Install:
-    pip install tiktoken
+    pip3 install tiktoken
 """
 
 from typing import List
 import tiktoken
 
 
-# The encoding to use. Options:
-#   "cl100k_base"  → GPT-4 / GPT-3.5  (100,277 tokens)  ← recommended
-#   "p50k_base"    → GPT-3 Codex       (50,281 tokens)
-#   "r50k_base"    → original GPT-2    (50,257 tokens)
 ENCODING_NAME = "cl100k_base"
 
-# tiktoken does not have explicit PAD/BOS/EOS tokens.
-# We repurpose two unused high-range IDs for BOS and EOS,
-# and define PAD as the same as EOS (standard practice).
-# These IDs are outside the normal token range so they never clash.
-_BOS_ID = 100_264   # <|im_start|>  (already in cl100k special tokens)
-_EOS_ID = 100_265   # <|im_end|>    (already in cl100k special tokens)
-_PAD_ID = _EOS_ID   # pad = eos  (common convention)
+# Special token IDs per encoding.
+# cl100k_base has <|im_start|> / <|im_end|> as built-in special tokens.
+# r50k_base (GPT-2) uses <|endoftext|> (id=50256) for both BOS and EOS.
+_SPECIAL_TOKENS = {
+    "cl100k_base": {"bos": 100_264, "eos": 100_265},
+    "r50k_base":   {"bos": 50_256,  "eos": 50_256 },
+    "p50k_base":   {"bos": 50_256,  "eos": 50_256 },
+}
 
 
 class TiktokenWrapper:
     """
-    Drop-in replacement for the old CharTokenizer.
-    Wraps tiktoken so the rest of the codebase (model.py, inference.py,
-    train.py) works without any changes.
+    Tokenizer wrapper around tiktoken.
+    Supports cl100k_base (default) and r50k_base (GPT-2).
 
     Key properties
     --------------
-    vocab_size : int   — total number of tokens (100,277 for cl100k_base)
+    vocab_size : int   — total number of tokens
     bos_id     : int   — beginning-of-sequence token id
     eos_id     : int   — end-of-sequence token id
     pad_id     : int   — padding token id (= eos_id)
+    encoding_name : str — which tiktoken encoding is active
     """
 
     def __init__(self, encoding_name: str = ENCODING_NAME):
-        self._enc           = tiktoken.get_encoding(encoding_name)
-        self.encoding_name  = encoding_name
+        self._enc          = tiktoken.get_encoding(encoding_name)
+        self.encoding_name = encoding_name
+        _ids               = _SPECIAL_TOKENS.get(encoding_name, {"bos": 100_264, "eos": 100_265})
+        self._bos_id       = _ids["bos"]
+        self._eos_id       = _ids["eos"]
 
     # ------------------------------------------------------------------
     # Special token IDs
@@ -56,19 +57,18 @@ class TiktokenWrapper:
 
     @property
     def bos_id(self) -> int:
-        return _BOS_ID
+        return self._bos_id
 
     @property
     def eos_id(self) -> int:
-        return _EOS_ID
+        return self._eos_id
 
     @property
     def pad_id(self) -> int:
-        return _PAD_ID
+        return self._eos_id   # pad = eos (standard convention)
 
     @property
     def vocab_size(self) -> int:
-        # n_vocab includes the special tokens already
         return self._enc.n_vocab
 
     # ------------------------------------------------------------------
@@ -84,13 +84,9 @@ class TiktokenWrapper:
         text                : input string
         add_special_tokens  : if True, prepend BOS and append EOS
         """
-        # allowed_special="all" so the <|im_start|>/<|im_end|> markers
-        # are tokenised as single tokens rather than split character-by-character.
         ids = self._enc.encode(text, allowed_special="all")
-
         if add_special_tokens:
             ids = [self.bos_id] + ids + [self.eos_id]
-
         return ids
 
     def decode(self, ids: List[int], skip_special_tokens: bool = True) -> str:
@@ -105,11 +101,10 @@ class TiktokenWrapper:
         if skip_special_tokens:
             special = {self.bos_id, self.eos_id, self.pad_id}
             ids = [i for i in ids if i not in special]
-
         return self._enc.decode(ids)
 
     # ------------------------------------------------------------------
-    # Compatibility shims (used by train.py)
+    # Compatibility shims
     # ------------------------------------------------------------------
 
     def build_vocab(self, text: str):
@@ -117,10 +112,7 @@ class TiktokenWrapper:
         pass
 
     def save(self, path: str):
-        """
-        Save the encoding name to a small JSON file.
-        (No need to store the full vocab — tiktoken fetches it automatically.)
-        """
+        """Save the encoding name to a JSON file."""
         import json, os
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w") as f:
