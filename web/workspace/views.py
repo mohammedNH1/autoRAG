@@ -1,15 +1,23 @@
 import json
+from collections import Counter
 
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
+from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.urls import reverse
+from django.utils import timezone
 
-from workspace.models import Workspace, WorkspaceMembership, Session
+from workspace.models import Workspace, WorkspaceMembership, Session, Message
 from pipeline.services.pipeline_registry import get_pipeline
+
+
+
+
 
 
 def _get_user_workspace(request, workspace_id):
@@ -33,6 +41,90 @@ def _get_user_session(workspace, user, session_id):
         user=user,
         session_id=session_id,
     ).first()
+
+
+def _user_display_name(user):
+    if user is None:
+        return "Unknown user"
+    return user.get_full_name() or user.email or user.username or "Unknown user"
+
+
+def _user_initials(user):
+    display_name = _user_display_name(user)
+    parts = [part for part in display_name.replace("@", " ").replace(".", " ").split() if part]
+    if not parts:
+        return "U"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return f"{parts[0][0]}{parts[-1][0]}".upper()
+
+
+def _can_manage_members(workspace, user):
+    return (
+        workspace.workspace_owner_id == user.id
+        or WorkspaceMembership.objects.filter(
+            workspace=workspace,
+            user=user,
+            role__in=["owner", "admin"],
+        ).exists()
+    )
+
+
+def _build_member_row(workspace, user, role, current_user):
+    sessions_count = Session.objects.filter(workspace=workspace, user=user).count()
+    questions_count = Message.objects.filter(
+        session__workspace=workspace,
+        session__user=user,
+        sender="user",
+    ).count()
+    documents_count = workspace.documents.filter(uploaded_by=user).count()
+
+    return {
+        "user": user,
+        "display_name": _user_display_name(user),
+        "initials": _user_initials(user),
+        "email": user.email or user.username,
+        "role": role,
+        "role_label": role.title(),
+        "is_owner": workspace.workspace_owner_id == user.id,
+        "is_current_user": current_user.id == user.id,
+        "sessions_count": sessions_count,
+        "questions_count": questions_count,
+        "documents_count": documents_count,
+        "activity_total": sessions_count + questions_count + documents_count,
+        "last_seen": user.last_login or user.date_joined,
+        "status_label": "You" if current_user.id == user.id else ("Active" if user.last_login else "No login yet"),
+    }
+
+### Added by rayan to build the time saved chart
+# Based on the McKinsey-style estimate that employees spend 1.8 hours per day
+# searching for and gathering information.
+TIME_SAVED_MINUTES_PER_ACTIVE_DAY = 108
+WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+CHART_W, CHART_H, CHART_TOP, CHART_BOTTOM = 365, 80, 12, 62
+
+
+def _smooth_svg_path(points):
+    path = f"M {points[0][0]:.2f} {points[0][1]:.2f}"
+    for index, (p1, p2) in enumerate(zip(points, points[1:])):
+        p0 = points[index - 1] if index else p1
+        p3 = points[index + 2] if index + 2 < len(points) else p2
+        c1x = p1[0] + (p2[0] - p0[0]) / 6
+        c1y = p1[1] + (p2[1] - p0[1]) / 6
+        c2x = p2[0] - (p3[0] - p1[0]) / 6
+        c2y = p2[1] - (p3[1] - p1[1]) / 6
+        path += f" C {c1x:.2f} {c1y:.2f}, {c2x:.2f} {c2y:.2f}, {p2[0]:.2f} {p2[1]:.2f}"
+    return path
+
+
+def _format_time_saved(minutes):
+    minutes = int(minutes or 0)
+    if minutes < 60:
+        return f"{minutes} {'min' if minutes == 1 else 'mins'}"
+
+    hours = minutes / 60
+    hours_value = int(hours) if hours.is_integer() else round(hours, 1)
+    return f"{hours_value} {'hour' if hours_value == 1 else 'hours'}"
 
 
 @login_required
@@ -131,6 +223,98 @@ def chat_page(request, workspace_id, session_id=None):
 
 
 @login_required
+def members(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+
+    member_rows = []
+    seen_user_ids = set()
+
+    for membership in WorkspaceMembership.objects.filter(workspace=workspace).select_related("user"):
+        user = membership.user
+        role = "owner" if workspace.workspace_owner_id == user.id else (membership.role or "member")
+        member_rows.append(_build_member_row(workspace, user, role, request.user))
+        seen_user_ids.add(user.id)
+
+    if workspace.workspace_owner and workspace.workspace_owner_id not in seen_user_ids:
+        member_rows.append(_build_member_row(workspace, workspace.workspace_owner, "owner", request.user))
+
+    member_rows.sort(key=lambda row: (0 if row["is_owner"] else 1, row["display_name"].lower()))
+    can_manage_members = _can_manage_members(workspace, request.user)
+
+    return render(request, "workspace/members.html", {
+        "workspace": workspace,
+        "workspace_id": workspace_id,
+        "members": member_rows,
+        "member_count": len(member_rows),
+        "owner_count": sum(1 for row in member_rows if row["is_owner"]),
+        "contributors_count": sum(1 for row in member_rows if row["activity_total"] > 0),
+        "questions_count": sum(row["questions_count"] for row in member_rows),
+        "can_manage_members": can_manage_members,
+        "role_choices": [
+            {"value": "member", "label": "Member"},
+            {"value": "editor", "label": "Editor"},
+            {"value": "viewer", "label": "Viewer"},
+        ],
+    })
+
+
+@login_required
+@require_POST
+def add_member(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+    if not _can_manage_members(workspace, request.user):
+        messages.error(request, "Only workspace owners can add members.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    email = (request.POST.get("email") or "").strip()
+    role = (request.POST.get("role") or "member").strip().lower()
+    if role not in {"member", "editor", "viewer"}:
+        role = "member"
+
+    if not email:
+        messages.error(request, "Enter the member email address.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    User = get_user_model()
+    user = User.objects.filter(email__iexact=email).first()
+    if user is None:
+        messages.error(request, "No account was found for that email.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    if user.id == workspace.workspace_owner_id or WorkspaceMembership.objects.filter(workspace=workspace, user=user).exists():
+        messages.info(request, "That user is already in this workspace.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    WorkspaceMembership.objects.create(workspace=workspace, user=user, role=role)
+    messages.success(request, f"{_user_display_name(user)} was added to this workspace.")
+    return redirect("workspace_members", workspace_id=workspace_id)
+
+
+@login_required
+@require_POST
+def remove_member(request, workspace_id, user_id):
+    workspace = _get_user_workspace(request, workspace_id)
+    if not _can_manage_members(workspace, request.user):
+        messages.error(request, "Only workspace owners can remove members.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    User = get_user_model()
+    user = get_object_or_404(User, pk=user_id)
+
+    if user.id == workspace.workspace_owner_id:
+        messages.error(request, "The workspace owner cannot be removed.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    deleted, _ = WorkspaceMembership.objects.filter(workspace=workspace, user=user).delete()
+    if deleted:
+        messages.success(request, f"{_user_display_name(user)} was removed from this workspace.")
+    else:
+        messages.info(request, "That user is not a member of this workspace.")
+
+    return redirect("workspace_members", workspace_id=workspace_id)
+
+
+@login_required
 @require_GET
 def list_sessions(request, workspace_id):
     workspace = _get_user_workspace(request, workspace_id)
@@ -221,3 +405,68 @@ def delete_session(request, workspace_id, session_id):
         return JsonResponse({"error": "Session not found"}, status=404)
     session.delete()
     return JsonResponse({"status": "deleted"})
+
+### Added by rayan to build the dashboard page
+@login_required
+def dashboard(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+
+    user_messages = Message.objects.filter(session__workspace=workspace, sender='user')
+    questions_count = user_messages.count()
+    message_timestamps = list(user_messages.values_list('timestamp', flat=True))
+    message_dates = [timezone.localtime(ts).date() for ts in message_timestamps]
+    active_days_count = len(set(message_dates))
+    week_ago = timezone.now() - timezone.timedelta(days=7)
+    questions_this_week = user_messages.filter(timestamp__gte=week_ago).count()
+    time_saved_minutes = active_days_count * TIME_SAVED_MINUTES_PER_ACTIVE_DAY
+    documents_qs = workspace.documents.all()
+    documents_count = documents_qs.count()
+
+    productive_days = Counter(timezone.localtime(ts).strftime('%A') for ts in message_timestamps).most_common(3)
+    today = timezone.localdate()
+    week_start = today - timezone.timedelta(days=(today.weekday() + 1) % 7)
+    week_end = week_start + timezone.timedelta(days=7)
+    active_week_day_indexes = {
+        (message_date - week_start).days
+        for message_date in message_dates
+        if week_start <= message_date < week_end
+    }
+    minutes = [
+        TIME_SAVED_MINUTES_PER_ACTIVE_DAY if i in active_week_day_indexes else 0
+        for i in range(7)
+    ]
+    time_saved_this_week_minutes = sum(minutes)
+    max_minutes = max(minutes) or 1
+    points = [(i * CHART_W / 6, CHART_BOTTOM - minutes[i] / max_minutes * (CHART_BOTTOM - CHART_TOP)) for i in range(7)]
+    line_path = _smooth_svg_path(points)
+    peak = max(range(7), key=lambda i: minutes[i]) if any(minutes) else min(max((today - week_start).days, 0), 6)
+    peak_x, peak_y = points[peak]
+    peak_date = week_start + timezone.timedelta(days=peak)
+    day_suffix = "th" if 10 <= peak_date.day % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(peak_date.day % 10, "th")
+
+    return render(request, "workspace/dashboard.html", {
+        "workspace": workspace,
+        "workspace_id": workspace_id,
+        "is_empty": questions_count == 0 and documents_count == 0,
+        "questions_count": questions_count,
+        "questions_this_week": questions_this_week,
+        "documents_count": documents_count,
+        "docs_this_week": documents_qs.filter(upload_time__gte=week_ago).count(),
+        "time_saved_display": _format_time_saved(time_saved_minutes),
+        "time_saved_this_week_display": _format_time_saved(time_saved_this_week_minutes),
+        "top_questions": list(user_messages.values('text').annotate(c=Count('text')).order_by('-c', 'text')[:5]),
+        "top_documents": list(documents_qs.order_by('-upload_time')[:5].values('document_title', 'file')),
+        "productive_days": productive_days,
+        "time_chart": {
+            "days": WEEKDAY_LABELS,
+            "line": line_path,
+            "fill": f"{line_path} L {CHART_W:.2f} {CHART_H:.2f} L 0.00 {CHART_H:.2f} Z",
+            "dot_x": f"{peak_x:.2f}",
+            "dot_y": f"{peak_y:.2f}",
+            "tooltip_x": f"{max(38, min(CHART_W - 38, peak_x)):.2f}",
+            "tooltip_y": f"{max(0, peak_y - 48):.2f}",
+            "tooltip_value": _format_time_saved(minutes[peak]),
+            "tooltip_date": f"{peak_date.strftime('%b')} {peak_date.day}{day_suffix}, {peak_date.year}",
+        },
+        "audit_trail": list(documents_qs.order_by('-upload_time')[:10].values('document_title', 'file', 'upload_time', 'uploaded_by__email')),
+    })

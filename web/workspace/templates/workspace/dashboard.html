@@ -1,0 +1,236 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Dashboard - AutoRAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@400;700&family=Barlow:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260506">
+</head>
+<body>
+<div class="dash-layout">
+
+    {% include "workspace/includes/sidebar.html" with active_nav="dashboard" %}
+
+    <!-- ============================================================
+         MAIN CONTENT
+         ============================================================ -->
+    <main class="dash-main">
+
+        <header class="dash-pageHeader">
+            <h1 class="dash-pageTitle">Dashboard</h1>
+            <hr class="dash-divider">
+        </header>
+
+        {% if is_empty %}
+        <!-- ===========================
+             EMPTY STATE
+             =========================== -->
+        <section class="dash-empty">
+            <img class="dash-empty__art"
+                 src="{% static 'dashboard/dashboard empty state image.png' %}"
+                 alt="" />
+            <h2 class="dash-empty__title">There is no data to display.</h2>
+            <p class="dash-empty__subtitle">Start chatting to see your statistic</p>
+        </section>
+        {% else %}
+        <!-- ===========================
+             DATA STATE
+             =========================== -->
+
+        <!-- KPI cards -->
+        <section class="dash-kpis">
+            <article class="kpi-card kpi-card--questions">
+                <div class="kpi-card__body">
+                    <p class="kpi-card__value">{{ questions_count }}</p>
+                    <p class="kpi-card__label">Number of Questions</p>
+                </div>
+                <p class="kpi-card__delta">
+                    <span class="kpi-card__arrow" aria-hidden="true">
+                        <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 10V2M6 2l4 4M6 2L2 6" stroke="#06bf5c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="kpi-card__pct">+{{ questions_this_week }}</span>
+                    <span class="kpi-card__period">this week</span>
+                </p>
+                <img class="kpi-card__bg kpi-card__bg--question"
+                     src="{% static 'dashboard/bigquestionicon.svg' %}" alt="">
+            </article>
+
+            <article class="kpi-card kpi-card--documents">
+                <div class="kpi-card__body">
+                    <p class="kpi-card__value">{{ documents_count }}</p>
+                    <p class="kpi-card__label">Number of documents</p>
+                </div>
+                <p class="kpi-card__delta">
+                    <span class="kpi-card__arrow" aria-hidden="true">
+                        <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 10V2M6 2l4 4M6 2L2 6" stroke="#06bf5c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="kpi-card__pct">{{ docs_this_week }}</span>
+                    <span class="kpi-card__period">documents added week</span>
+                </p>
+                <img class="kpi-card__bg kpi-card__bg--document"
+                     src="{% static 'dashboard/DocumentBigIcon.svg' %}" alt="">
+            </article>
+
+            <article class="kpi-card kpi-card--time">
+                <div class="kpi-card__body">
+                    <p class="kpi-card__value">{{ time_saved_display }}</p>
+                    <p class="kpi-card__label">Time saved</p>
+                </div>
+                <p class="kpi-card__delta">
+                    <span class="kpi-card__arrow" aria-hidden="true">
+                        <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 10V2M6 2l4 4M6 2L2 6" stroke="#06bf5c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="kpi-card__pct">+{{ time_saved_this_week_display }}</span>
+                    <span class="kpi-card__period">this week</span>
+                </p>
+                <img class="kpi-card__bg kpi-card__bg--clock"
+                     src="{% static 'dashboard/bigtimeicon.svg' %}" alt="">
+            </article>
+        </section>
+
+        <!-- Detail cards row -->
+        <section class="dash-details">
+
+            <!-- Most Frequently Asked Questions -->
+            <article class="detail-card detail-card--questions">
+                <header class="detail-card__head">
+                    <h3 class="detail-card__title">Most Frequently<br>Asked Questions</h3>
+                    <span class="detail-card__badge detail-card__badge--q">?</span>
+                </header>
+                <ol class="detail-card__list">
+                    {% for q in top_questions %}
+                    <li class="detail-card__item">
+                        <span class="detail-card__num">{{ forloop.counter }}</span>
+                        <span class="detail-card__text" title="{{ q.text }}">{{ q.text|truncatechars:48 }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="detail-card__item detail-card__item--empty">No questions yet</li>
+                    {% endfor %}
+                </ol>
+            </article>
+
+            <!-- Most Referenced Documents -->
+            <article class="detail-card detail-card--documents">
+                <header class="detail-card__head">
+                    <h3 class="detail-card__title">Most Referenced Documents</h3>
+                    <span class="detail-card__badge detail-card__badge--doc" aria-hidden="true">
+                        <img class="detail-card__badge-icon detail-card__badge-icon--doc"
+                             src="{% static 'dashboard/smalldocumenticon.svg' %}" alt="">
+                    </span>
+                </header>
+                <ul class="detail-card__list detail-card__list--files">
+                    {% for d in top_documents %}
+                    <li class="detail-card__item">
+                        <img class="detail-card__fileicon"
+                             src="{% with name=d.document_title|default:d.file %}{% if '.pdf' in name|stringformat:'s' %}{% static 'icons/pdf.svg' %}{% elif '.doc' in name|stringformat:'s' %}{% static 'icons/doc.svg' %}{% else %}{% static 'icons/file.svg' %}{% endif %}{% endwith %}"
+                             alt="">
+                        <span class="detail-card__text">{{ d.document_title|default:d.file|truncatechars:30 }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="detail-card__item detail-card__item--empty">No documents yet</li>
+                    {% endfor %}
+                </ul>
+            </article>
+
+            <!-- Time Saved -->
+            <article class="detail-card detail-card--time">
+                <header class="detail-card__head detail-card__head--time">
+                    <h3 class="detail-card__title">Time Saved</h3>
+                    <span class="detail-card__badge detail-card__badge--time" aria-hidden="true">
+                        <img class="detail-card__badge-icon detail-card__badge-icon--time"
+                             src="{% static 'dashboard/smalltimeicon.svg' %}" alt="">
+                    </span>
+                    <button class="detail-card__report" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 4v12M6 10l6 6 6-6" stroke="#1f64ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M4 20h16" stroke="#1f64ff" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Save Report
+                    </button>
+                </header>
+
+                <div class="detail-card__chart">
+                    <svg class="detail-card__chartFill" viewBox="0 0 365 80" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#1f64ff" stop-opacity="0.24"/>
+                                <stop offset="100%" stop-color="#1f64ff" stop-opacity="0.02"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="{{ time_chart.fill|safe }}" fill="url(#chartFill)"/>
+                        <path d="{{ time_chart.line|safe }}" fill="none" stroke="#1f64ff" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="{{ time_chart.dot_x }}" cy="{{ time_chart.dot_y }}" r="5" fill="#1f64ff"/>
+                    </svg>
+                    <div class="detail-card__tooltip" data-x="{{ time_chart.tooltip_x }}" data-y="{{ time_chart.tooltip_y }}">
+                        <span class="detail-card__tooltipVal">{{ time_chart.tooltip_value }}</span>
+                        <span class="detail-card__tooltipDate">{{ time_chart.tooltip_date }}</span>
+                    </div>
+                    <ul class="detail-card__days">
+                        {% for day in time_chart.days %}
+                        <li>{{ day }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <h4 class="detail-card__subtitle">Most Productive Days</h4>
+                <ol class="detail-card__list detail-card__list--days">
+                    {% for day, _count in productive_days %}
+                    <li class="detail-card__item">
+                        <span class="detail-card__num">{{ forloop.counter }}</span>
+                        <span class="detail-card__text">{{ day }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="detail-card__item detail-card__item--empty">No activity yet</li>
+                    {% endfor %}
+                </ol>
+            </article>
+        </section>
+
+        <!-- Audit Trail -->
+        <section class="dash-audit">
+            <h2 class="dash-pageTitle">Audit Trail</h2>
+            <hr class="dash-divider">
+
+            <div class="audit-table">
+                <div class="audit-table__head">
+                    <span>Employee</span>
+                    <span>Action</span>
+                    <span>Time</span>
+                </div>
+                {% for entry in audit_trail %}
+                <div class="audit-table__row">
+                    <span>{{ entry.uploaded_by__email|default:"—" }}</span>
+                    <span>Add {{ entry.document_title|default:entry.file|truncatechars:32 }}</span>
+                    <span>{{ entry.upload_time|date:"Y/n/j   -   g:i A" }}</span>
+                </div>
+                {% empty %}
+                <div class="audit-table__row audit-table__row--empty">
+                    <span colspan="3">No activity recorded yet</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% endif %}
+    </main>
+</div>
+<script>
+    document.querySelectorAll('.detail-card__tooltip[data-x]').forEach(function (el) {
+        el.style.left = el.dataset.x + 'px';
+        el.style.top = el.dataset.y + 'px';
+    });
+</script>
+</body>
+</html>

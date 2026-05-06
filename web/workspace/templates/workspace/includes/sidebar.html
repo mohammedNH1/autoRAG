@@ -1,0 +1,111 @@
+{% load static %}
+{% with nav_workspace_id=workspace_id|default:workspace.workspace_id %}
+<script>
+    (function () {
+        try {
+            document.documentElement.classList.toggle('autorag-sidebar-expanded', localStorage.getItem('autorag.sidebar') === 'expanded');
+        } catch (error) {}
+    })();
+</script>
+<aside class="dash-sidebar" data-autorag-sidebar>
+    <div class="dash-sidebar__top">
+        <div class="dash-sidebar__brand">
+            <a class="dash-logo" href="{% url 'workspace_list' %}" title="Workspaces" aria-label="Workspaces">
+                <img src="{% static 'logo.svg' %}" alt="AutoRAG" />
+            </a>
+            <button class="dash-sidebar__toggle" type="button" title="Expand sidebar" aria-label="Expand sidebar" aria-expanded="false" data-sidebar-toggle>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <nav class="dash-nav">
+            <a class="dash-nav__item{% if active_nav == 'sessions' %} is-active{% endif %}" href="{% url 'chat_page' nav_workspace_id %}" title="Sessions">
+                <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="">
+                <span class="dash-nav__label">Sessions</span>
+            </a>
+            <a class="dash-nav__item{% if active_nav == 'members' %} is-active{% endif %}" href="{% url 'workspace_members' nav_workspace_id %}" title="Members">
+                <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Members.svg' %}" alt="">
+                <span class="dash-nav__label">Members</span>
+            </a>
+            <a class="dash-nav__item{% if active_nav == 'documents' %} is-active{% endif %}" href="{% url 'documents:documents_page' nav_workspace_id %}" title="Documents">
+                <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Documents.svg' %}" alt="">
+                <span class="dash-nav__label">Documents</span>
+            </a>
+            <a class="dash-nav__item dash-nav__item--dashboard{% if active_nav == 'dashboard' %} is-active{% endif %}" href="{% url 'workspace_dashboard' nav_workspace_id %}" title="Dashboards">
+                <span class="dash-nav__icon-stack" aria-hidden="true">
+                    <img class="dash-nav__icon dash-nav__icon--regular" src="{% static 'icons/dashboardiconregular.svg' %}" alt="">
+                    <img class="dash-nav__icon dash-nav__icon--hover" src="{% static 'icons/dashboardiconwhite.svg' %}" alt="">
+                </span>
+                <span class="dash-nav__label">Dashboards</span>
+            </a>
+            <button class="dash-nav__item{% if active_nav == 'settings' %} is-active{% endif %}" type="button" title="Settings">
+                <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Settings.svg' %}" alt="">
+                <span class="dash-nav__label">Settings</span>
+            </button>
+        </nav>
+    </div>
+
+    <div class="dash-user">
+        <div class="dash-user__avatar">
+            {% if request.user.is_authenticated %}
+            <span>{{ request.user.first_name|default:request.user.email|default:request.user.username|make_list|first|upper }}</span>
+            {% else %}
+            <span>G</span>
+            {% endif %}
+        </div>
+        <div class="dash-user__meta">
+            {% if request.user.is_authenticated %}
+            <p class="dash-user__name">{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</p>
+            <p class="dash-user__role">
+                {% if workspace.workspace_owner_id == request.user.id %}Owner{% else %}Member{% endif %}
+            </p>
+            {% else %}
+            <p class="dash-user__name">Guest</p>
+            <p class="dash-user__role">Viewer</p>
+            {% endif %}
+        </div>
+        {% if request.user.is_authenticated %}
+        <a class="dash-user__action" href="{% url 'accounts:logout' %}" title="Sign out" aria-label="Sign out">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+        {% endif %}
+    </div>
+</aside>
+<script>
+    (function () {
+        var KEY = 'autorag.sidebar';
+        var root = document.documentElement;
+        var toggle = document.querySelector('[data-sidebar-toggle]');
+
+        function isExpanded() {
+            return root.classList.contains('autorag-sidebar-expanded');
+        }
+
+        function updateToggle() {
+            if (!toggle) return;
+            var expanded = isExpanded();
+            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            toggle.setAttribute('aria-label', expanded ? 'Collapse sidebar' : 'Expand sidebar');
+            toggle.setAttribute('title', expanded ? 'Collapse sidebar' : 'Expand sidebar');
+        }
+
+        updateToggle();
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                var nextExpanded = !isExpanded();
+                root.classList.toggle('autorag-sidebar-expanded', nextExpanded);
+                try {
+                    localStorage.setItem(KEY, nextExpanded ? 'expanded' : 'collapsed');
+                } catch (error) {}
+                updateToggle();
+            });
+        }
+    })();
+</script>
+{% endwith %}
