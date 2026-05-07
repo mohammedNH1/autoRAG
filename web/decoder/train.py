@@ -58,22 +58,21 @@ from .tokenizer import TiktokenWrapper
 class TextDataset(Dataset):
     """
     Sliding-window token dataset.
-    Each sample is (input_ids[:-1], input_ids[1:]) — next-token prediction.
-    Works for both raw text (pre-training) and Q&A text (fine-tuning).
+    Pre-converts the entire corpus to a single LongTensor at init time
+    so __getitem__ is just a fast tensor slice — no per-sample Python overhead.
     """
 
     def __init__(self, token_ids: list, seq_len: int):
-        self.ids     = token_ids
         self.seq_len = seq_len
+        # Convert once at startup — __getitem__ becomes a pure tensor slice
+        self.ids = torch.tensor(token_ids, dtype=torch.long)
 
     def __len__(self):
         return max(0, len(self.ids) - self.seq_len)
 
     def __getitem__(self, idx):
         chunk = self.ids[idx : idx + self.seq_len + 1]
-        x = torch.tensor(chunk[:-1], dtype=torch.long)
-        y = torch.tensor(chunk[1:],  dtype=torch.long)
-        return x, y
+        return chunk[:-1], chunk[1:]
 
 
 # ---------------------------------------------------------------------------
@@ -192,14 +191,20 @@ def train(args):
             f"Use a longer corpus or reduce --seq_len."
         )
 
+    # num_workers=0 on Windows (multiprocessing causes overhead there)
+    # num_workers=2 on Linux/WSL
+    import platform
+    n_workers = 0 if platform.system() == "Windows" else 2
+
     dataloader = DataLoader(
         dataset,
         batch_size  = args.batch_size,
         shuffle     = True,
         drop_last   = True,
-        num_workers = 2,        # parallel data loading — faster than 0
+        num_workers = n_workers,
         pin_memory  = (device == "cuda"),  # faster CPU→GPU transfer
     )
+    print(f"[train] DataLoader      : num_workers={n_workers}")
 
     steps_per_epoch = math.ceil(len(dataloader) / args.grad_accum)
     total_steps     = steps_per_epoch * args.epochs
@@ -427,4 +432,3 @@ RTX 3050 Ti (4GB) recommended settings:
 
 if __name__ == "__main__":
     train(parse_args())
-    
