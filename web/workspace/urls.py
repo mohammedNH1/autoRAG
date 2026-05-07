@@ -10,6 +10,12 @@ urlpatterns = [
     path('<int:workspace_id>/', views.chat_page, name='chat_page'),
     path('<int:workspace_id>/chat/<uuid:session_id>/', views.chat_page, name='chat_session'),
 
+    # Dashboard page — analytics + audit trail (empty state when no sessions).
+    path('<int:workspace_id>/dashboard/', views.dashboard, name='workspace_dashboard'),
+    path('<int:workspace_id>/members/', views.members, name='workspace_members'),
+    path('<int:workspace_id>/members/add/', views.add_member, name='workspace_add_member'),
+    path('<int:workspace_id>/members/<int:user_id>/remove/', views.remove_member, name='workspace_remove_member'),
+
     # Session JSON endpoints (workspace-scoped, owner-scoped).
     path('<int:workspace_id>/sessions/', views.list_sessions, name='list_sessions'),
     path('<int:workspace_id>/sessions/create/', views.create_session, name='create_session'),

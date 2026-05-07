@@ -52,7 +52,14 @@ button {
     transition: all 0.2s ease-in-out;
 }
 
-.main-header.header-draft #headerSessionName,
+/*
+   In the empty/new chat state, keep the session title in the actual top bar.
+   Only the welcome prompt and composer should be centered below it.
+*/
+.main-header.header-draft #headerSessionName {
+    visibility: visible;
+}
+
 .main-header.header-draft .header-session-edit-btn {
     visibility: hidden;
     pointer-events: none;
@@ -201,6 +208,15 @@ button {
     filter: none;
 }
 
+/* Dashboard sidebar icon: dual-icon hover/active swap (regular -> white) */
+.sidebar-icon--dashboard .sidebar-icon__hover { display: none; }
+.sidebar-icon--dashboard:hover .sidebar-icon__regular,
+.sidebar-icon--dashboard.active .sidebar-icon__regular { display: none; }
+.sidebar-icon--dashboard:hover .sidebar-icon__hover,
+.sidebar-icon--dashboard.active .sidebar-icon__hover { display: block; }
+.sidebar-icon--dashboard:hover img,
+.sidebar-icon--dashboard.active img { filter: none; }
+
 
 .sidebar-footer {
     display: flex;
@@ -221,7 +237,7 @@ button {
 
 .sessions-header {
     padding: 21.5px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -253,6 +269,7 @@ button {
     padding: 12px 16px;
     border-left: 3px solid transparent;
     cursor: pointer;
+    text-decoration: none;
     transition: all 0.2s ease-in-out;
     background-color: #fafafa;
 }
@@ -273,6 +290,7 @@ button {
 .session-title {
     font-size: 13px;
     color: #333;
+    text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -295,12 +313,12 @@ button {
 .main-content.welcome-mode {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: stretch;
 }
 
 .main-content.welcome-mode .chat-messages {
-    flex: 0 0 auto;
+    flex: 1;
     overflow: hidden;
     padding-bottom: 0;
     display: flex;
@@ -330,6 +348,7 @@ button {
     max-width: 560px;
     border-top: none;
     padding-top: 16px;
+    margin: 0 auto 64px;
 }
 
 /* Header */
@@ -643,11 +662,11 @@ button {
 
 /* ============ EMPTY SESSION HEADER STATE ============ */
 .main-header.header--empty-session {
-    border-bottom: none;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .main-header.header--empty-session #headerSessionName {
-    visibility: hidden;
+    visibility: visible;
 }
 
 .main-header.header--empty-session .header-session-edit-btn {
@@ -728,4 +747,30 @@ button {
     .chat-messages {
         padding: 12px 16px;
     }
+}
+
+/* Keep empty-chat title in the real top bar, never in the centered prompt stack. */
+.chat-container .main-content.welcome-mode {
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+}
+
+.chat-container .main-content.welcome-mode > .main-header {
+    align-self: stretch !important;
+    width: 100% !important;
+    flex: 0 0 70px;
+    margin: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.chat-container .main-content.welcome-mode > .main-header .header-left {
+    justify-content: flex-start;
+}
+
+.chat-container .main-content.welcome-mode > .chat-messages {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-height: 0;
+    padding-top: 0;
 }
