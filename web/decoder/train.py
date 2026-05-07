@@ -427,3 +427,4 @@ RTX 3050 Ti (4GB) recommended settings:
 
 if __name__ == "__main__":
     train(parse_args())
+    
