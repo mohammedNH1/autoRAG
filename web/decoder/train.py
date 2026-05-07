@@ -58,21 +58,24 @@ from .tokenizer import TiktokenWrapper
 class TextDataset(Dataset):
     """
     Sliding-window token dataset.
-    Pre-converts the entire corpus to a single LongTensor at init time
-    so __getitem__ is just a fast tensor slice — no per-sample Python overhead.
+    Pre-builds ALL windows as a single [N, seq_len+1] tensor at init.
+    __getitem__ is then a pure row lookup — zero CPU overhead during training.
     """
 
     def __init__(self, token_ids: list, seq_len: int):
         self.seq_len = seq_len
-        # Convert once at startup — __getitem__ becomes a pure tensor slice
-        self.ids = torch.tensor(token_ids, dtype=torch.long)
+        data = torch.tensor(token_ids, dtype=torch.long)
+        # Stack all windows into one big tensor at once
+        n = len(data) - seq_len
+        # Use unfold to create all sliding windows efficiently
+        self.windows = data.unfold(0, seq_len + 1, 1)[:n]  # [N, seq_len+1]
 
     def __len__(self):
-        return max(0, len(self.ids) - self.seq_len)
+        return len(self.windows)
 
     def __getitem__(self, idx):
-        chunk = self.ids[idx : idx + self.seq_len + 1]
-        return chunk[:-1], chunk[1:]
+        window = self.windows[idx]
+        return window[:-1], window[1:]
 
 
 # ---------------------------------------------------------------------------
