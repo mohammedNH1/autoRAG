@@ -194,18 +194,14 @@ def train(args):
             f"Use a longer corpus or reduce --seq_len."
         )
 
-    # Move entire dataset to GPU once — eliminates all CPU/DataLoader overhead
-    # This is the fastest possible approach: shuffling and batching happen on GPU
-    if device == "cuda":
-        print(f"[train] Moving dataset to GPU...")
-        all_windows = dataset.windows.to(device)
-    else:
-        all_windows = dataset.windows
-    print(f"[train] Dataset on {'GPU' if device == 'cuda' else 'CPU'}")
-    
-    # We no longer use DataLoader — batching done manually on GPU
-    dataloader = None
-    n_samples  = len(all_windows)
+    # Move windows to GPU once — all shuffling/indexing then happens on GPU
+    # unfold tensor is ~2GB for typical fine-tune corpus, fits in 3060 Ti 8GB
+    print(f"[train] Moving dataset to GPU (this takes ~30s)...")
+    all_windows = dataset.windows.to(device) if device == "cuda" else dataset.windows
+    dataloader  = None
+    n_samples   = len(all_windows)
+    vram_used   = all_windows.element_size() * all_windows.nelement() / (1024**2)
+    print(f"[train] Dataset on GPU : {n_samples:,} windows ({vram_used:.0f} MB)")
 
     batches_per_epoch = n_samples // args.batch_size
     steps_per_epoch   = math.ceil(batches_per_epoch / args.grad_accum)
@@ -282,12 +278,12 @@ def train(args):
         t0         = time.time()
         optimizer.zero_grad()
 
-        # Shuffle indices on GPU — no CPU involvement
+        # Shuffle and index entirely on GPU — zero CPU involvement
         perm   = torch.randperm(n_samples, device=device)
         chunks = perm[:batches_per_epoch * args.batch_size].split(args.batch_size)
 
         for batch_idx, idx in enumerate(chunks):
-            window = all_windows[idx]          # [B, seq_len+1]
+            window = all_windows[idx]          # [B, seq_len+1] — GPU tensor slice
             x = window[:, :-1]                 # [B, seq_len]
             y = window[:, 1:]                  # [B, seq_len]
 
