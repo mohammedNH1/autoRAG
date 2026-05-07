@@ -297,11 +297,21 @@ def train(args):
             if is_accum_step or is_last_batch:
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                # Save scale before step — if scaler skips the optimizer
+                # step (inf/nan grads), we should not step the scheduler
+                scale_before = scaler.get_scale()
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
-                scheduler.step()
+                # Only step scheduler if optimizer actually updated
+                if scaler.get_scale() == scale_before:
+                    scheduler.step()
                 global_step += 1
+
+                # Mid-epoch checkpoint save
+                if args.save_every > 0 and global_step % args.save_every == 0:
+                    save_checkpoint(model, model_config, tokenizer,
+                                    os.path.join(args.output_dir, f"step_{global_step}"))
 
                 if global_step % args.log_every == 0:
                     ppl      = math.exp(min(loss.item(), 20))
@@ -401,6 +411,8 @@ RTX 3050 Ti (4GB) recommended settings:
     p.add_argument("--dropout",     type=float, default=0.1)
     p.add_argument("--fp16",        action="store_true",
                    help="Mixed precision training. Halves VRAM. Recommended for 4GB GPU.")
+    p.add_argument("--save_every",  type=int,   default=0,
+                   help="Save checkpoint every N steps (0 = disabled). Useful for long runs.")
     p.add_argument("--log_every",   type=int,   default=50,
                    help="Print loss every N optimizer steps.")
 
