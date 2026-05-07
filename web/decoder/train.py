@@ -194,24 +194,23 @@ def train(args):
             f"Use a longer corpus or reduce --seq_len."
         )
 
-    # num_workers=0 on Windows (multiprocessing causes overhead there)
-    # num_workers=2 on Linux/WSL
-    import platform
-    n_workers = 0 if platform.system() == "Windows" else 2
+    # Move entire dataset to GPU once — eliminates all CPU/DataLoader overhead
+    # This is the fastest possible approach: shuffling and batching happen on GPU
+    if device == "cuda":
+        print(f"[train] Moving dataset to GPU...")
+        all_windows = dataset.windows.to(device)
+    else:
+        all_windows = dataset.windows
+    print(f"[train] Dataset on {'GPU' if device == 'cuda' else 'CPU'}")
+    
+    # We no longer use DataLoader — batching done manually on GPU
+    dataloader = None
+    n_samples  = len(all_windows)
 
-    dataloader = DataLoader(
-        dataset,
-        batch_size  = args.batch_size,
-        shuffle     = True,
-        drop_last   = True,
-        num_workers = n_workers,
-        pin_memory  = (device == "cuda"),  # faster CPU→GPU transfer
-    )
-    print(f"[train] DataLoader      : num_workers={n_workers}")
-
-    steps_per_epoch = math.ceil(len(dataloader) / args.grad_accum)
-    total_steps     = steps_per_epoch * args.epochs
-    print(f"[train] Batches/epoch   : {len(dataloader):,}")
+    batches_per_epoch = n_samples // args.batch_size
+    steps_per_epoch   = math.ceil(batches_per_epoch / args.grad_accum)
+    total_steps       = steps_per_epoch * args.epochs
+    print(f"[train] Batches/epoch   : {batches_per_epoch:,}")
     print(f"[train] Steps/epoch     : {steps_per_epoch:,}")
     print(f"[train] Total steps     : {total_steps:,}  ({args.epochs} epochs)")
 
@@ -283,8 +282,14 @@ def train(args):
         t0         = time.time()
         optimizer.zero_grad()
 
-        for batch_idx, (x, y) in enumerate(dataloader):
-            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
+        # Shuffle indices on GPU — no CPU involvement
+        perm   = torch.randperm(n_samples, device=device)
+        chunks = perm[:batches_per_epoch * args.batch_size].split(args.batch_size)
+
+        for batch_idx, idx in enumerate(chunks):
+            window = all_windows[idx]          # [B, seq_len+1]
+            x = window[:, :-1]                 # [B, seq_len]
+            y = window[:, 1:]                  # [B, seq_len]
 
             # Forward — autocast for fp16
             with torch.amp.autocast('cuda', enabled=use_fp16):
@@ -299,7 +304,7 @@ def train(args):
             scaler.scale(loss_scaled).backward()
             epoch_loss += loss.item()
 
-            is_last_batch = (batch_idx + 1) == len(dataloader)
+            is_last_batch = (batch_idx + 1) == len(chunks)
             is_accum_step = (batch_idx + 1) % args.grad_accum == 0
 
             if is_accum_step or is_last_batch:
@@ -334,7 +339,7 @@ def train(args):
                         f"lr {scheduler.get_last_lr()[0]:.2e}{vram_msg}"
                     )
 
-        avg_loss = epoch_loss / len(dataloader)
+        avg_loss = epoch_loss / len(chunks)
         elapsed  = time.time() - t0
         ppl      = math.exp(min(avg_loss, 20))
         remaining_epochs = args.epochs - epoch
