@@ -20,6 +20,13 @@
     return String(text).replace(/[&<>"']/g, (char) => map[char]);
   }
 
+  function renderMarkdown(text) {
+    return escapeHtml(text)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n---\n/g, '\n<hr class="response-divider">\n')
+      .replace(/\n/g, '<br>');
+  }
+
   function formatTime(timestamp) {
     if (!timestamp) return '';
     try {
@@ -71,7 +78,7 @@
       el.innerHTML =
         '<div class="message-bubble">' +
         (msg.sender === 'assistant' ? '<div class="message-sender">AutoRAG</div>' : '') +
-        '<div class="message-content">' + escapeHtml(msg.text) + '</div>' +
+        '<div class="message-content">' + renderMarkdown(msg.text) + '</div>' +
         (timestamp ? '<div class="message-time">' + timestamp + '</div>' : '') +
         '</div>';
       container.appendChild(el);

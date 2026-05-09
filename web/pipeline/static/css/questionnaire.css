@@ -1,27 +1,27 @@
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-Regular.otf') format('opentype');
+    src: url('/static/font/TheYearofHandicrafts-Regular.otf') format('opentype');
     font-weight: 400;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-Medium.otf') format('opentype');
+    src: url('/static/font/TheYearofHandicrafts-Medium.otf') format('opentype');
     font-weight: 500;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-SemiBold.otf') format('opentype');
+    src: url('/static/font/TheYearofHandicrafts-SemiBold.otf') format('opentype');
     font-weight: 600;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'TheYearofHandicrafts';
-    src: url('../../components/font/TheYearofHandicrafts-Bold.otf') format('opentype');
+    src: url('/static/font/TheYearofHandicrafts-Bold.otf') format('opentype');
     font-weight: 700;
     font-style: normal;
 }

@@ -11,6 +11,7 @@ from pipeline.services.pipeline_registry import get_pipeline
 from workspace.models import Message, Session
 import uuid
 from django.core.exceptions import ValidationError
+import datetime
 
 #Added by rayan to run here the questionnaire page
 def questionnaire_page(request):
@@ -38,8 +39,6 @@ def questionnaire(request):
     uptodate_value = data.get("uptodate")
     metadata_value = data.get("metadata")
     chunking_value = data.get("chunking_strategy")
-    is_citation_value = data.get("is_citation", False)
-
     # Process logic
     embedding_config = embedding_reranker(language, use_case)
     k_value = top_k(reference_value)
@@ -71,7 +70,8 @@ def questionnaire(request):
         temperature=temp_value,
         top_p=top_p_final,
         top_k=k_value,
-        is_citation=is_citation_value,
+        is_citation=reference_flag,
+        metadata_flag=metadata_flag,
     )
     return JsonResponse({
         "status": "success",
@@ -176,12 +176,7 @@ def add_metadata(response):
     """
     Determines if the user wants the answer with metadata or not .
     """
-    if response.lower().strip()== 'yes':
-        metadata = True
-    else:
-        metadata = False
-
-    return metadata
+    return str(response).lower().strip() == 'detailed'
 
 def determine_chunking_strategy(response):
     """
@@ -192,7 +187,7 @@ def determine_chunking_strategy(response):
 
     if 'slide deck' in response_lower:
         chunking_strategy = 'page-based'
- 
+
     elif 'meeting notes' in response_lower:
         chunking_strategy = 'large-overlapping'
 
@@ -230,6 +225,7 @@ def chat_page(request, workspace_id):
 @csrf_exempt
 @login_required
 def query_handling(request):
+    print(f"[{datetime.datetime.now()}] PIPELINE START: Received query request")
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -245,19 +241,27 @@ def query_handling(request):
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
+    print(f"[{datetime.datetime.now()}] JSON PARSED: Data loaded successfully")
+
     workspace_id = int(data.get("workspace_id"))
     session_id = data.get("session_id")
     query = (data.get("message") or "").strip()
+
+    print(f"[{datetime.datetime.now()}] VALIDATION: workspace_id={workspace_id}, session_id={session_id}, query_len={len(query)}")
 
     if not workspace_id or not query:
         return JsonResponse(
             {'error': 'workspace_id and message are required'}, status=400
         )
 
+    print(f"[{datetime.datetime.now()}] VALIDATION PASSED: Proceeding with query")
+
     try:
         workspace = Workspace.objects.get(workspace_id=workspace_id)
     except Workspace.DoesNotExist:
         return JsonResponse({'error': 'Workspace not found'}, status=404)
+
+    print(f"[{datetime.datetime.now()}] WORKSPACE LOOKUP: Found workspace {workspace_id}")
 
     is_member = (
         workspace.workspace_owner_id == request.user.id
@@ -268,15 +272,22 @@ def query_handling(request):
     if not is_member:
         return JsonResponse({'error': 'Forbidden'}, status=403)
 
+    print(f"[{datetime.datetime.now()}] MEMBERSHIP CHECK: User authorized for workspace {workspace_id}")
+
     if not hasattr(workspace, 'config'):
         return JsonResponse(
             {'error': 'Workspace is not configured yet'}, status=400
         )
 
+    print(f"[{datetime.datetime.now()}] CONFIG CHECK: Workspace configured, loading pipeline")
+
     config = workspace.config
     embedding_model_name = config.embedding_model
-    is_citation = config.is_citation                  # ← read citation flag
+    is_citation   = config.is_citation
+    metadata_flag = config.metadata_flag
     pipeline = get_pipeline(workspace_id, config)
+
+    print(f"[{datetime.datetime.now()}] PIPELINE LOADED: Model={embedding_model_name}, citation={is_citation}")
 
     embedding_model = pipeline["embedding_model"]
     reranker = pipeline["reranker"]
@@ -305,11 +316,15 @@ def query_handling(request):
             title="New Session",
         )
 
+    print(f"[{datetime.datetime.now()}] SESSION HANDLED: session_id={session.session_id}, created={not session_id}")
+
     # Auto-title from the first user message, ChatGPT-style.
     is_first_message = not session.messages.exists()
     if is_first_message and session.title == "New Session":
         session.title = (query[:60] + "…") if len(query) > 60 else query
         session.save(update_fields=["title"])
+
+    print(f"[{datetime.datetime.now()}] SESSION TITLED: title='{session.title}', first_message={is_first_message}")
 
     # -------------------------
     # Save User Message
@@ -320,8 +335,14 @@ def query_handling(request):
         text=query
     )
 
+    print(f"[{datetime.datetime.now()}] USER MESSAGE SAVED: session={session.session_id}")
+
+    print(f"[{datetime.datetime.now()}] EMBEDDING START: Using model {embedding_model_name}")
     embedded_query = EmbeddingService.embed_text(query, embedding_model_name)
 
+    print(f"[{datetime.datetime.now()}] EMBEDDING COMPLETE: Vector length={len(embedded_query) if embedded_query else 0}")
+
+    print(f"[{datetime.datetime.now()}] QDRANT SEARCH START: collection=documents__{embedding_model_mapping[embedding_model_name]}, top_k={top_k * 10}")
     qdrant = QdrantService(host="qdrant", port=6333)
 
     chunks = qdrant.search(
@@ -331,10 +352,22 @@ def query_handling(request):
         top_k=top_k * 10,
     )
     print("this is the chunks before reranking:", len(chunks))
+    print(f"[{datetime.datetime.now()}] QDRANT SEARCH COMPLETE: Found {len(chunks)} chunks")
+    print(f"[{datetime.datetime.now()}] RERANKING START: Processing {len(chunks)} chunks")
     pairs = [(query, chunk["payload"]["text"]) for chunk in chunks]
     scores = reranker.predict(pairs)
 
     ranked_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)
+
+    if not ranked_chunks:
+        no_docs_reply = "No documents have been uploaded to this workspace yet. Please upload documents first, then ask your question."
+        Message.objects.create(session=session, sender="assistant", text=no_docs_reply)
+        return JsonResponse({
+            "response":       no_docs_reply,
+            "session_id":     str(session.session_id),
+            "session_title":  session.title,
+            "session_created": is_first_message,
+        })
 
     print("\n\n========== RERANK DEBUG ==========\n")
     for i, (chunk, score) in enumerate(ranked_chunks[:5]):
@@ -342,43 +375,38 @@ def query_handling(request):
         print(chunk['payload']["text"][:100])
         print("-" * 50)
     print("\n========== END DEBUG ==========\n\n")
+    print(f"[{datetime.datetime.now()}] RERANKING COMPLETE: Top score={ranked_chunks[0][1]:.4f}")
 
     top_ranked = ranked_chunks[:top_k]
     top_chunks_for_llm = [chunk['payload']["text"] for chunk, score in top_ranked]
     context = "\n\n".join(top_chunks_for_llm)
 
+    print(f"[{datetime.datetime.now()}] CONTEXT BUILT: Selected {len(top_ranked)} chunks, context_len={len(context)}")
+
     # -------------------------
-    # Citations (only if is_citation=True)
+    # Collect sources for post-response appendix
     # -------------------------
     sources = []
-    if is_citation:
+    if is_citation or metadata_flag:
         seen = set()
         for chunk, score in top_ranked:
-            payload     = chunk['payload']
-            document_id = payload.get("document_id")
-            page        = payload.get("page")
-            source      = payload.get("source", f"Document {document_id}")
-            key = (document_id, page)
+            if score <= 0:
+                continue  # cross-encoder scores ≤ 0 indicate irrelevant chunks
+            payload = chunk['payload']
+            title   = payload.get('document_title') or payload.get('source', 'Unknown')
+            section = payload.get('section') or payload.get('page', '?')
+            key = (title, section)
             if key not in seen:
                 seen.add(key)
-                sources.append({
-                    "document_id": document_id,
-                    "page":        page,
-                    "source":      source,
-                })
+                sources.append(payload)
 
-        source_lines = "\n".join(
-            f"- {s['source']}, page {s['page']}" for s in sources
-        )
-        prompt = (
-            f"Answer the following question based on the context below.\n"
-            f"At the end of your answer, cite the sources used from this list:\n{source_lines}\n\n"
-            f"Context:\n{context}\n\n"
-            f"Question: {query}"
-        )
-    else:
-        prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
+    print(f"[{datetime.datetime.now()}] SOURCES BUILT: {len(sources)} sources for citation={is_citation}, metadata={metadata_flag}")
 
+    prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
+
+    print(f"[{datetime.datetime.now()}] PROMPT BUILT: prompt_len={len(prompt)}")
+
+    print(f"[{datetime.datetime.now()}] OLLAMA REQUEST START: Sending prompt to llama3:8b-instruct-q4_0")
     ollama_url = "http://ollama:11434/api/generate"
     payload = {
         "model": "llama3:8b-instruct-q4_0",
@@ -396,6 +424,57 @@ def query_handling(request):
     else:
         llm_response = f"Error generating response: {response.status_code}"
 
+    print(f"[{datetime.datetime.now()}] OLLAMA RESPONSE RECEIVED: status={response.status_code}, response_len={len(llm_response)}")
+
+    # -------------------------
+    # Post-response appendix — grouped per document, not per chunk
+    # -------------------------
+    appendix_parts = []
+
+    if sources:
+        # Group chunks by document_id → collect pages and document-level fields
+        _doc_level = {'document_id', 'document_title', 'uploaded_by', 'upload_time', 'file_type', 'source'}
+        docs = {}  # document_id → {fields, pages[]}
+        for s in sources:
+            doc_id = s.get('document_id', s.get('document_title', 'unknown'))
+            if doc_id not in docs:
+                docs[doc_id] = {
+                    'fields': {k: v for k, v in s.items() if k in _doc_level},
+                    'pages':  [],
+                }
+            page = s.get('section') or s.get('page', '?')
+            if page not in docs[doc_id]['pages']:
+                docs[doc_id]['pages'].append(page)
+
+        if is_citation:
+            citation_lines = [
+                f"- \"{d['fields'].get('document_title', 'Unknown')}\" — "
+                f"Pages: {', '.join(str(p) for p in d['pages'])}"
+                for d in docs.values()
+            ]
+            appendix_parts.append("**Sources:**\n" + "\n".join(citation_lines))
+
+        if metadata_flag:
+            meta_lines = []
+            for i, d in enumerate(docs.values(), 1):
+                f = d['fields']
+
+                raw_time = f.get('upload_time', '')
+                try:
+                    upload_time = datetime.datetime.fromisoformat(raw_time).strftime('%d %b %Y, %H:%M')
+                except (ValueError, TypeError):
+                    upload_time = raw_time
+
+                meta_lines.append(
+                    f"[{i}] uploaded_by: {f.get('uploaded_by', '—')} | "
+                    f"upload_time: {upload_time} | "
+                    f"file_type: {f.get('file_type', '—')}"
+                )
+            appendix_parts.append("**Metadata:**\n" + "\n".join(meta_lines))
+
+    if appendix_parts:
+        llm_response = llm_response + "\n\n---\n" + "\n\n".join(appendix_parts)
+
     # -------------------------
     # Save Assistant Message
     # -------------------------
@@ -405,6 +484,9 @@ def query_handling(request):
         text=llm_response
     )
 
+    print(f"[{datetime.datetime.now()}] ASSISTANT MESSAGE SAVED: session={session.session_id}")
+
+    print(f"[{datetime.datetime.now()}] PIPELINE COMPLETE: Returning response")
     return JsonResponse({
         "response": llm_response,
         "session_id": str(session.session_id),

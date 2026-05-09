@@ -1,0 +1,95 @@
+{
+  "document_count": 8,
+  "selected_document": {
+    "id": 3,
+    "document_title": "Project_Report_Final.pdf",
+    "file_extension": "pdf",
+    "is_indexed": true,
+    "uploaded_by": "rayanmaloma@gmail.com",
+    "uploaded_at": "2026-3-5  3:00 AM",
+    "total_chunks": 150,
+    "used_in_answers": 24
+  },
+  "documents": [
+    {
+      "id": 1,
+      "document_title": "Meeting_Notes_Q1.pdf",
+      "file_extension": "pdf",
+      "is_indexed": true,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-3-1  10:30 AM",
+      "total_chunks": 85,
+      "used_in_answers": 12
+    },
+    {
+      "id": 2,
+      "document_title": "API_Documentation.docx",
+      "file_extension": "docx",
+      "is_indexed": true,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-3-2  2:15 PM",
+      "total_chunks": 210,
+      "used_in_answers": 38
+    },
+    {
+      "id": 3,
+      "document_title": "Project_Report_Final.pdf",
+      "file_extension": "pdf",
+      "is_indexed": true,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-3-5  3:00 AM",
+      "total_chunks": 150,
+      "used_in_answers": 24
+    },
+    {
+      "id": 4,
+      "document_title": "app_controller.py",
+      "file_extension": "py",
+      "is_indexed": false,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-2-28  9:45 AM",
+      "total_chunks": 0,
+      "used_in_answers": 0
+    },
+    {
+      "id": 5,
+      "document_title": "Design_Spec_v2.doc",
+      "file_extension": "doc",
+      "is_indexed": true,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-3-3  11:00 AM",
+      "total_chunks": 95,
+      "used_in_answers": 17
+    },
+    {
+      "id": 6,
+      "document_title": "dashboard.tsx",
+      "file_extension": "tsx",
+      "is_indexed": false,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-3-4  4:20 PM",
+      "total_chunks": 0,
+      "used_in_answers": 0
+    },
+    {
+      "id": 7,
+      "document_title": "Budget_2026.xlsx",
+      "file_extension": "xlsx",
+      "is_indexed": true,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-2-25  1:30 PM",
+      "total_chunks": 42,
+      "used_in_answers": 8
+    },
+    {
+      "id": 8,
+      "document_title": "README.md",
+      "file_extension": "md",
+      "is_indexed": false,
+      "uploaded_by": "rayanmaloma@gmail.com",
+      "uploaded_at": "2026-3-4  6:00 PM",
+      "total_chunks": 0,
+      "used_in_answers": 0
+    }
+  ]
+}
