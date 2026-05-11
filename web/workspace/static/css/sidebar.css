@@ -271,7 +271,29 @@
     font-weight: 700;
     font-size: 18px;
     flex-shrink: 0;
+    text-decoration: none;
+    transition: transform 150ms ease, box-shadow 150ms ease;
 }
+
+.dash-user__avatar--link { cursor: pointer; }
+.dash-user__avatar--link:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(31, 100, 255, 0.3);
+}
+
+.dash-user__avatar.has-image {
+    background-size: cover;
+    background-position: center;
+    color: transparent;
+}
+
+.dash-user__meta--link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    display: block;
+}
+.dash-user__meta--link:hover .dash-user__name { color: #1f64ff; }
 
 .autorag-sidebar-expanded .dash-user__avatar {
     width: 48px;

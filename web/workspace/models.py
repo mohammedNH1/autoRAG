@@ -31,6 +31,12 @@ class Workspace(models.Model):
     collection_id = models.CharField(max_length=255, blank=True, null=True)
     api_key = models.CharField(max_length=255, blank=True, null=True)
 
+    workspace_image = models.FileField(
+        upload_to='workspace_images/',
+        null=True,
+        blank=True,
+    )
+
     def __str__(self):
         return self.workspace_name or f"Workspace {self.workspace_id}"
 
@@ -59,6 +65,53 @@ class WorkspaceMembership(models.Model):
 
 
 # ----------------------
+# Workspace Invitation
+# ----------------------
+class WorkspaceInvitation(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACCEPTED, "Accepted"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    invitation_id = models.AutoField(primary_key=True)
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="invitations",
+    )
+
+    invited_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="received_invitations",
+    )
+
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_invitations",
+    )
+
+    role = models.CharField(max_length=50, default="member")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Invite {self.invitation_id} for {self.invited_user} → {self.workspace} ({self.status})"
+
+
+# ----------------------
 # Weak Entity: Config
 # ----------------------
 class WorkspaceConfig(models.Model):
@@ -84,6 +137,10 @@ class WorkspaceConfig(models.Model):
     temperature = models.FloatField(default=0.7)
     top_p = models.FloatField(default=1.0)
     top_k = models.IntegerField(default=5)
+
+    # Raw questionnaire answers — kept so the Settings page can prefill the
+    # RAG form without lossy reverse-mapping from derived numeric values.
+    raw_answers = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return f"Config {self.config_id} for Workspace {self.workspace.workspace_id}"

@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@400;700&family=Barlow:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260506">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
 </head>
 <body>
 <div class="dash-layout">
@@ -23,7 +23,10 @@
     <main class="dash-main">
 
         <header class="dash-pageHeader">
-            <h1 class="dash-pageTitle">Dashboard</h1>
+            <nav class="dash-tabs" role="tablist">
+                <button type="button" class="dash-tab is-active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
+                <button type="button" class="dash-tab" data-tab="audit" role="tab" aria-selected="false">Audit Trail</button>
+            </nav>
             <hr class="dash-divider">
         </header>
 
@@ -43,6 +46,7 @@
              DATA STATE
              =========================== -->
 
+        <div class="dash-tabpanel is-active" data-panel="dashboard" role="tabpanel">
         <!-- KPI cards -->
         <section class="dash-kpis">
             <article class="kpi-card kpi-card--questions">
@@ -198,11 +202,11 @@
             </article>
         </section>
 
+        </div><!-- /tabpanel dashboard -->
+
+        <div class="dash-tabpanel" data-panel="audit" role="tabpanel" hidden>
         <!-- Audit Trail -->
         <section class="dash-audit">
-            <h2 class="dash-pageTitle">Audit Trail</h2>
-            <hr class="dash-divider">
-
             <div class="audit-table">
                 <div class="audit-table__head">
                     <span>Employee</span>
@@ -222,6 +226,7 @@
                 {% endfor %}
             </div>
         </section>
+        </div><!-- /tabpanel audit -->
 
         {% endif %}
     </main>
@@ -231,6 +236,31 @@
         el.style.left = el.dataset.x + 'px';
         el.style.top = el.dataset.y + 'px';
     });
+
+    (function () {
+        const tabs   = document.querySelectorAll('.dash-tab');
+        const panels = document.querySelectorAll('.dash-tabpanel');
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                const target = tab.getAttribute('data-tab');
+                tabs.forEach(function (t) {
+                    t.classList.remove('is-active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                panels.forEach(function (p) {
+                    p.classList.remove('is-active');
+                    p.hidden = true;
+                });
+                tab.classList.add('is-active');
+                tab.setAttribute('aria-selected', 'true');
+                const panel = document.querySelector('.dash-tabpanel[data-panel="' + target + '"]');
+                if (panel) {
+                    panel.classList.add('is-active');
+                    panel.hidden = false;
+                }
+            });
+        });
+    })();
 </script>
 </body>
 </html>

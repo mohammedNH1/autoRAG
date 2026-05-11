@@ -1,5 +1,9 @@
 {% load static %}
+{% load workspace_perms %}
+{% load account_extras %}
 {% with nav_workspace_id=workspace_id|default:workspace.workspace_id %}
+{% can_edit_settings workspace request.user as can_open_settings %}
+{% user_image_url request.user as sidebar_pfp_url %}
 <script>
     (function () {
         try {
@@ -40,32 +44,35 @@
                 </span>
                 <span class="dash-nav__label">Dashboards</span>
             </a>
-            <button class="dash-nav__item{% if active_nav == 'settings' %} is-active{% endif %}" type="button" title="Settings">
+            {% if can_open_settings %}
+            <a class="dash-nav__item{% if active_nav == 'settings' %} is-active{% endif %}" href="{% url 'workspace_settings' nav_workspace_id %}" title="Settings">
                 <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Settings.svg' %}" alt="">
                 <span class="dash-nav__label">Settings</span>
-            </button>
+            </a>
+            {% endif %}
         </nav>
     </div>
 
     <div class="dash-user">
-        <div class="dash-user__avatar">
-            {% if request.user.is_authenticated %}
+        {% if request.user.is_authenticated %}
+        <a class="dash-user__avatar dash-user__avatar--link{% if sidebar_pfp_url %} has-image{% endif %}" href="{% url 'accounts:profile' %}?next={{ request.get_full_path|urlencode }}" title="Edit profile"{% if sidebar_pfp_url %} style="background-image:url('{{ sidebar_pfp_url }}')"{% endif %}>
+            {% if not sidebar_pfp_url %}
             <span>{{ request.user.first_name|default:request.user.email|default:request.user.username|make_list|first|upper }}</span>
-            {% else %}
-            <span>G</span>
             {% endif %}
-        </div>
-        <div class="dash-user__meta">
-            {% if request.user.is_authenticated %}
+        </a>
+        <a class="dash-user__meta dash-user__meta--link" href="{% url 'accounts:profile' %}?next={{ request.get_full_path|urlencode }}" title="Edit profile">
             <p class="dash-user__name">{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</p>
             <p class="dash-user__role">
                 {% if workspace.workspace_owner_id == request.user.id %}Owner{% else %}Member{% endif %}
             </p>
-            {% else %}
+        </a>
+        {% else %}
+        <div class="dash-user__avatar"><span>G</span></div>
+        <div class="dash-user__meta">
             <p class="dash-user__name">Guest</p>
             <p class="dash-user__role">Viewer</p>
-            {% endif %}
         </div>
+        {% endif %}
         {% if request.user.is_authenticated %}
         <a class="dash-user__action" href="{% url 'accounts:logout' %}" title="Sign out" aria-label="Sign out">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -77,6 +84,19 @@
     </div>
 </aside>
 <script>
+    // Save current URL before navigating to profile so Back returns precisely here.
+    (function () {
+        document.querySelectorAll('a[href*="/accounts/profile"]').forEach(function (a) {
+            a.addEventListener('click', function () {
+                try {
+                    if (location.pathname.indexOf('/accounts/profile') !== 0) {
+                        sessionStorage.setItem('autorag.profileBack', location.pathname + location.search);
+                    }
+                } catch (_) {}
+            });
+        });
+    })();
+
     (function () {
         var KEY = 'autorag.sidebar';
         var root = document.documentElement;

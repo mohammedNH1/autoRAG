@@ -3,6 +3,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 import requests
 from documents.services.qdrant_service import QdrantService
 from documents.services.embedding_service import EmbeddingService
@@ -13,6 +14,12 @@ import uuid
 from django.core.exceptions import ValidationError
 import datetime
 
+
+REQUIRED_QUESTIONNAIRE_FIELDS = (
+    "language", "use_case", "reference", "temperature", "top_p",
+    "uptodate", "metadata", "chunking_strategy",
+)
+
 #Added by rayan to run here the questionnaire page
 def questionnaire_page(request):
     """Backend logic here"""
@@ -20,61 +27,120 @@ def questionnaire_page(request):
 
 
 @csrf_exempt
+@login_required
 def questionnaire(request):
     if request.method != 'POST':
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-    try:
-        data = json.loads(request.body)  
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-    # Extract values from JSON
-    
-    language = data.get("language")
-    use_case = data.get("use_case")
-    reference_value = data.get("reference")
-    temperature_value = data.get("temperature")
-    top_p_value = data.get("top_p")
-    uptodate_value = data.get("uptodate")
-    metadata_value = data.get("metadata")
-    chunking_value = data.get("chunking_strategy")
-    # Process logic
-    embedding_config = embedding_reranker(language, use_case)
-    k_value = top_k(reference_value)
-    reference_flag = reference(reference_value)
-    temp_value = temperature(temperature_value)
-    top_p_final = top_p(top_p_value)
-    uptodate_flag = up_to_date_docs(uptodate_value)
-    metadata_flag = add_metadata(metadata_value)
-    chunking_strategy = determine_chunking_strategy(chunking_value)
-    
-    # Use existing workspace if workspace_id provided, otherwise create new
-    workspace_id = data.get("workspace_id")
-    if workspace_id:
-        try:
-            workspace = Workspace.objects.get(workspace_id=workspace_id)
-        except Workspace.DoesNotExist:
-            workspace = Workspace.objects.create()
+    content_type = (request.META.get('CONTENT_TYPE') or '').lower()
+    image_file = None
+    if content_type.startswith('multipart/form-data'):
+        data = {k: v for k, v in request.POST.items()}
+        image_file = request.FILES.get('workspace_image')
     else:
-        workspace = Workspace.objects.create()
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    # 2️⃣ Create WorkspaceConfig linked via OneToOne
-    WorkspaceConfig.objects.create(
-        workspace=workspace,
-        retrieval_type='none',  # placeholder, (what is retrieval type?)
-        re_ranker=embedding_config["reranker_model"],
-        embedding_model=embedding_config["embedding_model"],
-        chunking_strategy=chunking_strategy,
-        distance_metric="cosine", # placeholder, (is it always cosine?)
-        temperature=temp_value,
-        top_p=top_p_final,
-        top_k=k_value,
-        is_citation=reference_flag,
-        metadata_flag=metadata_flag,
-    )
+    # Reject early if any answer is missing — no workspace should be created
+    # unless the questionnaire is fully and validly answered.
+    missing = [f for f in REQUIRED_QUESTIONNAIRE_FIELDS if not data.get(f)]
+    if missing:
+        return JsonResponse(
+            {"error": f"Missing answers: {', '.join(missing)}"}, status=400
+        )
+
+    workspace_id = data.get("workspace_id")
+    name = (data.get("name") or "").strip()
+    description = (data.get("description") or "").strip()
+
+    # When creating a brand-new workspace from the unified modal, the
+    # name is required. When attaching a config to an existing workspace
+    # (legacy /questionnaire/?workspace_id=X flow), the name is irrelevant.
+    if not workspace_id:
+        if not name:
+            return JsonResponse({"error": "Workspace name is required"}, status=400)
+        if len(name) > 150:
+            return JsonResponse({"error": "Name must be 150 characters or fewer"}, status=400)
+        if image_file is None:
+            return JsonResponse({"error": "Workspace image is required"}, status=400)
+        if not (image_file.content_type or '').startswith('image/'):
+            return JsonResponse({"error": "Uploaded file must be an image"}, status=400)
+        if image_file.size > 5 * 1024 * 1024:
+            return JsonResponse({"error": "Image must be 5 MB or smaller"}, status=400)
+
+    # Compute config values from raw answers.
+    language          = data.get("language")
+    use_case          = data.get("use_case")
+    reference_value   = data.get("reference")
+    temperature_value = data.get("temperature")
+    top_p_value       = data.get("top_p")
+    uptodate_value    = data.get("uptodate")
+    metadata_value    = data.get("metadata")
+    chunking_value    = data.get("chunking_strategy")
+
+    embedding_config  = embedding_reranker(language, use_case)
+    k_value           = top_k(reference_value)
+    reference_flag    = reference(reference_value)
+    temp_value        = temperature(temperature_value)
+    top_p_final       = top_p(top_p_value)
+    uptodate_flag     = up_to_date_docs(uptodate_value)
+    metadata_flag     = add_metadata(metadata_value)
+    chunking_strategy = determine_chunking_strategy(chunking_value)
+
+    # Atomic: workspace + owner membership + config all succeed, or none persist.
+    try:
+        with transaction.atomic():
+            if workspace_id:
+                # Legacy path: attach config to an already-created workspace.
+                # Only allow when the requesting user owns or is in the workspace.
+                workspace = Workspace.objects.get(workspace_id=workspace_id)
+                is_member = (
+                    workspace.workspace_owner_id == request.user.id
+                    or WorkspaceMembership.objects.filter(
+                        workspace=workspace, user=request.user
+                    ).exists()
+                )
+                if not is_member:
+                    return JsonResponse({"error": "Forbidden"}, status=403)
+            else:
+                workspace = Workspace.objects.create(
+                    workspace_name=name,
+                    workspace_description=description,
+                    workspace_owner=request.user,
+                    workspace_image=image_file,
+                )
+                WorkspaceMembership.objects.create(
+                    workspace=workspace,
+                    user=request.user,
+                    role="owner",
+                )
+
+            raw_answers = {
+                f: data.get(f) for f in REQUIRED_QUESTIONNAIRE_FIELDS
+            }
+
+            WorkspaceConfig.objects.create(
+                workspace=workspace,
+                retrieval_type='none',
+                re_ranker=embedding_config["reranker_model"],
+                embedding_model=embedding_config["embedding_model"],
+                chunking_strategy=chunking_strategy,
+                distance_metric="cosine",
+                temperature=temp_value,
+                top_p=top_p_final,
+                top_k=k_value,
+                is_citation=reference_flag,
+                metadata_flag=metadata_flag,
+                raw_answers=raw_answers,
+            )
+    except Workspace.DoesNotExist:
+        return JsonResponse({"error": "Workspace not found"}, status=404)
+
     return JsonResponse({
         "status": "success",
+        "workspace_id": workspace.workspace_id,
         "config": {
             "embedding": embedding_config,
             "top_k": k_value,
@@ -83,9 +149,8 @@ def questionnaire(request):
             "top_p": top_p_final,
             "uptodate": uptodate_flag,
             "metadata": metadata_flag,
-            "chunking_strategy": chunking_strategy
+            "chunking_strategy": chunking_strategy,
         },
-        "received_payload": data, #Added by rayan to see the payload in the response
     })
 
 
@@ -320,9 +385,6 @@ def query_handling(request):
 
     # Auto-title from the first user message, ChatGPT-style.
     is_first_message = not session.messages.exists()
-    if is_first_message and session.title == "New Session":
-        session.title = (query[:60] + "…") if len(query) > 60 else query
-        session.save(update_fields=["title"])
 
     print(f"[{datetime.datetime.now()}] SESSION TITLED: title='{session.title}', first_message={is_first_message}")
 
@@ -474,6 +536,40 @@ def query_handling(request):
 
     if appendix_parts:
         llm_response = llm_response + "\n\n---\n" + "\n\n".join(appendix_parts)
+
+    # -------------------------
+    # Auto-title (LLM-generated, ChatGPT-style) on first message
+    # -------------------------
+    if is_first_message and session.title == "New Session":
+        fallback_title = (query[:60] + "…") if len(query) > 60 else query
+        title_prompt = (
+            "Generate a short, specific chat title (max 6 words). "
+            "No quotes, no trailing punctuation, no prefix like 'Title:'. "
+            "Reply with only the title.\n\n"
+            f"User: {query}\n"
+            f"Assistant: {llm_response[:500]}\n\n"
+            "Title:"
+        )
+        try:
+            title_resp = requests.post(
+                ollama_url,
+                json={
+                    "model": "llama3:8b-instruct-q4_0",
+                    "prompt": title_prompt,
+                    "stream": False,
+                    "options": {"num_predict": 20, "temperature": 0.3},
+                },
+                timeout=15,
+            )
+            generated = ""
+            if title_resp.status_code == 200:
+                raw = (title_resp.json().get("response") or "").strip()
+                raw = raw.splitlines()[0] if raw else ""
+                generated = raw.strip().strip('"').strip("'").rstrip(".!?,;:").strip()[:60]
+            session.title = generated or fallback_title
+        except requests.RequestException:
+            session.title = fallback_title
+        session.save(update_fields=["title"])
 
     # -------------------------
     # Save Assistant Message

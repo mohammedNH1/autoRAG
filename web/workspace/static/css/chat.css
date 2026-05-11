@@ -301,6 +301,100 @@ button {
     font-weight: 500;
 }
 
+/* Session row (wraps item + kebab) */
+.session-row {
+    position: relative;
+    border-left: 3px solid transparent;
+    background-color: #fafafa;
+    transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.session-row.active {
+    border-left-color: #0052cc;
+    background-color: #f0f0f0;
+}
+
+.session-row .session-item {
+    border-left: 0;
+    background: transparent;
+    padding-right: 40px;
+}
+
+.session-row:hover { background-color: #f0f0f0; }
+
+.session-kebab {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    border-radius: 50%;
+    color: #64748b;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.session-row:hover .session-kebab,
+.session-row.active .session-kebab,
+.session-kebab[aria-expanded="true"] {
+    display: flex;
+}
+
+.session-kebab:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.session-kebab svg { width: 16px; height: 16px; }
+
+.session-kebab-menu {
+    position: absolute;
+    top: calc(100% - 6px);
+    right: 8px;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.05);
+    padding: 4px;
+    z-index: 50;
+}
+
+.session-kebab-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e293b;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.session-kebab-menu button:hover {
+    background: #f1f5f9;
+}
+
+.session-kebab-menu__danger {
+    color: #E41E3F !important;
+}
+
+.session-kebab-menu__danger:hover {
+    background: #fef2f4 !important;
+    color: #c01839 !important;
+}
+
 /* ============ MAIN CONTENT ============ */
 .main-content {
     flex: 1;

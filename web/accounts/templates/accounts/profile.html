@@ -1,0 +1,165 @@
+{% load static %}
+{% load account_extras %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Profile — AutoRAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}?v=3">
+</head>
+<body>
+<div class="profile-page">
+    <header class="profile-topbar">
+        <a class="profile-back" id="profileBack" href="{{ back_url }}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Back</span>
+        </a>
+        <a class="profile-logout" href="{% url 'accounts:logout' %}">Sign out</a>
+    </header>
+    <script>
+        (function () {
+            // 1) Override the server-resolved back_url with the last non-profile
+            //    page we stored in sessionStorage, if any (most accurate).
+            try {
+                var stored = sessionStorage.getItem('autorag.profileBack');
+                if (stored) {
+                    var a = document.getElementById('profileBack');
+                    if (a) a.href = stored;
+                }
+            } catch (_) {}
+
+            // 2) On click, if we have a same-origin non-profile referrer, prefer
+            //    history.back() so we restore exact scroll/state.
+            var back = document.getElementById('profileBack');
+            if (back) {
+                back.addEventListener('click', function (e) {
+                    var stored;
+                    try { stored = sessionStorage.getItem('autorag.profileBack'); } catch (_) {}
+                    if (stored) return; // use href set above
+                    var ref = document.referrer;
+                    if (!ref) return;
+                    var refURL;
+                    try { refURL = new URL(ref); } catch (_) { return; }
+                    if (refURL.host !== location.host) return;
+                    if (refURL.pathname.indexOf('/accounts/profile') === 0) return;
+                    e.preventDefault();
+                    history.back();
+                });
+            }
+        })();
+    </script>
+
+    <main class="profile-main">
+        <section class="profile-card">
+            <div class="profile-card__head">
+                {% user_image_url request.user as pfp_url %}
+                <div class="profile-avatar{% if pfp_url %} profile-avatar--has-image{% endif %}"{% if pfp_url %} style="background-image:url('{{ pfp_url }}')"{% endif %}>
+                    {% if not pfp_url %}
+                    <span>{{ request.user.first_name|default:request.user.email|default:request.user.username|make_list|first|upper }}</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <h1 class="profile-title">{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</h1>
+                    <p class="profile-sub">{{ request.user.email|default:request.user.username }}</p>
+                </div>
+            </div>
+
+            {% if messages %}
+            <div class="profile-flashes" aria-live="polite">
+                {% for message in messages %}
+                <p class="profile-flash profile-flash--{{ message.tags|default:'info' }}">{{ message }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'accounts:profile' %}" class="profile-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ back_url }}">
+
+                <div class="profile-field">
+                    <span class="profile-field__label">Profile picture</span>
+                    <div class="profile-pfp">
+                        <div class="profile-pfp__preview{% if pfp_url %} has-image{% endif %}" id="pfpPreview"{% if pfp_url %} style="background-image:url('{{ pfp_url }}')"{% endif %}>
+                            {% if not pfp_url %}
+                            <span>{{ request.user.first_name|default:request.user.email|default:request.user.username|make_list|first|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="profile-pfp__body">
+                            <button type="button" class="profile-btn profile-btn--ghost" id="pfpBtn">Choose photo</button>
+                            {% if pfp_url %}
+                            <label class="profile-pfp__remove">
+                                <input type="checkbox" name="remove_image" value="1"> Remove current photo
+                            </label>
+                            {% endif %}
+                            <span class="profile-field__hint">PNG / JPG / SVG, up to 5 MB</span>
+                            <input type="file" id="pfpInput" name="profile_image" accept="image/*" hidden>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-grid">
+                    <label class="profile-field">
+                        <span class="profile-field__label">First name</span>
+                        <input type="text" name="first_name" value="{{ request.user.first_name }}" maxlength="150" autocomplete="given-name">
+                    </label>
+
+                    <label class="profile-field">
+                        <span class="profile-field__label">Last name</span>
+                        <input type="text" name="last_name" value="{{ request.user.last_name }}" maxlength="150" autocomplete="family-name">
+                    </label>
+                </div>
+
+                <label class="profile-field">
+                    <span class="profile-field__label">Email</span>
+                    <input type="email" name="email" value="{{ request.user.email }}" required autocomplete="email">
+                    <span class="profile-field__hint">Used for sign-in and notifications.</span>
+                </label>
+
+                <div class="profile-form__actions">
+                    <button type="submit" class="profile-btn profile-btn--primary">Save changes</button>
+                </div>
+            </form>
+        </section>
+    </main>
+</div>
+<script>
+    // Profile picture picker (placed after the form so all elements exist).
+    (function () {
+        var btn     = document.getElementById('pfpBtn');
+        var input   = document.getElementById('pfpInput');
+        var preview = document.getElementById('pfpPreview');
+        if (!btn || !input || !preview) return;
+        btn.addEventListener('click', function () { input.click(); });
+        input.addEventListener('change', function () {
+            var file = input.files && input.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('File must be an image.');
+                input.value = '';
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image must be 5 MB or smaller.');
+                input.value = '';
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var src = String(e.target.result);
+                preview.style.backgroundImage =
+                    'url("' + src.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
+                preview.classList.add('has-image');
+                preview.innerHTML = '';
+            };
+            reader.readAsDataURL(file);
+        });
+    })();
+</script>
+</body>
+</html>

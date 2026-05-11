@@ -12,9 +12,25 @@ from django.db.models import Q, Count
 from django.urls import reverse
 from django.utils import timezone
 
-from workspace.models import Workspace, WorkspaceMembership, Session, Message
+from workspace.models import Workspace, WorkspaceMembership, WorkspaceInvitation, Session, Message
 from pipeline.services.pipeline_registry import get_pipeline
 
+
+# Roles that the workspace owner can assign to other members.
+MANAGEABLE_ROLES = ("member", "admin", "content_manager")
+INVITER_ROLES   = ("owner", "admin", "content_manager")
+ROLE_LABELS = {
+    "owner":           "Owner",
+    "admin":           "Admin",
+    "content_manager": "Content Manager",
+    "member":          "User",
+    "editor":          "Editor",
+    "viewer":          "Viewer",
+}
+
+
+def _role_label(role):
+    return ROLE_LABELS.get(role, (role or "").replace("_", " ").title() or "User")
 
 
 
@@ -65,7 +81,7 @@ def _can_manage_members(workspace, user):
         or WorkspaceMembership.objects.filter(
             workspace=workspace,
             user=user,
-            role__in=["owner", "admin"],
+            role__in=list(INVITER_ROLES),
         ).exists()
     )
 
@@ -85,7 +101,7 @@ def _build_member_row(workspace, user, role, current_user):
         "initials": _user_initials(user),
         "email": user.email or user.username,
         "role": role,
-        "role_label": role.title(),
+        "role_label": _role_label(role),
         "is_owner": workspace.workspace_owner_id == user.id,
         "is_current_user": current_user.id == user.id,
         "sessions_count": sessions_count,
@@ -133,45 +149,97 @@ def workspace_list(request):
         Q(workspace_owner=request.user) | Q(users=request.user)
     ).distinct().order_by('-workspace_id')
 
+    pending_invites_count = WorkspaceInvitation.objects.filter(
+        invited_user=request.user,
+        status=WorkspaceInvitation.STATUS_PENDING,
+    ).count()
+
     return render(request, "workspace/workspace_list.html", {
         "workspaces": workspaces,
+        "pending_invites_count": pending_invites_count,
+    })
+
+
+@login_required
+@require_GET
+def list_invitations(request):
+    invites = (
+        WorkspaceInvitation.objects
+        .filter(invited_user=request.user, status=WorkspaceInvitation.STATUS_PENDING)
+        .select_related("workspace", "invited_by")
+    )
+    return JsonResponse({
+        "invitations": [
+            {
+                "invitation_id":   inv.invitation_id,
+                "workspace_id":    inv.workspace.workspace_id,
+                "workspace_name":  inv.workspace.workspace_name or f"Workspace {inv.workspace.workspace_id}",
+                "role":            inv.role,
+                "role_label":      _role_label(inv.role),
+                "invited_by":      _user_display_name(inv.invited_by) if inv.invited_by else "Someone",
+                "created_at":      inv.created_at.isoformat(),
+            }
+            for inv in invites
+        ],
     })
 
 
 @csrf_exempt
 @login_required
 @require_POST
-def create_workspace(request):
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+def accept_invitation(request, invitation_id):
+    invite = get_object_or_404(WorkspaceInvitation, pk=invitation_id, invited_user=request.user)
+    if invite.status != WorkspaceInvitation.STATUS_PENDING:
+        return JsonResponse({"error": "Invitation already responded to."}, status=400)
 
-    name = data.get("name", "").strip()
-    description = data.get("description", "").strip()
-
-    if not name:
-        return JsonResponse({"error": "Workspace name is required"}, status=400)
-
-    if len(name) > 150:
-        return JsonResponse({"error": "Name must be 150 characters or fewer"}, status=400)
-
-    workspace = Workspace.objects.create(
-        workspace_name=name,
-        workspace_description=description,
-        workspace_owner=request.user,
+    workspace = invite.workspace
+    already_member = (
+        workspace.workspace_owner_id == request.user.id
+        or WorkspaceMembership.objects.filter(workspace=workspace, user=request.user).exists()
     )
+    if not already_member:
+        WorkspaceMembership.objects.create(
+            workspace=workspace,
+            user=request.user,
+            role=invite.role,
+        )
 
-    WorkspaceMembership.objects.create(
-        workspace=workspace,
-        user=request.user,
-        role="owner",
-    )
+    invite.status = WorkspaceInvitation.STATUS_ACCEPTED
+    invite.responded_at = timezone.now()
+    invite.save(update_fields=["status", "responded_at"])
 
     return JsonResponse({
-        "status": "success",
+        "status": "accepted",
         "workspace_id": workspace.workspace_id,
     })
+
+
+@csrf_exempt
+@login_required
+@require_POST
+def reject_invitation(request, invitation_id):
+    invite = get_object_or_404(WorkspaceInvitation, pk=invitation_id, invited_user=request.user)
+    if invite.status != WorkspaceInvitation.STATUS_PENDING:
+        return JsonResponse({"error": "Invitation already responded to."}, status=400)
+
+    invite.status = WorkspaceInvitation.STATUS_REJECTED
+    invite.responded_at = timezone.now()
+    invite.save(update_fields=["status", "responded_at"])
+
+    return JsonResponse({"status": "rejected"})
+
+
+@csrf_exempt
+@login_required
+@require_POST
+def create_workspace(request):
+    # DEPRECATED: workspaces are now created atomically alongside their
+    # RAG configuration via /submit-answers/. This endpoint refuses
+    # to create workspaces standalone so orphaned ones can never appear.
+    return JsonResponse(
+        {"error": "Workspace creation requires the full RAG questionnaire. Use /submit-answers/."},
+        status=410,
+    )
 
 
 @login_required
@@ -250,10 +318,9 @@ def members(request, workspace_id):
         "contributors_count": sum(1 for row in member_rows if row["activity_total"] > 0),
         "questions_count": sum(row["questions_count"] for row in member_rows),
         "can_manage_members": can_manage_members,
+        "is_owner": workspace.workspace_owner_id == request.user.id,
         "role_choices": [
-            {"value": "member", "label": "Member"},
-            {"value": "editor", "label": "Editor"},
-            {"value": "viewer", "label": "Viewer"},
+            {"value": role, "label": _role_label(role)} for role in MANAGEABLE_ROLES
         ],
     })
 
@@ -263,12 +330,12 @@ def members(request, workspace_id):
 def add_member(request, workspace_id):
     workspace = _get_user_workspace(request, workspace_id)
     if not _can_manage_members(workspace, request.user):
-        messages.error(request, "Only workspace owners can add members.")
+        messages.error(request, "You don't have permission to invite members.")
         return redirect("workspace_members", workspace_id=workspace_id)
 
     email = (request.POST.get("email") or "").strip()
     role = (request.POST.get("role") or "member").strip().lower()
-    if role not in {"member", "editor", "viewer"}:
+    if role not in MANAGEABLE_ROLES:
         role = "member"
 
     if not email:
@@ -285,8 +352,62 @@ def add_member(request, workspace_id):
         messages.info(request, "That user is already in this workspace.")
         return redirect("workspace_members", workspace_id=workspace_id)
 
-    WorkspaceMembership.objects.create(workspace=workspace, user=user, role=role)
-    messages.success(request, f"{_user_display_name(user)} was added to this workspace.")
+    existing_pending = WorkspaceInvitation.objects.filter(
+        workspace=workspace,
+        invited_user=user,
+        status=WorkspaceInvitation.STATUS_PENDING,
+    ).first()
+    if existing_pending:
+        messages.info(request, f"{_user_display_name(user)} already has a pending invitation.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    WorkspaceInvitation.objects.create(
+        workspace=workspace,
+        invited_user=user,
+        invited_by=request.user,
+        role=role,
+        status=WorkspaceInvitation.STATUS_PENDING,
+    )
+    messages.success(request, f"Invitation sent to {_user_display_name(user)}.")
+    return redirect("workspace_members", workspace_id=workspace_id)
+
+
+@login_required
+@require_POST
+def change_member_role(request, workspace_id, user_id):
+    workspace = _get_user_workspace(request, workspace_id)
+
+    # Only the workspace owner can change roles.
+    if workspace.workspace_owner_id != request.user.id:
+        messages.error(request, "Only the workspace owner can change member roles.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    if user_id == workspace.workspace_owner_id:
+        messages.error(request, "The workspace owner's role cannot be changed.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    new_role = (request.POST.get("role") or "").strip().lower()
+    if new_role not in MANAGEABLE_ROLES:
+        messages.error(request, "Invalid role.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    User = get_user_model()
+    target_user = get_object_or_404(User, pk=user_id)
+
+    membership = WorkspaceMembership.objects.filter(workspace=workspace, user=target_user).first()
+    if membership is None:
+        messages.error(request, "That user is not a member of this workspace.")
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    if membership.role == new_role:
+        return redirect("workspace_members", workspace_id=workspace_id)
+
+    membership.role = new_role
+    membership.save(update_fields=["role"])
+    messages.success(
+        request,
+        f"{_user_display_name(target_user)} is now {_role_label(new_role)}.",
+    )
     return redirect("workspace_members", workspace_id=workspace_id)
 
 
@@ -312,6 +433,160 @@ def remove_member(request, workspace_id, user_id):
         messages.info(request, "That user is not a member of this workspace.")
 
     return redirect("workspace_members", workspace_id=workspace_id)
+
+
+@login_required
+def workspace_settings(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+
+    # Only owners and admins can access the settings page at all.
+    if not _can_edit_settings(workspace, request.user):
+        messages.error(request, "Only the workspace owner or an admin can view settings.")
+        return redirect("chat_page", workspace_id=workspace_id)
+
+    is_owner = workspace.workspace_owner_id == request.user.id
+    can_edit = True  # already gated above
+
+    config = getattr(workspace, 'config', None)
+    raw = (config.raw_answers or {}) if config else {}
+
+    return render(request, "workspace/settings.html", {
+        "workspace": workspace,
+        "workspace_id": workspace_id,
+        "workspace_name": workspace.workspace_name,
+        "is_owner": is_owner,
+        "can_edit": can_edit,
+        "config": config,
+        "raw_answers": raw,
+    })
+
+
+def _can_edit_settings(workspace, user):
+    return (
+        workspace.workspace_owner_id == user.id
+        or WorkspaceMembership.objects.filter(
+            workspace=workspace, user=user, role__in=["owner", "admin"],
+        ).exists()
+    )
+
+
+@login_required
+@require_POST
+def update_workspace_general(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+    if not _can_edit_settings(workspace, request.user):
+        messages.error(request, "You don't have permission to edit workspace settings.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    name = (request.POST.get("name") or "").strip()
+    description = (request.POST.get("description") or "").strip()
+
+    if not name:
+        messages.error(request, "Workspace name is required.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+    if len(name) > 150:
+        messages.error(request, "Name must be 150 characters or fewer.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    workspace.workspace_name = name
+    workspace.workspace_description = description
+    workspace.save(update_fields=["workspace_name", "workspace_description"])
+    messages.success(request, "Workspace details updated.")
+    return redirect("workspace_settings", workspace_id=workspace_id)
+
+
+@login_required
+@require_POST
+def update_workspace_config(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+    if not _can_edit_settings(workspace, request.user):
+        messages.error(request, "You don't have permission to edit RAG configuration.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    config = getattr(workspace, 'config', None)
+    if config is None:
+        messages.error(request, "Workspace has no configuration to edit.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    # Import the questionnaire helpers locally to avoid circular import.
+    from pipeline.views import (
+        REQUIRED_QUESTIONNAIRE_FIELDS,
+        embedding_reranker, top_k as _top_k, reference as _reference,
+        temperature as _temperature, top_p as _top_p,
+        up_to_date_docs, add_metadata, determine_chunking_strategy,
+    )
+
+    chunking_map = {
+        'slide_deck':     'slide deck',
+        'meeting_notes':  'meeting notes',
+        'article':        'article',
+        'research_paper': 'research paper',
+        'policy':         'policy',
+    }
+
+    raw = {f: (request.POST.get(f) or "").strip() for f in REQUIRED_QUESTIONNAIRE_FIELDS}
+    if not all(raw.values()):
+        missing = [k for k, v in raw.items() if not v]
+        messages.error(request, f"Missing answers: {', '.join(missing)}")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    # Normalize chunking_strategy from form value to backend-expected string.
+    raw_chunk_form = raw["chunking_strategy"]
+    raw["chunking_strategy"] = chunking_map.get(raw_chunk_form, raw_chunk_form)
+
+    embedding_config  = embedding_reranker(raw["language"], raw["use_case"])
+    config.embedding_model    = embedding_config["embedding_model"]
+    config.re_ranker          = embedding_config["reranker_model"]
+    config.top_k              = _top_k(raw["reference"])
+    config.is_citation        = _reference(raw["reference"])
+    config.temperature        = _temperature(raw["temperature"])
+    config.top_p              = _top_p(raw["top_p"])
+    config.metadata_flag      = add_metadata(raw["metadata"])
+    config.chunking_strategy  = determine_chunking_strategy(raw["chunking_strategy"])
+    # Persist form values back for next-time prefill.
+    raw["chunking_strategy"] = raw_chunk_form
+    config.raw_answers = raw
+    config.save()
+
+    messages.success(
+        request,
+        "RAG configuration updated. Note: changing embedding or chunking may require re-indexing existing documents.",
+    )
+    return redirect("workspace_settings", workspace_id=workspace_id)
+
+
+@login_required
+@require_POST
+def delete_workspace(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+    if workspace.workspace_owner_id != request.user.id:
+        messages.error(request, "Only the workspace owner can delete this workspace.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    confirm = (request.POST.get("confirm_name") or "").strip()
+    if confirm != (workspace.workspace_name or ""):
+        messages.error(request, "Confirmation name does not match. Workspace not deleted.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    workspace.delete()
+    messages.success(request, "Workspace deleted.")
+    return redirect("workspace_list")
+
+
+@login_required
+@require_POST
+def leave_workspace(request, workspace_id):
+    workspace = _get_user_workspace(request, workspace_id)
+    if workspace.workspace_owner_id == request.user.id:
+        messages.error(request, "Owners cannot leave their own workspace. Delete it instead.")
+        return redirect("workspace_settings", workspace_id=workspace_id)
+
+    deleted, _ = WorkspaceMembership.objects.filter(
+        workspace=workspace, user=request.user,
+    ).delete()
+    if deleted:
+        messages.success(request, f"You left {workspace.workspace_name or 'this workspace'}.")
+    return redirect("workspace_list")
 
 
 @login_required

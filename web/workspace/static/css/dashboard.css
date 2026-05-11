@@ -2,6 +2,50 @@
    Workspace Dashboard — Figma node 2046:3065 / 2048:3682
    ============================================ */
 
+/* Tabs */
+.dash-tabs {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    margin: 0;
+    padding: 6px;
+    background: #F1F4F7;
+    border-radius: 999px;
+}
+
+.dash-tab {
+    border: 0;
+    cursor: pointer;
+    padding: 10px 22px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--dash-nav-text-mute, #646464);
+    background: transparent;
+    border-radius: 999px;
+    transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    white-space: nowrap;
+}
+
+.dash-tab:hover {
+    color: var(--dash-text, #181818);
+    background: rgba(255,255,255,0.6);
+}
+
+.dash-tab.is-active {
+    background: #fff;
+    color: var(--dash-primary, #2563EB);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.dash-tabpanel { display: none; }
+.dash-tabpanel.is-active {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+
 @font-face {
     font-family: 'Year of Handicrafts';
     src: url('/static/font/TheYearofHandicrafts-Regular.otf') format('opentype');

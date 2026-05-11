@@ -6,6 +6,11 @@ urlpatterns = [
     path("", views.workspace_list, name="workspace_list"),
     path("create/", views.create_workspace, name="create_workspace"),
 
+    # Invitations (current user's pending list + accept/reject).
+    path("invitations/", views.list_invitations, name="list_invitations"),
+    path("invitations/<int:invitation_id>/accept/", views.accept_invitation, name="accept_invitation"),
+    path("invitations/<int:invitation_id>/reject/", views.reject_invitation, name="reject_invitation"),
+
     # Chat page — empty state (no active session) and with-session URL.
     path('<int:workspace_id>/', views.chat_page, name='chat_page'),
     path('<int:workspace_id>/chat/<uuid:session_id>/', views.chat_page, name='chat_session'),
@@ -15,6 +20,14 @@ urlpatterns = [
     path('<int:workspace_id>/members/', views.members, name='workspace_members'),
     path('<int:workspace_id>/members/add/', views.add_member, name='workspace_add_member'),
     path('<int:workspace_id>/members/<int:user_id>/remove/', views.remove_member, name='workspace_remove_member'),
+    path('<int:workspace_id>/members/<int:user_id>/role/', views.change_member_role, name='workspace_change_member_role'),
+
+    # Settings
+    path('<int:workspace_id>/settings/', views.workspace_settings, name='workspace_settings'),
+    path('<int:workspace_id>/settings/general/', views.update_workspace_general, name='workspace_settings_general'),
+    path('<int:workspace_id>/settings/config/', views.update_workspace_config, name='workspace_settings_config'),
+    path('<int:workspace_id>/settings/delete/', views.delete_workspace, name='workspace_settings_delete'),
+    path('<int:workspace_id>/settings/leave/', views.leave_workspace, name='workspace_settings_leave'),
 
     # Session JSON endpoints (workspace-scoped, owner-scoped).
     path('<int:workspace_id>/sessions/', views.list_sessions, name='list_sessions'),

@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/members.css' %}">
-    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260506">
+    <link rel="stylesheet" href="{% static 'css/members.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
 </head>
 <body>
 <div class="dash-layout members-layout">
@@ -64,18 +64,6 @@
             </article>
 
             <article class="members-stat">
-                <span class="members-stat__icon members-stat__icon--amber">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.3 6.1-.9L12 3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                    </svg>
-                </span>
-                <div>
-                    <p class="members-stat__value">{{ owner_count }}</p>
-                    <p class="members-stat__label">Owner{{ owner_count|pluralize }}</p>
-                </div>
-            </article>
-
-            <article class="members-stat">
                 <span class="members-stat__icon members-stat__icon--green">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 17l5-5 4 4 7-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -85,18 +73,6 @@
                 <div>
                     <p class="members-stat__value">{{ contributors_count }}</p>
                     <p class="members-stat__label">Active contributors</p>
-                </div>
-            </article>
-
-            <article class="members-stat">
-                <span class="members-stat__icon members-stat__icon--violet">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 5h14v11H8l-3 3V5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-                    </svg>
-                </span>
-                <div>
-                    <p class="members-stat__value">{{ questions_count }}</p>
-                    <p class="members-stat__label">Questions asked</p>
                 </div>
             </article>
         </section>
@@ -157,11 +133,44 @@
                     <div class="member-actions">
                         {% if member.is_owner %}
                         <span class="member-actions__locked">Owner</span>
-                        {% else %}
-                        <form method="post" action="{% url 'workspace_remove_member' workspace_id member.user.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="member-remove" onclick="return confirm('Remove this member from the workspace?');">Remove</button>
-                        </form>
+                        {% elif is_owner %}
+                        <div class="member-kebab" data-kebab>
+                            <button type="button" class="member-kebab__btn" data-kebab-toggle aria-haspopup="true" aria-expanded="false" title="More">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="5"  r="1.7" fill="currentColor"/>
+                                    <circle cx="12" cy="12" r="1.7" fill="currentColor"/>
+                                    <circle cx="12" cy="19" r="1.7" fill="currentColor"/>
+                                </svg>
+                            </button>
+
+                            <div class="member-kebab__menu" data-kebab-menu hidden>
+                                <button type="button" class="member-kebab__item" data-kebab-action="change-role">
+                                    Change Role
+                                    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="member-kebab__item member-kebab__item--danger" data-kebab-action="remove">Remove Member</button>
+                            </div>
+
+                            <div class="member-kebab__submenu" data-kebab-submenu hidden>
+                                <p class="member-kebab__subhead">Assign role</p>
+                                {% for role in role_choices %}
+                                <form method="post" action="{% url 'workspace_change_member_role' workspace_id member.user.id %}" class="member-kebab__roleform">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="role" value="{{ role.value }}">
+                                    <button type="submit" class="member-kebab__item member-kebab__item--role{% if role.value == member.role %} is-current{% endif %}">
+                                        {{ role.label }}
+                                        {% if role.value == member.role %}<span class="member-kebab__check">✓</span>{% endif %}
+                                    </button>
+                                </form>
+                                {% endfor %}
+                            </div>
+
+                            <form method="post" action="{% url 'workspace_remove_member' workspace_id member.user.id %}" class="member-kebab__removeform" data-kebab-removeform>
+                                {% csrf_token %}
+                            </form>
+                        </div>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -260,6 +269,68 @@
                 if (event.target === modal) setModal(false);
             });
         }
+
+        // ── Kebab menus ─────────────────────────────────────
+        function closeAllKebabs(except) {
+            document.querySelectorAll('[data-kebab]').forEach(function (k) {
+                if (k === except) return;
+                var m = k.querySelector('[data-kebab-menu]');
+                var s = k.querySelector('[data-kebab-submenu]');
+                if (m) m.hidden = true;
+                if (s) s.hidden = true;
+                var btn = k.querySelector('[data-kebab-toggle]');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        document.querySelectorAll('[data-kebab]').forEach(function (kebab) {
+            var toggle    = kebab.querySelector('[data-kebab-toggle]');
+            var menu      = kebab.querySelector('[data-kebab-menu]');
+            var submenu   = kebab.querySelector('[data-kebab-submenu]');
+            var removeFm  = kebab.querySelector('[data-kebab-removeform]');
+
+            if (toggle) {
+                toggle.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    var open = !menu.hidden;
+                    closeAllKebabs(kebab);
+                    if (open) {
+                        menu.hidden = true;
+                        submenu.hidden = true;
+                        toggle.setAttribute('aria-expanded', 'false');
+                    } else {
+                        menu.hidden = false;
+                        submenu.hidden = true;
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
+
+            if (menu) {
+                menu.addEventListener('click', function (e) {
+                    var btn = e.target.closest('[data-kebab-action]');
+                    if (!btn) return;
+                    var action = btn.getAttribute('data-kebab-action');
+                    if (action === 'change-role') {
+                        menu.hidden = true;
+                        submenu.hidden = false;
+                    } else if (action === 'remove') {
+                        if (confirm('Remove this member from the workspace?')) {
+                            removeFm.submit();
+                        }
+                    }
+                });
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('[data-kebab]')) return;
+            closeAllKebabs(null);
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeAllKebabs(null);
+        });
     })();
 </script>
 </body>

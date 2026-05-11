@@ -105,9 +105,11 @@ svg {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
 }
+
+.members-add { flex-shrink: 0; }
 
 .members-search {
     width: min(320px, 100%);
@@ -439,6 +441,133 @@ svg {
     background: #eef2ff;
     color: #4338ca;
 }
+
+.member-role__form {
+    margin: 0;
+    display: inline-flex;
+}
+
+.member-role__select {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid #cbd5e1;
+    background: #fff
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23475569' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>")
+        no-repeat right 10px center;
+    border-radius: 9999px;
+    padding: 6px 28px 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.member-role__select:hover {
+    border-color: #1f64ff;
+}
+
+.member-role__select:focus {
+    outline: 0;
+    border-color: #1f64ff;
+    box-shadow: 0 0 0 3px rgba(31, 100, 255, 0.15);
+}
+
+/* ────────────────────────────────
+   Kebab menu (3-dot actions)
+   ──────────────────────────────── */
+
+.member-kebab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.member-kebab__btn {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.member-kebab__btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.member-kebab__btn svg { width: 18px; height: 18px; }
+
+.member-kebab__menu,
+.member-kebab__submenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+    padding: 6px;
+    z-index: 30;
+}
+
+.member-kebab__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.member-kebab__item:hover {
+    background: #f1f5f9;
+}
+
+.member-kebab__item--danger { color: #E41E3F; }
+.member-kebab__item--danger:hover { background: #fef2f4; color: #c01839; }
+
+.member-kebab__roleform {
+    margin: 0;
+}
+
+.member-kebab__subhead {
+    margin: 4px 12px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+}
+
+.member-kebab__item--role.is-current {
+    color: #1f64ff;
+    font-weight: 600;
+}
+
+.member-kebab__check {
+    color: #1f64ff;
+}
+
+.member-kebab__removeform { display: none; }
 
 .member-activity {
     display: grid;

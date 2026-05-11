@@ -354,18 +354,88 @@
     const headerEditBtn = document.querySelector('.header-session-edit-btn');
     if (headerEditBtn) headerEditBtn.addEventListener('click', enterHeaderRenameMode);
 
-    const headerLeft = document.querySelector('.header-left');
-    if (headerLeft && headerEditBtn) {
-      headerLeft.addEventListener('mouseenter', () => {
-        if (!headerLeft.classList.contains('header-renaming') && activeSessionId) {
-          headerEditBtn.style.opacity = '1';
-        }
-      });
-      headerLeft.addEventListener('mouseleave', () => {
-        if (!headerLeft.classList.contains('header-renaming')) {
-          headerEditBtn.style.opacity = '0';
-        }
+    // Button stays visible at all times; CSS handles hover styling.
+
+    // ── Sidebar session kebab menus ────────────────────────────
+    function closeAllSessionMenus(except) {
+      document.querySelectorAll('[data-session-row]').forEach(function (row) {
+        if (row === except) return;
+        var menu = row.querySelector('[data-session-menu]');
+        var btn  = row.querySelector('[data-session-kebab]');
+        if (menu) menu.hidden = true;
+        if (btn)  btn.setAttribute('aria-expanded', 'false');
       });
     }
+
+    function renameSidebarSession(row, sessionId, current) {
+      var name = prompt('Rename session', current || '');
+      if (name === null) return;
+      name = name.trim();
+      if (!name) return;
+      fetch(WORKSPACE_CHAT_ROOT_URL + 'sessions/' + sessionId + '/rename/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify({ title: name }),
+      }).then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+          var titleEl = row.querySelector('.session-title');
+          if (titleEl) titleEl.textContent = data.title || name;
+          row.setAttribute('data-session-name', data.title || name);
+          if (String(sessionId) === String(activeSessionId)) {
+            var header = document.getElementById('headerSessionName');
+            if (header) header.textContent = data.title || name;
+          }
+        })
+        .catch(function () {});
+    }
+
+    function deleteSidebarSession(row, sessionId) {
+      if (!confirm('Delete this session? This cannot be undone.')) return;
+      fetch(WORKSPACE_CHAT_ROOT_URL + 'sessions/' + sessionId + '/delete/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrfToken() },
+      }).then(function (res) {
+        if (!res.ok) return;
+        row.remove();
+        if (String(sessionId) === String(activeSessionId)) {
+          window.location.href = WORKSPACE_CHAT_ROOT_URL;
+        }
+      }).catch(function () {});
+    }
+
+    document.querySelectorAll('[data-session-row]').forEach(function (row) {
+      var kebab = row.querySelector('[data-session-kebab]');
+      var menu  = row.querySelector('[data-session-menu]');
+      if (kebab && menu) {
+        kebab.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var wasHidden = menu.hidden;
+          closeAllSessionMenus(row);
+          menu.hidden = !wasHidden;
+          kebab.setAttribute('aria-expanded', String(!wasHidden));
+        });
+      }
+      if (menu) {
+        menu.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-session-action]');
+          if (!btn) return;
+          e.preventDefault();
+          e.stopPropagation();
+          var action      = btn.getAttribute('data-session-action');
+          var sessionId   = row.getAttribute('data-session-id');
+          var currentName = row.getAttribute('data-session-name') || '';
+          menu.hidden = true;
+          if (action === 'rename') renameSidebarSession(row, sessionId, currentName);
+          else if (action === 'delete') deleteSidebarSession(row, sessionId);
+        });
+      }
+    });
+
+    document.addEventListener('click', function () { closeAllSessionMenus(null); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAllSessionMenus(null);
+    });
   });
 })();

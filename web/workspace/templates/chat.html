@@ -6,8 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>Chat - AutoRAG</title>
-    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=20260509">
-    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260506">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=20260511">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
 </head>
 <body>
     <div class="chat-container">
@@ -26,15 +29,26 @@
 
             <div class="sessions-list">
                 {% for session in sessions %}
-                <a
-                    class="session-item{% if active_session and session.session_id == active_session.session_id %} active{% endif %}"
-                    href="{% url 'chat_session' workspace_id session.session_id %}"
-                    data-session-id="{{ session.session_id }}"
-                    data-session-name="{{ session.title }}"
-                >
-                    <div class="session-indicator"></div>
-                    <span class="session-title">{{ session.title }}</span>
-                </a>
+                <div class="session-row{% if active_session and session.session_id == active_session.session_id %} active{% endif %}" data-session-row data-session-id="{{ session.session_id }}" data-session-name="{{ session.title }}">
+                    <a
+                        class="session-item"
+                        href="{% url 'chat_session' workspace_id session.session_id %}"
+                    >
+                        <div class="session-indicator"></div>
+                        <span class="session-title">{{ session.title }}</span>
+                    </a>
+                    <button type="button" class="session-kebab" data-session-kebab title="More" aria-haspopup="true" aria-expanded="false">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="5"  r="1.7" fill="currentColor"/>
+                            <circle cx="12" cy="12" r="1.7" fill="currentColor"/>
+                            <circle cx="12" cy="19" r="1.7" fill="currentColor"/>
+                        </svg>
+                    </button>
+                    <div class="session-kebab-menu" data-session-menu hidden>
+                        <button type="button" data-session-action="rename">Rename</button>
+                        <button type="button" class="session-kebab-menu__danger" data-session-action="delete">Delete</button>
+                    </div>
+                </div>
                 {% endfor %}
             </div>
         </aside>
@@ -49,7 +63,6 @@
                         class="header-session-edit-btn"
                         type="button"
                         title="Rename session"
-                        style="opacity:0;"
                     >
                         <img src="{% static 'edit.svg' %}" alt="Edit" class="header-edit-icon">
                     </button>
@@ -110,6 +123,6 @@
             frontendOnly: false
         };
     </script>
-    <script src="{% static 'js/chat.js' %}?v=3"></script>
+    <script src="{% static 'js/chat.js' %}?v=4"></script>
 </body>
 </html>

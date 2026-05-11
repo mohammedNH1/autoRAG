@@ -1,0 +1,209 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Settings — AutoRAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/settings.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
+</head>
+<body>
+<div class="dash-layout settings-layout">
+    {% include "workspace/includes/sidebar.html" with active_nav="settings" %}
+
+    <main class="settings-main">
+        <header class="settings-header">
+            <p class="settings-eyebrow">{{ workspace.workspace_name|default:"Workspace" }}</p>
+            <h1 class="settings-title">Settings</h1>
+        </header>
+
+        {% if messages %}
+        <div class="settings-flashes" aria-live="polite">
+            {% for message in messages %}
+            <p class="settings-flash settings-flash--{{ message.tags|default:'info' }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- ===========================================
+             SECTION 1 — General
+             =========================================== -->
+        <section class="settings-section">
+            <div class="settings-section__head">
+                <h2>General</h2>
+                <p>Workspace name and description.</p>
+            </div>
+
+            <form method="post" action="{% url 'workspace_settings_general' workspace_id %}" class="settings-form">
+                {% csrf_token %}
+
+                <label class="settings-field">
+                    <span class="settings-field__label">Name</span>
+                    <input type="text" name="name" value="{{ workspace.workspace_name }}" maxlength="150" {% if not can_edit %}disabled{% endif %} required>
+                </label>
+
+                <label class="settings-field">
+                    <span class="settings-field__label">Description</span>
+                    <textarea name="description" rows="4" maxlength="500" {% if not can_edit %}disabled{% endif %}>{{ workspace.workspace_description }}</textarea>
+                </label>
+
+                {% if can_edit %}
+                <div class="settings-form__actions">
+                    <button type="submit" class="settings-btn settings-btn--primary">Save changes</button>
+                </div>
+                {% else %}
+                <p class="settings-note">Only owners and admins can edit these fields.</p>
+                {% endif %}
+            </form>
+        </section>
+
+        <!-- ===========================================
+             SECTION 2 — RAG Configuration
+             =========================================== -->
+        <section class="settings-section">
+            <div class="settings-section__head">
+                <h2>RAG configuration</h2>
+                <p>Re-tune the questionnaire answers. Changing embedding or chunking may require re-indexing existing documents.</p>
+            </div>
+
+            {% if config %}
+            <form method="post" action="{% url 'workspace_settings_config' workspace_id %}" class="settings-form settings-form--rag">
+                {% csrf_token %}
+
+                <div class="settings-grid">
+                    <label class="settings-field">
+                        <span class="settings-field__label">Language of documents</span>
+                        <select name="language" {% if not can_edit %}disabled{% endif %}>
+                            <option value="english"      {% if raw_answers.language == 'english' %}selected{% endif %}>English</option>
+                            <option value="arabic"       {% if raw_answers.language == 'arabic' %}selected{% endif %}>Arabic</option>
+                            <option value="multilingual" {% if raw_answers.language == 'multilingual' %}selected{% endif %}>Multilingual</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Speed vs quality</span>
+                        <select name="use_case" {% if not can_edit %}disabled{% endif %}>
+                            <option value="fast"     {% if raw_answers.use_case == 'fast' %}selected{% endif %}>Speed</option>
+                            <option value="quality"  {% if raw_answers.use_case == 'quality' %}selected{% endif %}>Quality</option>
+                            <option value="balanced" {% if raw_answers.use_case == 'balanced' %}selected{% endif %}>Balanced</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Answer scope</span>
+                        <select name="main_idea_or_related" {% if not can_edit %}disabled{% endif %}>
+                            <option value="main_only"    {% if raw_answers.main_idea_or_related == 'main_only' %}selected{% endif %}>Main Idea Only</option>
+                            <option value="with_related" {% if raw_answers.main_idea_or_related == 'with_related' %}selected{% endif %}>Include Related Points</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Use up-to-date documents</span>
+                        <select name="uptodate" {% if not can_edit %}disabled{% endif %}>
+                            <option value="yes" {% if raw_answers.uptodate == 'yes' %}selected{% endif %}>Yes</option>
+                            <option value="no"  {% if raw_answers.uptodate == 'no' %}selected{% endif %}>No</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Document info</span>
+                        <select name="metadata" {% if not can_edit %}disabled{% endif %}>
+                            <option value="minimal"  {% if raw_answers.metadata == 'minimal' %}selected{% endif %}>Minimal Info</option>
+                            <option value="standard" {% if raw_answers.metadata == 'standard' %}selected{% endif %}>Standard Metadata</option>
+                            <option value="detailed" {% if raw_answers.metadata == 'detailed' %}selected{% endif %}>Detailed Metadata</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Content type</span>
+                        <select name="chunking_strategy" {% if not can_edit %}disabled{% endif %}>
+                            <option value="slide_deck"     {% if raw_answers.chunking_strategy == 'slide_deck' %}selected{% endif %}>Slide Deck</option>
+                            <option value="meeting_notes"  {% if raw_answers.chunking_strategy == 'meeting_notes' %}selected{% endif %}>Meeting Notes</option>
+                            <option value="article"        {% if raw_answers.chunking_strategy == 'article' %}selected{% endif %}>Article</option>
+                            <option value="research_paper" {% if raw_answers.chunking_strategy == 'research_paper' %}selected{% endif %}>Research Paper</option>
+                            <option value="policy"         {% if raw_answers.chunking_strategy == 'policy' %}selected{% endif %}>Policy Document</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Source references</span>
+                        <select name="reference" {% if not can_edit %}disabled{% endif %}>
+                            <option value="yes" {% if raw_answers.reference == 'yes' %}selected{% endif %}>Yes</option>
+                            <option value="no"  {% if raw_answers.reference == 'no' %}selected{% endif %}>No</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Model creativity</span>
+                        <select name="temperature" {% if not can_edit %}disabled{% endif %}>
+                            <option value="precise"  {% if raw_answers.temperature == 'precise' %}selected{% endif %}>Precise</option>
+                            <option value="balanced" {% if raw_answers.temperature == 'balanced' %}selected{% endif %}>Balanced</option>
+                            <option value="creative" {% if raw_answers.temperature == 'creative' %}selected{% endif %}>Creative</option>
+                        </select>
+                    </label>
+
+                    <label class="settings-field">
+                        <span class="settings-field__label">Source strictness</span>
+                        <select name="top_p" {% if not can_edit %}disabled{% endif %}>
+                            <option value="strict"       {% if raw_answers.top_p == 'strict' %}selected{% endif %}>Stick to Source</option>
+                            <option value="balanced"     {% if raw_answers.top_p == 'balanced' %}selected{% endif %}>Balanced</option>
+                            <option value="exploratory"  {% if raw_answers.top_p == 'exploratory' %}selected{% endif %}>Allow Suggestions</option>
+                        </select>
+                    </label>
+                </div>
+
+                {% if can_edit %}
+                <div class="settings-form__actions">
+                    <button type="submit" class="settings-btn settings-btn--primary">Save configuration</button>
+                </div>
+                {% else %}
+                <p class="settings-note">Only owners and admins can edit RAG configuration.</p>
+                {% endif %}
+            </form>
+            {% else %}
+            <p class="settings-note">No RAG configuration found for this workspace.</p>
+            {% endif %}
+        </section>
+
+        <!-- ===========================================
+             SECTION 3 — Danger zone
+             =========================================== -->
+        <section class="settings-section settings-section--danger">
+            <div class="settings-section__head">
+                <h2>Danger zone</h2>
+                <p>Irreversible actions.</p>
+            </div>
+
+            {% if is_owner %}
+            <div class="settings-danger">
+                <div class="settings-danger__copy">
+                    <h3>Delete workspace</h3>
+                    <p>Permanently remove this workspace, its documents, sessions, and configuration. This cannot be undone.</p>
+                </div>
+                <form method="post" action="{% url 'workspace_settings_delete' workspace_id %}" class="settings-danger__form" onsubmit="return confirm('This will permanently delete the workspace and all its data. Continue?');">
+                    {% csrf_token %}
+                    <input type="text" name="confirm_name" placeholder="Type workspace name to confirm" required>
+                    <button type="submit" class="settings-btn settings-btn--danger">Delete</button>
+                </form>
+            </div>
+            {% else %}
+            <div class="settings-danger">
+                <div class="settings-danger__copy">
+                    <h3>Leave workspace</h3>
+                    <p>Remove your access to this workspace. You can be re-invited later.</p>
+                </div>
+                <form method="post" action="{% url 'workspace_settings_leave' workspace_id %}" class="settings-danger__form" onsubmit="return confirm('Leave this workspace?');">
+                    {% csrf_token %}
+                    <button type="submit" class="settings-btn settings-btn--danger">Leave workspace</button>
+                </form>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+</div>
+</body>
+</html>
