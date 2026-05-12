@@ -359,7 +359,15 @@ def query_handling(request):
     temperature = pipeline["temperature"]
     top_p = pipeline["top_p"]
     top_k = pipeline["top_k"]
+        # -------------------------
+    # Strict mode trigger (top_p-based)
+    # -------------------------
+    strict_context_instruction = ""
 
+    if top_p == 0.2:
+        strict_context_instruction = (
+            "Use only the provided context. Do not use external knowledge.\n\n"
+        )
     # -------------------------
     # Session — must belong to this user + workspace; otherwise start a new one.
     # -------------------------
@@ -411,7 +419,7 @@ def query_handling(request):
         collection_name=f"documents__{embedding_model_mapping[embedding_model_name]}",
         workspace_id=workspace_id,
         query_vector=embedded_query,
-        top_k=top_k * 10,
+        top_k=int(top_k * 2.5),
     )
     print("this is the chunks before reranking:", len(chunks))
     print(f"[{datetime.datetime.now()}] QDRANT SEARCH COMPLETE: Found {len(chunks)} chunks")
@@ -464,14 +472,19 @@ def query_handling(request):
 
     print(f"[{datetime.datetime.now()}] SOURCES BUILT: {len(sources)} sources for citation={is_citation}, metadata={metadata_flag}")
 
-    prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
+    prompt = (
+    f"{strict_context_instruction}"
+    f"Answer the following question based on the context:\n\n"
+    f"Context:\n{context}\n\n"
+    f"Question: {query}"
+    )
 
     print(f"[{datetime.datetime.now()}] PROMPT BUILT: prompt_len={len(prompt)}")
 
     print(f"[{datetime.datetime.now()}] OLLAMA REQUEST START: Sending prompt to llama3:8b-instruct-q4_0")
     ollama_url = "http://ollama:11434/api/generate"
     payload = {
-        "model": "llama3:8b-instruct-q4_0",
+        "model": "llama3:latest",
         "prompt": prompt,
         "temperature": temperature,
         "top_p": top_p,
