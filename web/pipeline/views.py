@@ -7,7 +7,7 @@ from django.db import transaction
 import requests
 from workspace.models import Workspace, WorkspaceConfig, WorkspaceMembership
 from pipeline.services.pipeline_registry import get_pipeline
-from pipeline.services.query_service import run_query, OLLAMA_URL, OLLAMA_MODEL
+from pipeline.services.query_service import run_query, OLLAMA_URL, OLLAMA_TITLE_MODEL
 from workspace.models import Message, Session
 import uuid
 from django.core.exceptions import ValidationError
@@ -436,7 +436,7 @@ def query_handling(request):
             title_resp = requests.post(
                 OLLAMA_URL,
                 json={
-                    "model": OLLAMA_MODEL,
+                    "model": OLLAMA_TITLE_MODEL,
                     "prompt": title_prompt,
                     "stream": False,
                     "options": {"num_predict": 20, "temperature": 0.3},
