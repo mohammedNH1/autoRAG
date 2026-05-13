@@ -29,7 +29,7 @@
     const ragSubmitLabel   = ragSubmitBtn ? ragSubmitBtn.querySelector('.btn-label') : null;
     const ragSubmitLoading = ragSubmitBtn ? ragSubmitBtn.querySelector('.btn-loading') : null;
 
-    const RAG_TOTAL = 9;
+    const RAG_TOTAL = 8;
     let ragCurrent  = 1;
     let pendingWorkspace = null;  // { name, description, image: File } collected at stage 1, sent with stage 2 submit
 
@@ -243,11 +243,8 @@
             e.preventDefault();
             if (!validate()) return;
 
-            const file = imageInput && imageInput.files && imageInput.files[0];
-            if (!file) {
-                if (imageError) imageError.textContent = 'Please choose a workspace image.';
-                return;
-            }
+            // Image is optional — null is fine, we just won't attach a file.
+            const file = imageInput && imageInput.files && imageInput.files[0] || null;
 
             // Defer creation until the questionnaire is fully answered.
             pendingWorkspace = {
@@ -316,24 +313,27 @@
 
             const data = new FormData(ragForm);
             const chunkingMap = {
-                'slide_deck':     'slide deck',
-                'meeting_notes':  'meeting notes',
-                'article':        'article',
-                'research_paper': 'research paper',
-                'policy':         'policy'
+                'slide_deck':          'slide deck',
+                'meeting_notes':       'meeting notes',
+                'article':             'article',
+                'research_paper':      'research paper',
+                'policy':              'policy',
+                'books_long_manuals':  'books or long manuals',
+                'undecided':           'undecided'
             };
             const chunkingRaw = data.get('chunking_strategy');
 
             const payload = new FormData();
             payload.append('name',              pendingWorkspace.name);
             payload.append('description',       pendingWorkspace.description);
-            payload.append('workspace_image',   pendingWorkspace.image);
+            if (pendingWorkspace.image) {
+                payload.append('workspace_image', pendingWorkspace.image);
+            }
             payload.append('language',          data.get('language') || '');
             payload.append('use_case',          data.get('speed_quality') || '');
             payload.append('reference',         data.get('reference') || '');
             payload.append('temperature',       data.get('temperature') || '');
             payload.append('top_p',             data.get('top_p') || '');
-            payload.append('uptodate',          data.get('upToDate') || '');
             payload.append('metadata',          data.get('document_info') || '');
             payload.append('chunking_strategy', chunkingMap[chunkingRaw] || chunkingRaw || '');
 

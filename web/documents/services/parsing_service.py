@@ -110,22 +110,3 @@ def parse_document_into_chunks(
             })
 
     return all_chunks
-
-
-def parse_pdf_into_chunks(
-    file_path:  str,
-    model_key:  str   = 'minilm',
-    strategy:   str   = 'fixed-length',
-    chunk_size: int   = 100,
-    overlap:    int   = 10,
-    threshold:  float = 0.5,
-) -> list[dict]:
-    """Backwards-compatible alias for parse_document_into_chunks."""
-    return parse_document_into_chunks(
-        file_path  = file_path,
-        model_key  = model_key,
-        strategy   = strategy,
-        chunk_size = chunk_size,
-        overlap    = overlap,
-        threshold  = threshold,
-    )

@@ -703,10 +703,29 @@ ol, ul { list-style: none; }
 .audit-table__head,
 .audit-table__row {
     display: grid;
-    grid-template-columns: 1.4fr 1.4fr 1fr;
+    grid-template-columns: 1.2fr 1.4fr 2fr 1.2fr;
     gap: 20px;
+    align-items: start;
     padding: 16px 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.audit-table__row > span {
+    min-width: 0;       /* lets long text wrap inside the cell instead of overflowing */
+    word-break: break-word;
+}
+
+.audit-change {
+    display: block;
+    line-height: 1.6;
+}
+
+.audit-change code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.9em;
 }
 
 .audit-table__head {

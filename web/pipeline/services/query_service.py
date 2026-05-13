@@ -7,10 +7,13 @@ flow in one place so behavior cannot drift between the two callers.
 """
 
 import requests
+from langdetect import DetectorFactory, LangDetectException, detect
 
 from documents.services.embedding_service import EmbeddingService
 from documents.services.qdrant_service import QdrantService
 from pipeline.services.pipeline_registry import get_pipeline
+
+DetectorFactory.seed = 0
 
 
 EMBEDDING_MODEL_COLLECTION_SUFFIX = {
@@ -20,8 +23,30 @@ EMBEDDING_MODEL_COLLECTION_SUFFIX = {
     "BAAI/bge-m3":            "bge_m3",
 }
 
-OLLAMA_URL   = "http://ollama:11434/api/generate"
-OLLAMA_MODEL = "llama3:8b-instruct-q4_0"
+OLLAMA_URL         = "http://ollama:11434/api/generate"
+OLLAMA_MODEL       = "llama3:latest"
+
+OLLAMA_TITLE_MODEL = "llama3:8b-instruct-q4_0"
+
+STRICT_TOP_P = 0.2
+STRICT_INSTRUCTION = "Use only the provided context. Do not use external knowledge.\n\n"
+
+LANGUAGE_NAMES = {
+    "ar": "Arabic",
+    "en": "English",
+}
+
+
+def _detect_language_instruction(query):
+    try:
+        code = detect(query)
+    except LangDetectException:
+        return ""
+    name = LANGUAGE_NAMES.get(code)
+    if name:
+        return f"Respond in {name}.\n\n"
+    # Fall-through for any other detected language — let the LLM mirror it.
+    return "Respond in the same language as the question.\n\n"
 
 NO_DOCS_REPLY = (
     "No documents have been uploaded to this workspace yet. "
@@ -69,7 +94,7 @@ def run_query(workspace, query):
         collection_name=f"documents__{collection_suffix}",
         workspace_id=workspace.workspace_id,
         query_vector=embedded_query,
-        top_k=top_k * 10,
+        top_k=int(top_k * 2.5),
     )
 
     if not chunks:
@@ -105,7 +130,11 @@ def run_query(workspace, query):
         seen.add(key)
         sources.append(payload)
 
+    strict_prefix   = STRICT_INSTRUCTION if top_p == STRICT_TOP_P else ""
+    language_prefix = _detect_language_instruction(query)
     prompt = (
+        f"{language_prefix}"
+        f"{strict_prefix}"
         f"Answer the following question based on the context:\n\n"
         f"Context:\n{context}\n\n"
         f"Question: {query}"

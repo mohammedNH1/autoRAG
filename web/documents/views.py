@@ -12,6 +12,7 @@ from .services.embedding_service import EmbeddingService
 from .services.model_selector import ModelSelector
 from .services.qdrant_service import QdrantService
 from workspace.models import Workspace
+from workspace.services import activity_log
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +166,15 @@ def save_file(request):
         logger.info(
             f"Indexed {len(all_chunks)} chunks for '{uploaded_file.name}' "
             f"in workspace {workspace_id}"
+        )
+        activity_log.record(
+            workspace=workspace,
+            actor=request.user if request.user.is_authenticated else None,
+            action="document.uploaded",
+            target=uploaded_file.name,
+            document_id=doc.id,
+            chunks=len(all_chunks),
+            file_type=file_type,
         )
 
     if len(results) == 1:
@@ -354,8 +364,19 @@ def delete_document(request):
             document_id=document_id,
         )
 
-        Document.objects.filter(id=document_id, workspace=workspace).delete()
+        # Capture the title before deletion so we can log it.
+        doc_qs = Document.objects.filter(id=document_id, workspace=workspace)
+        doc_title = doc_qs.values_list("document_title", flat=True).first() or f"document #{document_id}"
+        doc_qs.delete()
         logger.info(f"Deleted document {document_id} from workspace {workspace_id}")
+        activity_log.record(
+            workspace=workspace,
+            actor=request.user if request.user.is_authenticated else None,
+            action="document.deleted",
+            target=doc_title,
+            document_id=document_id,
+            deleted_chunks=int(deleted_count),
+        )
 
         return JsonResponse({
             'status':         'success',

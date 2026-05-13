@@ -75,10 +75,13 @@
       const el = document.createElement('div');
       el.className = 'message ' + msg.sender;
       const timestamp = msg.timestamp ? formatTime(msg.timestamp) : '';
+      // dir="auto" lets the browser pick RTL/LTR per message from its
+      // first strong directional character — so Arabic answers flip
+      // automatically, English stays left-to-right, no JS detection needed.
       el.innerHTML =
         '<div class="message-bubble">' +
         (msg.sender === 'assistant' ? '<div class="message-sender">AutoRAG</div>' : '') +
-        '<div class="message-content">' + renderMarkdown(msg.text) + '</div>' +
+        '<div class="message-content" dir="auto">' + renderMarkdown(msg.text) + '</div>' +
         (timestamp ? '<div class="message-time">' + timestamp + '</div>' : '') +
         '</div>';
       container.appendChild(el);
@@ -160,7 +163,11 @@
       thinkingEl.className = 'message assistant message--thinking';
       thinkingEl.innerHTML =
         '<div class="message-bubble"><div class="message-sender">AutoRAG</div>' +
-        '<div class="message-content">Thinking…</div></div>';
+        '<div class="message-content">' +
+          '<span class="thinking-dots" aria-label="Thinking">' +
+            '<span></span><span></span><span></span>' +
+          '</span>' +
+        '</div></div>';
       container.appendChild(thinkingEl);
       scrollToBottom();
     }

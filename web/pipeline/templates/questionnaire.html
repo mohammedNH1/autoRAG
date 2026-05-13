@@ -11,7 +11,7 @@
     <div class="container">
         <div class="card">
             <h1>RAG Configuration Setup</h1>
-            <div class="progress"><span id="step">1</span> of 9</div>
+            <div class="progress"><span id="step">1</span> of 8</div>
 
             <form id="form">
                 <!-- Q1: Language -->
@@ -46,29 +46,18 @@
                     <input type="hidden" name="main_idea_or_related" value="">
                 </div>
 
-                <!-- Q4: Up to Date Documents -->
+                <!-- Q4: File Details -->
                 <div class="question" data-q="4">
-                    <h2>Do you want your answers to be based from up-to-date documents?</h2>
+                    <h2>Would you like to see details about the files used in the answer?</h2>
                     <div class="options">
-                        <button type="button" class="option" data-value="yes">Yes</button>
-                        <button type="button" class="option" data-value="no">No</button>
-                    </div>
-                    <input type="hidden" name="upToDate" value="">
-                </div>
-
-                <!-- Q5: Document Information -->
-                <div class="question" data-q="5">
-                    <h2>What information about each retrieved document do you want?</h2>
-                    <div class="options">
-                        <button type="button" class="option" data-value="minimal">Minimal Info</button>
-                        <button type="button" class="option" data-value="standard">Standard Metadata</button>
-                        <button type="button" class="option" data-value="detailed">Detailed Metadata</button>
+                        <button type="button" class="option" data-value="no">No, show only the answer</button>
+                        <button type="button" class="option" data-value="yes">Yes, show file details</button>
                     </div>
                     <input type="hidden" name="document_info" value="">
                 </div>
 
-                <!-- Q6: Content Type -->
-                <div class="question" data-q="6">
+                <!-- Q5: Content Type -->
+                <div class="question" data-q="5">
                     <h2>What kind of content will you mostly upload to this workspace?</h2>
                     <div class="options">
                         <button type="button" class="option" data-value="slide_deck">Slide Deck</button>
@@ -76,12 +65,14 @@
                         <button type="button" class="option" data-value="article">Article</button>
                         <button type="button" class="option" data-value="research_paper">Research Paper</button>
                         <button type="button" class="option" data-value="policy">Policy Document</button>
+                        <button type="button" class="option" data-value="books_long_manuals">Books or Long Manuals</button>
+                        <button type="button" class="option" data-value="undecided">Undecided</button>
                     </div>
                     <input type="hidden" name="chunking_strategy" value="">
                 </div>
 
-                <!-- Q7: References -->
-                <div class="question" data-q="7">
+                <!-- Q6: References -->
+                <div class="question" data-q="6">
                     <h2>Should the answers include reference to the source documents?</h2>
                     <div class="options">
                         <button type="button" class="option" data-value="yes">Yes</button>
@@ -90,8 +81,8 @@
                     <input type="hidden" name="reference" value="">
                 </div>
 
-                <!-- Q8: Model Creativity -->
-                <div class="question" data-q="8">
+                <!-- Q7: Model Creativity -->
+                <div class="question" data-q="7">
                     <h2>Do you want the model to be precise or creative?</h2>
                     <div class="options">
                         <button type="button" class="option" data-value="precise">Precise</button>
@@ -101,8 +92,8 @@
                     <input type="hidden" name="temperature" value="">
                 </div>
 
-                <!-- Q9: Source Strictness -->
-                <div class="question" data-q="9">
+                <!-- Q8: Source Strictness -->
+                <div class="question" data-q="8">
                     <h2>Should the system stick strictly to the source content, or allow uncommon suggestions?</h2>
                     <div class="options">
                         <button type="button" class="option" data-value="strict">Stick to Source</button>
@@ -149,7 +140,7 @@
     </div>
 
     <script>
-        const totalQ = 9;
+        const totalQ = 8;
         let currentQ = 1;
 
         function updateUI() {
@@ -181,11 +172,13 @@
             // Map chunking strategy to readable format expected by the backend
             // (pipeline/views.py -> determine_chunking_strategy)
             const chunkingMap = {
-                'slide_deck': 'slide deck',
-                'meeting_notes': 'meeting notes',
-                'article': 'article',
-                'research_paper': 'research paper',
-                'policy': 'policy'
+                'slide_deck':          'slide deck',
+                'meeting_notes':       'meeting notes',
+                'article':             'article',
+                'research_paper':      'research paper',
+                'policy':              'policy',
+                'books_long_manuals':  'books or long manuals',
+                'undecided':           'undecided'
             };
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -199,7 +192,6 @@
                 reference: data.get('reference'),
                 temperature: data.get('temperature'),
                 top_p: data.get('top_p'),
-                uptodate: data.get('upToDate'),
                 metadata: data.get('document_info'),
                 chunking_strategy: chunkingMap[data.get('chunking_strategy')] || data.get('chunking_strategy')
             };

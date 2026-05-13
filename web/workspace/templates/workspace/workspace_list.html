@@ -238,7 +238,7 @@
                 <!-- Stage 1: name + description + image -->
                 <form id="createWorkspaceForm" novalidate enctype="multipart/form-data">
                     <div class="form-group">
-                        <label>Workspace image</label>
+                        <label>Workspace image <span class="field-optional">(optional)</span></label>
                         <div class="ws-image-picker" id="wsImagePicker">
                             <div class="ws-image-picker__preview" id="wsImagePreview">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -300,7 +300,7 @@
 
                 <!-- Stage 2: RAG questionnaire -->
                 <div id="ragStage" hidden>
-                    <div class="rag-progress">Question <span id="ragStepNum">1</span> of 9</div>
+                    <div class="rag-progress">Question <span id="ragStepNum">1</span> of 8</div>
 
                     <form id="ragForm">
                         <div class="rag-question is-active" data-q="1">
@@ -333,25 +333,15 @@
                         </div>
 
                         <div class="rag-question" data-q="4">
-                            <h3 class="rag-q-title">Do you want your answers to be based from up-to-date documents?</h3>
+                            <h3 class="rag-q-title">Would you like to see details about the files used in the answer?</h3>
                             <div class="rag-options">
-                                <button type="button" class="rag-option" data-value="yes">Yes</button>
-                                <button type="button" class="rag-option" data-value="no">No</button>
-                            </div>
-                            <input type="hidden" name="upToDate" value="">
-                        </div>
-
-                        <div class="rag-question" data-q="5">
-                            <h3 class="rag-q-title">What information about each retrieved document do you want?</h3>
-                            <div class="rag-options">
-                                <button type="button" class="rag-option" data-value="minimal">Minimal Info</button>
-                                <button type="button" class="rag-option" data-value="standard">Standard Metadata</button>
-                                <button type="button" class="rag-option" data-value="detailed">Detailed Metadata</button>
+                                <button type="button" class="rag-option" data-value="no">No, show only the answer</button>
+                                <button type="button" class="rag-option" data-value="yes">Yes, show file details</button>
                             </div>
                             <input type="hidden" name="document_info" value="">
                         </div>
 
-                        <div class="rag-question" data-q="6">
+                        <div class="rag-question" data-q="5">
                             <h3 class="rag-q-title">What kind of content will you mostly upload to this workspace?</h3>
                             <div class="rag-options">
                                 <button type="button" class="rag-option" data-value="slide_deck">Slide Deck</button>
@@ -359,11 +349,13 @@
                                 <button type="button" class="rag-option" data-value="article">Article</button>
                                 <button type="button" class="rag-option" data-value="research_paper">Research Paper</button>
                                 <button type="button" class="rag-option" data-value="policy">Policy Document</button>
+                                <button type="button" class="rag-option" data-value="books_long_manuals">Books or Long Manuals</button>
+                                <button type="button" class="rag-option" data-value="undecided">Undecided</button>
                             </div>
                             <input type="hidden" name="chunking_strategy" value="">
                         </div>
 
-                        <div class="rag-question" data-q="7">
+                        <div class="rag-question" data-q="6">
                             <h3 class="rag-q-title">Should the answers include reference to the source documents?</h3>
                             <div class="rag-options">
                                 <button type="button" class="rag-option" data-value="yes">Yes</button>
@@ -372,7 +364,7 @@
                             <input type="hidden" name="reference" value="">
                         </div>
 
-                        <div class="rag-question" data-q="8">
+                        <div class="rag-question" data-q="7">
                             <h3 class="rag-q-title">Do you want the model to be precise or creative?</h3>
                             <div class="rag-options">
                                 <button type="button" class="rag-option" data-value="precise">Precise</button>
@@ -382,7 +374,7 @@
                             <input type="hidden" name="temperature" value="">
                         </div>
 
-                        <div class="rag-question" data-q="9">
+                        <div class="rag-question" data-q="8">
                             <h3 class="rag-q-title">Should the system stick strictly to the source content, or allow uncommon suggestions?</h3>
                             <div class="rag-options">
                                 <button type="button" class="rag-option" data-value="strict">Stick to Source</button>

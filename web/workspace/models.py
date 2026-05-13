@@ -206,3 +206,37 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender} message in Session {self.session.session_id}"
+
+
+# ----------------------
+# Audit Trail / Activity Log
+# ----------------------
+class WorkspaceActivity(models.Model):
+    """
+    Append-only log of workspace events (uploads, member changes, key
+    rotations, config edits). Surfaced on the dashboard's audit trail.
+    """
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="activities",
+    )
+    # Nullable so deleting a user doesn't delete the history of what they did.
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    action     = models.CharField(max_length=40)
+    target     = models.CharField(max_length=255, blank=True)
+    metadata   = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes  = [models.Index(fields=["workspace", "-created_at"])]
+
+    def __str__(self):
+        return f"{self.action} on Workspace {self.workspace_id} at {self.created_at:%Y-%m-%d %H:%M}"

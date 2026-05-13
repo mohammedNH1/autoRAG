@@ -102,30 +102,23 @@
                     </label>
 
                     <label class="settings-field">
-                        <span class="settings-field__label">Use up-to-date documents</span>
-                        <select name="uptodate" {% if not can_edit %}disabled{% endif %}>
-                            <option value="yes" {% if raw_answers.uptodate == 'yes' %}selected{% endif %}>Yes</option>
-                            <option value="no"  {% if raw_answers.uptodate == 'no' %}selected{% endif %}>No</option>
-                        </select>
-                    </label>
-
-                    <label class="settings-field">
-                        <span class="settings-field__label">Document info</span>
+                        <span class="settings-field__label">Show file details with answers?</span>
                         <select name="metadata" {% if not can_edit %}disabled{% endif %}>
-                            <option value="minimal"  {% if raw_answers.metadata == 'minimal' %}selected{% endif %}>Minimal Info</option>
-                            <option value="standard" {% if raw_answers.metadata == 'standard' %}selected{% endif %}>Standard Metadata</option>
-                            <option value="detailed" {% if raw_answers.metadata == 'detailed' %}selected{% endif %}>Detailed Metadata</option>
+                            <option value="no"  {% if raw_answers.metadata == 'no' %}selected{% endif %}>No, show only the answer</option>
+                            <option value="yes" {% if raw_answers.metadata == 'yes' %}selected{% endif %}>Yes, show file details</option>
                         </select>
                     </label>
 
                     <label class="settings-field">
                         <span class="settings-field__label">Content type</span>
                         <select name="chunking_strategy" {% if not can_edit %}disabled{% endif %}>
-                            <option value="slide_deck"     {% if raw_answers.chunking_strategy == 'slide_deck' %}selected{% endif %}>Slide Deck</option>
-                            <option value="meeting_notes"  {% if raw_answers.chunking_strategy == 'meeting_notes' %}selected{% endif %}>Meeting Notes</option>
-                            <option value="article"        {% if raw_answers.chunking_strategy == 'article' %}selected{% endif %}>Article</option>
-                            <option value="research_paper" {% if raw_answers.chunking_strategy == 'research_paper' %}selected{% endif %}>Research Paper</option>
-                            <option value="policy"         {% if raw_answers.chunking_strategy == 'policy' %}selected{% endif %}>Policy Document</option>
+                            <option value="slide_deck"          {% if raw_answers.chunking_strategy == 'slide_deck' %}selected{% endif %}>Slide Deck</option>
+                            <option value="meeting_notes"       {% if raw_answers.chunking_strategy == 'meeting_notes' %}selected{% endif %}>Meeting Notes</option>
+                            <option value="article"             {% if raw_answers.chunking_strategy == 'article' %}selected{% endif %}>Article</option>
+                            <option value="research_paper"      {% if raw_answers.chunking_strategy == 'research_paper' %}selected{% endif %}>Research Paper</option>
+                            <option value="policy"              {% if raw_answers.chunking_strategy == 'policy' %}selected{% endif %}>Policy Document</option>
+                            <option value="books_long_manuals"  {% if raw_answers.chunking_strategy == 'books_long_manuals' %}selected{% endif %}>Books or Long Manuals</option>
+                            <option value="undecided"           {% if raw_answers.chunking_strategy == 'undecided' %}selected{% endif %}>Undecided</option>
                         </select>
                     </label>
 

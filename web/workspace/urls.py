@@ -23,7 +23,7 @@ urlpatterns = [
     path('<int:workspace_id>/members/<int:user_id>/role/', views.change_member_role, name='workspace_change_member_role'),
 
     # Settings
-    path('<int:workspace_id>/settings/', views.workspace_settings, name='workspace_settings'),
+    path('<int:workspace_id>/settings/', views.workspace_settings_page, name='workspace_settings'),
     path('<int:workspace_id>/settings/general/', views.update_workspace_general, name='workspace_settings_general'),
     path('<int:workspace_id>/settings/config/', views.update_workspace_config, name='workspace_settings_config'),
     path('<int:workspace_id>/settings/delete/', views.delete_workspace, name='workspace_settings_delete'),

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=20260511">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=20260513">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
 </head>
 <body>
@@ -83,6 +83,7 @@
                         id="messageInput"
                         placeholder="Ask AutoRAG..."
                         autocomplete="off"
+                        dir="auto"
                     >
                     <button class="send-button" id="sendButton" type="button">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -123,6 +124,6 @@
             frontendOnly: false
         };
     </script>
-    <script src="{% static 'js/chat.js' %}?v=4"></script>
+    <script src="{% static 'js/chat.js' %}?v=5"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@400;700&family=Barlow:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=4">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
 </head>
 <body>
@@ -207,24 +207,47 @@
         <div class="dash-tabpanel" data-panel="audit" role="tabpanel" hidden>
         <!-- Audit Trail -->
         <section class="dash-audit">
+            {% if can_view_audit_trail %}
             <div class="audit-table">
                 <div class="audit-table__head">
-                    <span>Employee</span>
+                    <span>Who</span>
                     <span>Action</span>
+                    <span>Details</span>
                     <span>Time</span>
                 </div>
                 {% for entry in audit_trail %}
                 <div class="audit-table__row">
-                    <span>{{ entry.uploaded_by__email|default:"—" }}</span>
-                    <span>Add {{ entry.document_title|default:entry.file|truncatechars:32 }}</span>
-                    <span>{{ entry.upload_time|date:"Y/n/j   -   g:i A" }}</span>
+                    <span>{{ entry.actor_name }}</span>
+                    <span>{{ entry.action_label }}</span>
+                    <span>
+                        {% if entry.changes %}
+                            {% for c in entry.changes %}
+                                <div class="audit-change">
+                                    <strong>{{ c.label }}:</strong>
+                                    <code>{{ c.before|default:"—" }}</code>
+                                    →
+                                    <code>{{ c.after|default:"—" }}</code>
+                                </div>
+                            {% endfor %}
+                        {% elif entry.target %}
+                            {{ entry.target }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </span>
+                    <span>{{ entry.created_at|date:"Y/n/j   -   g:i A" }}</span>
                 </div>
                 {% empty %}
                 <div class="audit-table__row audit-table__row--empty">
-                    <span colspan="3">No activity recorded yet</span>
+                    <span>No activity recorded yet</span>
                 </div>
                 {% endfor %}
             </div>
+            {% else %}
+            <p class="audit-table__row audit-table__row--empty" style="padding:24px;text-align:center;">
+                Only workspace owners and admins can view the audit trail.
+            </p>
+            {% endif %}
         </section>
         </div><!-- /tabpanel audit -->
 

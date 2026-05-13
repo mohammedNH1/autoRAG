@@ -27,7 +27,9 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollama_data:/some/path/inside/container
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=15m
 
 volumes:
   qdrant_storage:
