@@ -29,7 +29,12 @@ class Workspace(models.Model):
 
     tokens = models.IntegerField(default=0)
     collection_id = models.CharField(max_length=255, blank=True, null=True)
-    api_key = models.CharField(max_length=255, blank=True, null=True)
+
+    # SHA-256 hex digest of the raw API key (64 chars). The raw key is shown
+    # once at generation and never stored. Indexed for O(log n) lookup from
+    # the X-API-Key header during external API authentication.
+    api_key = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    api_key_created_at = models.DateTimeField(null=True, blank=True)
 
     workspace_image = models.FileField(
         upload_to='workspace_images/',

@@ -28,6 +28,7 @@ urlpatterns = [
     path('<int:workspace_id>/settings/config/', views.update_workspace_config, name='workspace_settings_config'),
     path('<int:workspace_id>/settings/delete/', views.delete_workspace, name='workspace_settings_delete'),
     path('<int:workspace_id>/settings/leave/', views.leave_workspace, name='workspace_settings_leave'),
+    path('<int:workspace_id>/settings/api-key/generate/', views.generate_workspace_api_key, name='workspace_generate_api_key'),
 
     # Session JSON endpoints (workspace-scoped, owner-scoped).
     path('<int:workspace_id>/sessions/', views.list_sessions, name='list_sessions'),

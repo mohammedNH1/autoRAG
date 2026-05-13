@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from workspace.models import Workspace, WorkspaceMembership, WorkspaceInvitation, Session, Message
 from pipeline.services.pipeline_registry import get_pipeline
+from pipeline.api.keys import generate_api_key, hash_api_key
 
 
 # Roles that the workspace owner can assign to other members.
@@ -571,6 +572,34 @@ def delete_workspace(request, workspace_id):
     workspace.delete()
     messages.success(request, "Workspace deleted.")
     return redirect("workspace_list")
+
+
+@login_required
+@require_POST
+def generate_workspace_api_key(request, workspace_id):
+    """
+    Generate (or regenerate) the external API key for a workspace.
+
+    Owner-only. The raw key is returned exactly once in this response.
+    The DB only stores its SHA-256 hash, so regenerating invalidates
+    every previously issued key for this workspace.
+    """
+    workspace = _get_user_workspace(request, workspace_id)
+    if workspace.workspace_owner_id != request.user.id:
+        return JsonResponse(
+            {"error": "Only the workspace owner can manage the API key."},
+            status=403,
+        )
+
+    raw_key = generate_api_key()
+    workspace.api_key = hash_api_key(raw_key)
+    workspace.api_key_created_at = timezone.now()
+    workspace.save(update_fields=["api_key", "api_key_created_at"])
+
+    return JsonResponse({
+        "api_key":    raw_key,                                # shown ONCE
+        "created_at": workspace.api_key_created_at.isoformat(),
+    })
 
 
 @login_required

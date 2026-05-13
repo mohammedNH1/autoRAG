@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/documents/", include("documents.urls")),
     path("workspace/", include("workspace.urls")),
     path("decoder/", include("decoder.urls")),
+    path("api/v1/", include("pipeline.api.urls")),
 ]
 
 from django.conf import settings

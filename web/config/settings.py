@@ -37,11 +37,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'accounts',
     'pipeline',
     'workspace',
     'documents',
 ]
+
+# ============================================
+# DJANGO REST FRAMEWORK
+# ============================================
+# The external API uses its own per-request authentication via the
+# X-API-Key header. We keep DRF's defaults minimal so the workspace
+# API key class is the only auth path for the /api/v1/ endpoints.
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
+    'UNAUTHENTICATED_USER': None,
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

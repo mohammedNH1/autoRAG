@@ -170,7 +170,116 @@
         </section>
 
         <!-- ===========================================
-             SECTION 3 — Danger zone
+             SECTION 3 — API Access (owner only)
+             =========================================== -->
+        {% if is_owner %}
+        <section class="settings-section" id="api-access-section">
+            <div class="settings-section__head">
+                <h2>API access</h2>
+                <p>Generate an API key to query this workspace from your own systems. The raw key is shown only once — copy and store it somewhere safe.</p>
+            </div>
+
+            <div class="api-access" data-generate-url="{% url 'workspace_generate_api_key' workspace_id %}">
+                <div class="api-access__status">
+                    {% if workspace.api_key %}
+                        <p class="settings-note" id="api-key-status">
+                            An API key exists for this workspace.
+                            {% if workspace.api_key_created_at %}
+                                Created on {{ workspace.api_key_created_at|date:"d M Y, H:i" }}.
+                            {% endif %}
+                            Regenerating will immediately invalidate the previous key.
+                        </p>
+                    {% else %}
+                        <p class="settings-note" id="api-key-status">No API key has been generated yet.</p>
+                    {% endif %}
+                </div>
+
+                <div class="settings-form__actions">
+                    <button type="button" id="generate-api-key-btn" class="settings-btn settings-btn--primary">
+                        {% if workspace.api_key %}Regenerate API key{% else %}Generate API key{% endif %}
+                    </button>
+                </div>
+
+                <!-- One-time reveal — populated by JS after a successful generate. -->
+                <div id="api-key-reveal" class="api-key-reveal" hidden>
+                    <p class="api-key-reveal__warning">
+                        <strong>Copy this key now.</strong> It will not be shown again — if you lose it, you'll have to regenerate.
+                    </p>
+                    <div class="api-key-reveal__row">
+                        <input type="text" id="api-key-value" readonly>
+                        <button type="button" id="copy-api-key-btn" class="settings-btn settings-btn--primary">Copy</button>
+                    </div>
+
+                    <div class="api-key-usage">
+                        <h4 class="api-key-usage__title">How to use this key</h4>
+                        <p class="api-key-usage__intro">
+                            Send a <strong>POST</strong> request to the endpoint below. Replace the example question with anything you want to ask your documents.
+                        </p>
+
+                        <dl class="api-key-usage__spec">
+                            <dt>URL</dt>
+                            <dd><code id="api-usage-url"></code></dd>
+
+                            <dt>Method</dt>
+                            <dd><code>POST</code></dd>
+
+                            <dt>Headers</dt>
+                            <dd>
+                                <code>X-API-Key: <span id="api-usage-key"></span></code><br>
+                                <code>Content-Type: application/json</code>
+                            </dd>
+
+                            <dt>Body (JSON)</dt>
+                            <dd>
+<pre class="api-key-usage__code">{
+  "question": "What is our refund policy?"
+}</pre>
+                            </dd>
+
+                            <dt>Response (JSON)</dt>
+                            <dd>
+<pre class="api-key-usage__code">{
+  "answer": "Refunds are processed within 5 business days...",
+  "citations": [
+    {
+      "document": "refund_policy.pdf",
+      "page": "3",
+      "snippet": "Refunds are processed within 5 business days..."
+    }
+  ]
+}</pre>
+                            </dd>
+                        </dl>
+
+                        <h4 class="api-key-usage__title">Copy-paste examples</h4>
+
+                        <p class="api-key-usage__label">curl</p>
+                        <div class="api-key-usage__code-wrap">
+<pre class="api-key-usage__code" id="api-usage-curl"></pre>
+                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-curl">Copy</button>
+                        </div>
+
+                        <p class="api-key-usage__label">Python (requests)</p>
+                        <div class="api-key-usage__code-wrap">
+<pre class="api-key-usage__code" id="api-usage-python"></pre>
+                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-python">Copy</button>
+                        </div>
+
+                        <p class="api-key-usage__label">JavaScript (fetch)</p>
+                        <div class="api-key-usage__code-wrap">
+<pre class="api-key-usage__code" id="api-usage-js"></pre>
+                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-js">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <p id="api-key-error" class="settings-flash settings-flash--error" hidden></p>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- ===========================================
+             SECTION 4 — Danger zone
              =========================================== -->
         <section class="settings-section settings-section--danger">
             <div class="settings-section__head">
@@ -205,5 +314,171 @@
         </section>
     </main>
 </div>
+
+<style>
+    .api-key-reveal {
+        margin-top: 16px;
+        padding: 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fffbeb;
+    }
+    .api-key-reveal__warning { margin: 0 0 12px; color: #92400e; font-size: 14px; }
+    .api-key-reveal__row { display: flex; gap: 8px; align-items: center; }
+    .api-key-reveal__row input {
+        flex: 1; padding: 10px 12px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff;
+    }
+
+    .api-key-usage {
+        margin-top: 20px; padding-top: 16px; border-top: 1px dashed #d1d5db;
+    }
+    .api-key-usage__title { margin: 16px 0 8px; font-size: 15px; color: #111827; }
+    .api-key-usage__title:first-child { margin-top: 0; }
+    .api-key-usage__intro { margin: 0 0 12px; font-size: 13px; color: #4b5563; }
+    .api-key-usage__label { margin: 12px 0 4px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+
+    .api-key-usage__spec { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; align-items: start; }
+    .api-key-usage__spec dt { font-weight: 600; font-size: 13px; color: #374151; padding-top: 4px; }
+    .api-key-usage__spec dd { margin: 0; font-size: 13px; color: #111827; }
+    .api-key-usage__spec code {
+        background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; word-break: break-all;
+    }
+
+    .api-key-usage__code {
+        margin: 0; padding: 12px; background: #1f2937; color: #e5e7eb;
+        border-radius: 6px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; overflow-x: auto;
+    }
+    .api-key-usage__code-wrap { position: relative; }
+    .api-key-usage__copy {
+        position: absolute; top: 8px; right: 8px;
+        padding: 4px 10px !important; font-size: 11px !important;
+    }
+
+    #api-key-error { margin-top: 12px; }
+</style>
+
+<script>
+(function () {
+    const container = document.querySelector(".api-access");
+    if (!container) return;  // not the owner — section not rendered
+
+    const generateUrl = container.dataset.generateUrl;
+    const csrfToken   = document.querySelector('meta[name="csrf-token"]').content;
+
+    const btn       = document.getElementById("generate-api-key-btn");
+    const reveal    = document.getElementById("api-key-reveal");
+    const keyInput  = document.getElementById("api-key-value");
+    const copyBtn   = document.getElementById("copy-api-key-btn");
+    const status    = document.getElementById("api-key-status");
+    const errorBox  = document.getElementById("api-key-error");
+
+    btn.addEventListener("click", async function () {
+        // Confirm before destroying an existing key.
+        const isRegenerate = btn.textContent.trim().toLowerCase().startsWith("regenerate");
+        if (isRegenerate) {
+            const ok = confirm("Regenerating will immediately invalidate the current API key. Continue?");
+            if (!ok) return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "Generating…";
+        errorBox.hidden = true;
+
+        try {
+            const resp = await fetch(generateUrl, {
+                method: "POST",
+                headers: { "X-CSRFToken": csrfToken },
+                credentials: "same-origin",
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error("Server returned " + resp.status + ": " + text);
+            }
+            const data = await resp.json();
+
+            keyInput.value = data.api_key;
+            reveal.hidden = false;
+
+            // Populate the live usage snippets with this exact key + URL.
+            const apiUrl = window.location.origin + "/api/v1/query";
+            document.getElementById("api-usage-url").textContent = apiUrl;
+            document.getElementById("api-usage-key").textContent = data.api_key;
+
+            document.getElementById("api-usage-curl").textContent =
+                'curl -X POST ' + apiUrl + ' \\\n' +
+                '  -H "X-API-Key: ' + data.api_key + '" \\\n' +
+                '  -H "Content-Type: application/json" \\\n' +
+                '  -d \'{"question": "What is our refund policy?"}\'';
+
+            document.getElementById("api-usage-python").textContent =
+                'import requests\n\n' +
+                'resp = requests.post(\n' +
+                '    "' + apiUrl + '",\n' +
+                '    headers={"X-API-Key": "' + data.api_key + '"},\n' +
+                '    json={"question": "What is our refund policy?"},\n' +
+                ')\n' +
+                'print(resp.json())';
+
+            document.getElementById("api-usage-js").textContent =
+                'const resp = await fetch("' + apiUrl + '", {\n' +
+                '  method: "POST",\n' +
+                '  headers: {\n' +
+                '    "X-API-Key": "' + data.api_key + '",\n' +
+                '    "Content-Type": "application/json",\n' +
+                '  },\n' +
+                '  body: JSON.stringify({ question: "What is our refund policy?" }),\n' +
+                '});\n' +
+                'const data = await resp.json();\n' +
+                'console.log(data);';
+
+            keyInput.focus();
+            keyInput.select();
+
+            const created = new Date(data.created_at).toLocaleString();
+            status.textContent =
+                "An API key exists for this workspace. Created on " + created +
+                ". Regenerating will immediately invalidate the previous key.";
+
+            btn.textContent = "Regenerate API key";
+        } catch (err) {
+            errorBox.textContent = "Could not generate API key — " + err.message;
+            errorBox.hidden = false;
+            btn.textContent = isRegenerate ? "Regenerate API key" : "Generate API key";
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    async function copyText(text, button) {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch (_e) {
+            // Fallback for older browsers / non-HTTPS contexts.
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+        }
+        const original = button.textContent;
+        button.textContent = "Copied!";
+        setTimeout(() => { button.textContent = original; }, 1500);
+    }
+
+    copyBtn.addEventListener("click", () => copyText(keyInput.value, copyBtn));
+
+    // Wire every per-snippet Copy button.
+    document.querySelectorAll(".api-key-usage__copy").forEach(function (b) {
+        b.addEventListener("click", function () {
+            const target = document.getElementById(b.dataset.copyTarget);
+            if (target) copyText(target.textContent, b);
+        });
+    });
+})();
+</script>
 </body>
 </html>

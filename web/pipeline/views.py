@@ -5,10 +5,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 import requests
-from documents.services.qdrant_service import QdrantService
-from documents.services.embedding_service import EmbeddingService
 from workspace.models import Workspace, WorkspaceConfig, WorkspaceMembership
 from pipeline.services.pipeline_registry import get_pipeline
+from pipeline.services.query_service import run_query, OLLAMA_URL, OLLAMA_MODEL
 from workspace.models import Message, Session
 import uuid
 from django.core.exceptions import ValidationError
@@ -294,39 +293,24 @@ def query_handling(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    embedding_model_mapping = {
-        "all-MiniLM-L6-v2": "minilm",
-        "all-mpnet-base-v2": "mpnet",
-        "intfloat/e5-large-v2": "e5_large",
-        "BAAI/bge-m3": "bge_m3",
-    }
-
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    print(f"[{datetime.datetime.now()}] JSON PARSED: Data loaded successfully")
-
     workspace_id = int(data.get("workspace_id"))
     session_id = data.get("session_id")
     query = (data.get("message") or "").strip()
-
-    print(f"[{datetime.datetime.now()}] VALIDATION: workspace_id={workspace_id}, session_id={session_id}, query_len={len(query)}")
 
     if not workspace_id or not query:
         return JsonResponse(
             {'error': 'workspace_id and message are required'}, status=400
         )
 
-    print(f"[{datetime.datetime.now()}] VALIDATION PASSED: Proceeding with query")
-
     try:
         workspace = Workspace.objects.get(workspace_id=workspace_id)
     except Workspace.DoesNotExist:
         return JsonResponse({'error': 'Workspace not found'}, status=404)
-
-    print(f"[{datetime.datetime.now()}] WORKSPACE LOOKUP: Found workspace {workspace_id}")
 
     is_member = (
         workspace.workspace_owner_id == request.user.id
@@ -337,28 +321,10 @@ def query_handling(request):
     if not is_member:
         return JsonResponse({'error': 'Forbidden'}, status=403)
 
-    print(f"[{datetime.datetime.now()}] MEMBERSHIP CHECK: User authorized for workspace {workspace_id}")
-
     if not hasattr(workspace, 'config'):
         return JsonResponse(
             {'error': 'Workspace is not configured yet'}, status=400
         )
-
-    print(f"[{datetime.datetime.now()}] CONFIG CHECK: Workspace configured, loading pipeline")
-
-    config = workspace.config
-    embedding_model_name = config.embedding_model
-    is_citation   = config.is_citation
-    metadata_flag = config.metadata_flag
-    pipeline = get_pipeline(workspace_id, config)
-
-    print(f"[{datetime.datetime.now()}] PIPELINE LOADED: Model={embedding_model_name}, citation={is_citation}")
-
-    embedding_model = pipeline["embedding_model"]
-    reranker = pipeline["reranker"]
-    temperature = pipeline["temperature"]
-    top_p = pipeline["top_p"]
-    top_k = pipeline["top_k"]
 
     # -------------------------
     # Session — must belong to this user + workspace; otherwise start a new one.
@@ -381,112 +347,28 @@ def query_handling(request):
             title="New Session",
         )
 
-    print(f"[{datetime.datetime.now()}] SESSION HANDLED: session_id={session.session_id}, created={not session_id}")
-
-    # Auto-title from the first user message, ChatGPT-style.
     is_first_message = not session.messages.exists()
 
-    print(f"[{datetime.datetime.now()}] SESSION TITLED: title='{session.title}', first_message={is_first_message}")
+    Message.objects.create(session=session, sender="user", text=query)
 
     # -------------------------
-    # Save User Message
+    # Run the shared RAG pipeline (also used by /api/v1/query)
     # -------------------------
-    Message.objects.create(
-        session=session,
-        sender="user",
-        text=query
-    )
+    result = run_query(workspace, query)
 
-    print(f"[{datetime.datetime.now()}] USER MESSAGE SAVED: session={session.session_id}")
-
-    print(f"[{datetime.datetime.now()}] EMBEDDING START: Using model {embedding_model_name}")
-    embedded_query = EmbeddingService.embed_text(query, embedding_model_name)
-
-    print(f"[{datetime.datetime.now()}] EMBEDDING COMPLETE: Vector length={len(embedded_query) if embedded_query else 0}")
-
-    print(f"[{datetime.datetime.now()}] QDRANT SEARCH START: collection=documents__{embedding_model_mapping[embedding_model_name]}, top_k={top_k * 10}")
-    qdrant = QdrantService(host="qdrant", port=6333)
-
-    chunks = qdrant.search(
-        collection_name=f"documents__{embedding_model_mapping[embedding_model_name]}",
-        workspace_id=workspace_id,
-        query_vector=embedded_query,
-        top_k=top_k * 10,
-    )
-    print("this is the chunks before reranking:", len(chunks))
-    print(f"[{datetime.datetime.now()}] QDRANT SEARCH COMPLETE: Found {len(chunks)} chunks")
-    print(f"[{datetime.datetime.now()}] RERANKING START: Processing {len(chunks)} chunks")
-    pairs = [(query, chunk["payload"]["text"]) for chunk in chunks]
-    scores = reranker.predict(pairs)
-
-    ranked_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)
-
-    if not ranked_chunks:
-        no_docs_reply = "No documents have been uploaded to this workspace yet. Please upload documents first, then ask your question."
-        Message.objects.create(session=session, sender="assistant", text=no_docs_reply)
+    if result.no_documents:
+        Message.objects.create(session=session, sender="assistant", text=result.answer)
         return JsonResponse({
-            "response":       no_docs_reply,
+            "response":       result.answer,
             "session_id":     str(session.session_id),
             "session_title":  session.title,
             "session_created": is_first_message,
         })
 
-    print("\n\n========== RERANK DEBUG ==========\n")
-    for i, (chunk, score) in enumerate(ranked_chunks[:5]):
-        print(f"{i+1}. Score: {score:.4f}")
-        print(chunk['payload']["text"][:100])
-        print("-" * 50)
-    print("\n========== END DEBUG ==========\n\n")
-    print(f"[{datetime.datetime.now()}] RERANKING COMPLETE: Top score={ranked_chunks[0][1]:.4f}")
-
-    top_ranked = ranked_chunks[:top_k]
-    top_chunks_for_llm = [chunk['payload']["text"] for chunk, score in top_ranked]
-    context = "\n\n".join(top_chunks_for_llm)
-
-    print(f"[{datetime.datetime.now()}] CONTEXT BUILT: Selected {len(top_ranked)} chunks, context_len={len(context)}")
-
-    # -------------------------
-    # Collect sources for post-response appendix
-    # -------------------------
-    sources = []
-    if is_citation or metadata_flag:
-        seen = set()
-        for chunk, score in top_ranked:
-            if score <= 0:
-                continue  # cross-encoder scores ≤ 0 indicate irrelevant chunks
-            payload = chunk['payload']
-            title   = payload.get('document_title') or payload.get('source', 'Unknown')
-            section = payload.get('section') or payload.get('page', '?')
-            key = (title, section)
-            if key not in seen:
-                seen.add(key)
-                sources.append(payload)
-
-    print(f"[{datetime.datetime.now()}] SOURCES BUILT: {len(sources)} sources for citation={is_citation}, metadata={metadata_flag}")
-
-    prompt = f"Answer the following question based on the context:\n\nContext:\n{context}\n\nQuestion: {query}"
-
-    print(f"[{datetime.datetime.now()}] PROMPT BUILT: prompt_len={len(prompt)}")
-
-    print(f"[{datetime.datetime.now()}] OLLAMA REQUEST START: Sending prompt to llama3:8b-instruct-q4_0")
-    ollama_url = "http://ollama:11434/api/generate"
-    payload = {
-        "model": "llama3:8b-instruct-q4_0",
-        "prompt": prompt,
-        "temperature": temperature,
-        "top_p": top_p,
-        "options": {"top_k": top_k},
-        "stream": False,
-    }
-
-    response = requests.post(ollama_url, json=payload)
-
-    if response.status_code == 200:
-        llm_response = response.json().get("response", "No response from LLaMA")
-    else:
-        llm_response = f"Error generating response: {response.status_code}"
-
-    print(f"[{datetime.datetime.now()}] OLLAMA RESPONSE RECEIVED: status={response.status_code}, response_len={len(llm_response)}")
+    llm_response  = result.answer
+    sources       = result.sources
+    is_citation   = result.is_citation
+    metadata_flag = result.metadata_flag
 
     # -------------------------
     # Post-response appendix — grouped per document, not per chunk
@@ -552,9 +434,9 @@ def query_handling(request):
         )
         try:
             title_resp = requests.post(
-                ollama_url,
+                OLLAMA_URL,
                 json={
-                    "model": "llama3:8b-instruct-q4_0",
+                    "model": OLLAMA_MODEL,
                     "prompt": title_prompt,
                     "stream": False,
                     "options": {"num_predict": 20, "temperature": 0.3},
