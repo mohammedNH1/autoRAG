@@ -76,24 +76,6 @@
 
                 <div class="settings-grid">
                     <label class="settings-field">
-                        <span class="settings-field__label">Language of documents</span>
-                        <select name="language" {% if not can_edit %}disabled{% endif %}>
-                            <option value="english"      {% if raw_answers.language == 'english' %}selected{% endif %}>English</option>
-                            <option value="arabic"       {% if raw_answers.language == 'arabic' %}selected{% endif %}>Arabic</option>
-                            <option value="multilingual" {% if raw_answers.language == 'multilingual' %}selected{% endif %}>Multilingual</option>
-                        </select>
-                    </label>
-
-                    <label class="settings-field">
-                        <span class="settings-field__label">Speed vs quality</span>
-                        <select name="use_case" {% if not can_edit %}disabled{% endif %}>
-                            <option value="fast"     {% if raw_answers.use_case == 'fast' %}selected{% endif %}>Speed</option>
-                            <option value="quality"  {% if raw_answers.use_case == 'quality' %}selected{% endif %}>Quality</option>
-                            <option value="balanced" {% if raw_answers.use_case == 'balanced' %}selected{% endif %}>Balanced</option>
-                        </select>
-                    </label>
-
-                    <label class="settings-field">
                         <span class="settings-field__label">Answer scope</span>
                         <select name="main_idea_or_related" {% if not can_edit %}disabled{% endif %}>
                             <option value="main_only"    {% if raw_answers.main_idea_or_related == 'main_only' %}selected{% endif %}>Main Idea Only</option>

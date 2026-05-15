@@ -74,6 +74,41 @@ def documents_page(request, workspace_id):
     })
 
 
+def document_details(request, workspace_id, document_id):
+    """JSON details for a single document — populates the right-hand panel."""
+    workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
+    document = get_object_or_404(Document, id=document_id, workspace=workspace)
+
+    total_chunks = 0
+    if hasattr(workspace, "config"):
+        try:
+            model_config = ModelSelector.get_model_config(workspace.config.embedding_model)
+            collection_name = ModelSelector.get_collection_name(model_config.collection_key)
+            total_chunks = _get_qdrant().count_document_chunks(
+                collection_name=collection_name,
+                workspace_id=workspace.workspace_id,
+                document_id=document.id,
+            )
+        except Exception as e:
+            logger.warning(f"Could not count chunks for doc {document_id}: {e}")
+
+    uploader = document.uploaded_by
+    uploaded_by_label = (
+        getattr(uploader, "email", None) or getattr(uploader, "username", None) or "—"
+    )
+
+    return JsonResponse({
+        "id":              document.id,
+        "title":           document.document_title or (document.file.name if document.file else ""),
+        "file_extension":  document.file_extension,
+        "uploaded_by":     uploaded_by_label,
+        "upload_time":     document.upload_time.isoformat() if document.upload_time else None,
+        "total_chunks":    total_chunks,
+        "used_in_answers": 0,
+        "is_indexed":      total_chunks > 0,
+    })
+
+
 def text_input_page(request, workspace_id):
     workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
     return render(request, "documents/text_input.html", {"workspace": workspace})
@@ -358,7 +393,7 @@ def delete_document(request):
         qdrant          = _get_qdrant()
         collection_name = ModelSelector.get_collection_name(model_config.collection_key)
 
-        deleted_count = qdrant.delete_document(
+        delete_result = qdrant.delete_document(
             collection_name=collection_name,
             workspace_id=workspace_id,
             document_id=document_id,
@@ -375,13 +410,12 @@ def delete_document(request):
             action="document.deleted",
             target=doc_title,
             document_id=document_id,
-            deleted_chunks=int(deleted_count),
         )
 
         return JsonResponse({
-            'status':         'success',
-            'document_id':    document_id,
-            'deleted_chunks': str(deleted_count),
+            'status':        'success',
+            'document_id':   document_id,
+            'qdrant_status': str(getattr(delete_result, 'status', delete_result)),
         })
 
     except Exception as e:

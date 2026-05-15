@@ -452,7 +452,6 @@ ol, ul { list-style: none; }
 }
 
 .detail-card--documents .detail-card__title {
-    width: 320px;
     white-space: nowrap;
 }
 
@@ -464,6 +463,10 @@ ol, ul { list-style: none; }
 .detail-card--questions .detail-card__head,
 .detail-card--documents .detail-card__head {
     margin-bottom: 76px;
+}
+
+.detail-card--documents .detail-card__head {
+    gap: 16px;
 }
 
 .detail-card__badge {

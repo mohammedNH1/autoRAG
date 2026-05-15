@@ -15,9 +15,16 @@ from workspace.services import activity_log
 from workspace.services.manage_members import user_display_name
 
 
-# Based on the McKinsey-style estimate that employees spend 1.8 hours per
-# day searching for and gathering information.
-TIME_SAVED_MINUTES_PER_ACTIVE_DAY = 108
+MINUTES_SAVED_PER_QUESTION = 18
+DAILY_CAP_MINUTES          = 108
+
+
+def _time_saved_minutes(message_dates):
+    """Sum per-day savings, each day capped at the McKinsey ceiling."""
+    return sum(
+        min(count * MINUTES_SAVED_PER_QUESTION, DAILY_CAP_MINUTES)
+        for count in Counter(message_dates).values()
+    )
 
 WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 CHART_W, CHART_H, CHART_TOP, CHART_BOTTOM = 365, 80, 12, 62
@@ -101,10 +108,9 @@ def build_dashboard_context(workspace, viewer, can_view_audit_trail):
     questions_count  = user_messages.count()
     timestamps       = list(user_messages.values_list("timestamp", flat=True))
     message_dates    = [timezone.localtime(ts).date() for ts in timestamps]
-    active_days      = len(set(message_dates))
     week_ago         = timezone.now() - timezone.timedelta(days=7)
     questions_week   = user_messages.filter(timestamp__gte=week_ago).count()
-    time_saved_min   = active_days * TIME_SAVED_MINUTES_PER_ACTIVE_DAY
+    time_saved_min   = _time_saved_minutes(message_dates)
 
     documents_qs     = workspace.documents.all()
     documents_count  = documents_qs.count()
@@ -147,11 +153,11 @@ def _build_time_chart(message_dates):
     week_start = today - timezone.timedelta(days=(today.weekday() + 1) % 7)
     week_end   = week_start + timezone.timedelta(days=7)
 
-    active_indexes = {
+    questions_per_day = Counter(
         (d - week_start).days for d in message_dates if week_start <= d < week_end
-    }
+    )
     minutes = [
-        TIME_SAVED_MINUTES_PER_ACTIVE_DAY if i in active_indexes else 0
+        min(questions_per_day.get(i, 0) * MINUTES_SAVED_PER_QUESTION, DAILY_CAP_MINUTES)
         for i in range(7)
     ]
     this_week_minutes = sum(minutes)

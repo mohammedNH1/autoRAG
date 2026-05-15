@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'documents/css/documents.css' %}">
+    <link rel="stylesheet" href="{% static 'documents/css/documents.css' %}?v=20260513">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
 </head>
 
@@ -19,9 +19,8 @@
 
         {% include "workspace/includes/sidebar.html" with active_nav="documents" %}
 
-        <!-- Layout: two columns when a document is selected, full width otherwise -->
-        <!-- FIX: guard `with-sidebar` on BOTH selected_document AND documents existing -->
-        <div class="documents-layout {% if selected_document and documents %}with-sidebar{% else %}full-width{% endif %}">
+        <!-- Layout starts full-width; JS adds .with-sidebar when a card is clicked. -->
+        <div class="documents-layout full-width">
 
         <!-- ============================================================
              MAIN CONTENT — header, toolbar, document grid
@@ -89,6 +88,9 @@
                         class="doc-card{% if selected_document and selected_document.id == doc.id %} selected{% endif %}"
                         data-document-id="{{ doc.id }}"
                         data-filename="{{ doc.document_title|default:doc.file.name }}"
+                        data-file-extension="{{ doc.file_extension }}"
+                        data-upload-time="{{ doc.upload_time|date:'c' }}"
+                        data-uploaded-by="{% if doc.uploaded_by %}{{ doc.uploaded_by.email|default:doc.uploaded_by.username }}{% endif %}"
                     >
                         <div class="doc-card__preview">
                             <img
@@ -126,15 +128,11 @@
         </main>
 
         <!-- ============================================================
-             FILE DETAILS PANEL — right sidebar showing selected file info
-             FIX: Guard on BOTH selected_document AND documents being non-empty.
-             This prevents a stale selected_document (from session/URL) from
-             rendering the details panel — and its .details-card — when the
-             documents list is actually empty. That stale card was the "ghost"
-             card users saw alongside "0 Items" and the empty state.
+             FILE DETAILS PANEL — right sidebar (Figma node 83-6169)
+             Always rendered; hidden until a card is clicked. JS fills the
+             values from /documents/<wid>/<docid>/details/.
              ============================================================ -->
-        {% if selected_document and documents %}
-        <aside class="details-panel" id="detailsPanel">
+        <aside class="details-panel hidden" id="detailsPanel">
             <div class="details-header">
                 <h2 class="details-title">File Details</h2>
                 <button class="details-menu-btn" type="button" aria-label="More options">
@@ -146,24 +144,14 @@
 
             <div class="details-body">
                 <div class="details-card">
-                    <img
-                        class="details-card__icon"
-                        src="{% if selected_document.file_extension == 'pdf' %}{% static 'icons/pdf.svg' %}{% elif selected_document.file_extension == 'doc' or selected_document.file_extension == 'docx' %}{% static 'icons/doc.svg' %}{% elif selected_document.file_extension == 'tsx' or selected_document.file_extension == 'jsx' or selected_document.file_extension == 'js' or selected_document.file_extension == 'py' or selected_document.file_extension == 'html' or selected_document.file_extension == 'css' %}{% static 'icons/code.svg' %}{% elif selected_document.file_extension == 'txt' %}{% static 'icons/txt.svg' %}{% else %}{% static 'icons/file.svg' %}{% endif %}"
-                        alt="{{ selected_document.file_extension|default:'file' }} file"
-                    />
-                    {% if selected_document.is_indexed %}
-                    <span class="details-status indexed">
-                        Indexed
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <img class="details-card__icon" id="detailsIcon" src="{% static 'icons/file.svg' %}" alt="" />
+                    <span class="details-status indexed" id="detailsStatus">
+                        <span id="detailsStatusText">Indexed</span>
+                        <svg id="detailsStatusCheck" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </span>
-                    {% else %}
-                    <span class="details-status pending-index">Pending</span>
-                    {% endif %}
-                    <span class="details-filename">
-                        {{ selected_document.document_title|default:selected_document.file.name }}
-                    </span>
+                    <span class="details-filename" id="detailsFilename">—</span>
                 </div>
             </div>
 
@@ -181,34 +169,19 @@
                         <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/user.svg' %}" alt="" />
                         <div class="details-overview__row-text">
                             <span class="details-overview__row-label">Uploaded by</span>
-                            <span class="details-overview__row-value">{{ selected_document.uploaded_by|default:"—" }}</span>
+                            <span class="details-overview__row-value" id="detailsUploadedBy">—</span>
                         </div>
                     </div>
                     <div class="details-overview__row">
                         <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/date.svg' %}" alt="" />
                         <div class="details-overview__row-text">
                             <span class="details-overview__row-label">Uploaded at</span>
-                            <span class="details-overview__row-value" id="uploadedAtValue" data-raw-date="{{ selected_document.upload_time|default:"" }}">{{ selected_document.uploaded_at|default:"—" }}</span>
-                        </div>
-                    </div>
-                    <div class="details-overview__row">
-                        <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/chunk.svg' %}" alt="" />
-                        <div class="details-overview__row-text">
-                            <span class="details-overview__row-label">Total chunks</span>
-                            <span class="details-overview__row-value">{{ selected_document.total_chunks|default:"0" }} chunks</span>
-                        </div>
-                    </div>
-                    <div class="details-overview__row">
-                        <img class="details-overview__row-icon" src="{% static 'icons/File overview icons/chat.svg' %}" alt="" />
-                        <div class="details-overview__row-text">
-                            <span class="details-overview__row-label">Used in answers</span>
-                            <span class="details-overview__row-value">{{ selected_document.used_in_answers|default:"0" }} times</span>
+                            <span class="details-overview__row-value" id="detailsUploadedAt">—</span>
                         </div>
                     </div>
                 </div>
             </div>
         </aside>
-        {% endif %}
 
         </div><!-- .documents-layout -->
 
@@ -250,6 +223,22 @@
          ============================================================ -->
     <script>
         const SEL_CARD = '.doc-card';
+        const ICONS = {
+            pdf:  "{% static 'icons/pdf.svg' %}",
+            doc:  "{% static 'icons/doc.svg' %}",
+            docx: "{% static 'icons/doc.svg' %}",
+            txt:  "{% static 'icons/txt.svg' %}",
+            code: "{% static 'icons/code.svg' %}",
+            file: "{% static 'icons/file.svg' %}",
+        };
+        const CODE_EXTS = new Set(['tsx','jsx','js','py','html','css']);
+
+        function iconFor(ext) {
+            ext = (ext || '').toLowerCase();
+            if (ICONS[ext]) return ICONS[ext];
+            if (CODE_EXTS.has(ext)) return ICONS.code;
+            return ICONS.file;
+        }
 
         function formatDate(raw) {
             if (!raw) return null;
@@ -268,11 +257,13 @@
             const searchInput = document.getElementById('searchInput');
             const grid = document.getElementById('documentsGrid');
 
-            const dateEl = document.getElementById('uploadedAtValue');
-            if (dateEl && dateEl.dataset.rawDate) {
-                const formatted = formatDate(dateEl.dataset.rawDate);
-                if (formatted) dateEl.textContent = formatted;
-            }
+            const detailsIcon          = document.getElementById('detailsIcon');
+            const detailsFilename      = document.getElementById('detailsFilename');
+            const detailsStatus        = document.getElementById('detailsStatus');
+            const detailsStatusText    = document.getElementById('detailsStatusText');
+            const detailsStatusCheck   = document.getElementById('detailsStatusCheck');
+            const detailsUploadedBy    = document.getElementById('detailsUploadedBy');
+            const detailsUploadedAt    = document.getElementById('detailsUploadedAt');
 
             function setDetailPanelVisible(show) {
                 if (detailsPanel) detailsPanel.classList.toggle('hidden', !show);
@@ -280,10 +271,69 @@
                 if (layoutEl) { layoutEl.classList.toggle('with-sidebar', show); layoutEl.classList.toggle('full-width', !show); }
             }
 
+            function renderDetails(data, fallbackName, fallbackExt) {
+                detailsFilename.textContent = data.title || fallbackName || '\u2014';
+                detailsIcon.src = iconFor(data.file_extension || fallbackExt);
+                detailsIcon.alt = `${data.file_extension || fallbackExt || 'file'} file`;
+
+                if (data.is_indexed) {
+                    detailsStatus.classList.remove('pending-index');
+                    detailsStatus.classList.add('indexed');
+                    detailsStatusText.textContent = 'Indexed';
+                    detailsStatusCheck.style.display = '';
+                } else {
+                    detailsStatus.classList.remove('indexed');
+                    detailsStatus.classList.add('pending-index');
+                    detailsStatusText.textContent = 'Pending';
+                    detailsStatusCheck.style.display = 'none';
+                }
+
+                detailsUploadedBy.textContent    = data.uploaded_by || '\u2014';
+                detailsUploadedAt.textContent    = formatDate(data.upload_time) || '\u2014';
+            }
+
+            function setLoading() {
+                detailsFilename.textContent = 'Loading\u2026';
+                detailsUploadedBy.textContent = '\u2014';
+                detailsUploadedAt.textContent = '\u2014';
+            }
+
+            async function loadDetails(card) {
+                const docId = card.dataset.documentId;
+                const workspaceId = (typeof window.WORKSPACE_ID !== 'undefined' && window.WORKSPACE_ID !== '') ? window.WORKSPACE_ID : null;
+
+                const filename   = card.dataset.filename || '';
+                const ext        = (card.dataset.fileExtension || filename.split('.').pop() || '').toLowerCase();
+                const uploadedBy = card.dataset.uploadedBy || '';
+                const uploadTime = card.dataset.uploadTime || '';
+
+                renderDetails({
+                    title:           filename,
+                    file_extension:  ext,
+                    uploaded_by:     uploadedBy,
+                    upload_time:     uploadTime,
+                    is_indexed:      true,
+                }, filename, ext);
+
+                if (!workspaceId || !docId) return;
+
+                try {
+                    const res = await fetch(`/documents/${workspaceId}/${docId}/details/`, {
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    renderDetails(data, filename, ext);
+                } catch (err) {
+                    console.error('Failed to load document details:', err);
+                }
+            }
+
             const gridWrapper = grid ? grid.closest('.documents-grid-wrapper') : null;
             if (gridWrapper) {
                 gridWrapper.addEventListener('click', (e) => {
                     const card = e.target.closest(SEL_CARD);
+                    if (e.target.closest('.doc-card__menu')) return;
 
                     grid.querySelectorAll(SEL_CARD).forEach(c => c.classList.remove('selected'));
 
@@ -294,6 +344,7 @@
 
                     card.classList.add('selected');
                     setDetailPanelVisible(true);
+                    loadDetails(card);
                 });
             }
 

@@ -117,7 +117,6 @@
                 }
 
                 function resetModal() {
-                    files.forEach(f => { if (f.timer) clearInterval(f.timer); });
                     files = [];
                     fileIdCounter = 0;
                     dragCounter = 0;
@@ -151,7 +150,7 @@
                         '<div class="upload-modal__file-info">' +
                             '<span class="upload-modal__file-name">' + fileObj.name + '</span>' +
                             '<span class="upload-modal__file-status" data-status-id="' + fileObj.id + '">' +
-                                sizeStr + ' | 0% \u2022 Uploading' +
+                                sizeStr + ' | Ready' +
                             '</span>' +
                         '</div>' +
                         '<button class="upload-modal__file-delete" type="button" data-delete-id="' + fileObj.id + '" aria-label="Remove file">' +
@@ -163,31 +162,11 @@
                     return row;
                 }
 
-                function updateFileStatus(fileObj) {
+                function setFileStatus(fileObj, label, done) {
                     const statusEl = fileListEl.querySelector('[data-status-id="' + fileObj.id + '"]');
                     if (!statusEl) return;
-                    const sizeStr = formatFileSize(fileObj.size);
-
-                    if (fileObj.progress >= 100) {
-                        statusEl.textContent = sizeStr + ' | 100% \u2022 Uploaded Successfully';
-                        statusEl.classList.add('upload-modal__file-status--done');
-                    } else {
-                        const remaining = Math.max(1, Math.round((100 - fileObj.progress) * 0.7));
-                        statusEl.textContent = sizeStr + ' | ' + fileObj.progress + '% \u2022 ' + remaining + ' sec left \u2728 Uploading';
-                        statusEl.classList.remove('upload-modal__file-status--done');
-                    }
-                }
-
-                function simulateUpload(fileObj) {
-                    fileObj.timer = setInterval(function () {
-                        fileObj.progress = Math.min(100, fileObj.progress + Math.floor(Math.random() * 8 + 3));
-                        updateFileStatus(fileObj);
-                        if (fileObj.progress >= 100) {
-                            clearInterval(fileObj.timer);
-                            fileObj.timer = null;
-                            updateSubmitState();
-                        }
-                    }, 300);
+                    statusEl.textContent = formatFileSize(fileObj.size) + ' | ' + label;
+                    statusEl.classList.toggle('upload-modal__file-status--done', !!done);
                 }
 
                 function addFiles(rawFiles) {
@@ -202,15 +181,14 @@
                             name: f.name,
                             size: f.size,
                             ext: ext,
-                            file: f,        // ← store the real File object
-                            progress: 0,
-                            timer: null
+                            file: f,
+                            progress: 100,
                         };
                         files.push(fileObj);
 
                         const row = renderFileRow(fileObj);
                         fileListEl.appendChild(row);
-                        simulateUpload(fileObj);
+                        setFileStatus(fileObj, 'Ready', true);
                         added = true;
                     }
 
@@ -223,7 +201,6 @@
                 function removeFile(id) {
                     const idx = files.findIndex(f => f.id === id);
                     if (idx === -1) return;
-                    if (files[idx].timer) clearInterval(files[idx].timer);
                     files.splice(idx, 1);
 
                     const row = fileListEl.querySelector('[data-file-id="' + id + '"]');
@@ -319,6 +296,8 @@
                         formData.append('file', fileObj.file);
                         formData.append('workspace_id', workspaceId);
 
+                        setFileStatus(fileObj, 'Uploading…', false);
+
                         try {
                             const response = await fetch('/documents/upload/', {
                                 method: 'POST',
@@ -332,13 +311,16 @@
                                 const err = await response.json().catch(() => ({}));
                                 const msg = err.error || ('HTTP ' + response.status);
                                 console.error('Upload error for', fileObj.name, err);
+                                setFileStatus(fileObj, 'Failed: ' + msg, false);
                                 failures.push(fileObj.name + ': ' + msg);
                             } else {
                                 const data = await response.json();
                                 console.log('Uploaded successfully:', fileObj.name, data);
+                                setFileStatus(fileObj, 'Uploaded', true);
                             }
                         } catch (err) {
                             console.error('Network error uploading', fileObj.name, err);
+                            setFileStatus(fileObj, 'Network error', false);
                             failures.push(fileObj.name + ': network error');
                         }
                     }
