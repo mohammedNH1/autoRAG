@@ -45,7 +45,7 @@ _STRATEGIES = frozenset(
 def parse_document_into_chunks(
     file_path:    str,
     model_key:    str   = 'minilm',
-    strategy:     str   = 'simple',
+    strategy:     str   = 'fixed-length',
     chunk_size:   int   = 100,
     overlap:      int   = 10,
     threshold:    float = 0.5,

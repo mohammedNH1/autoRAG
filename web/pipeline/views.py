@@ -87,7 +87,7 @@ def questionnaire(request):
 
     embedding_config = embedding_reranker(data.get("language"), data.get("use_case"))
     config_values = {
-        "k_value":           top_k(data.get("reference")),
+        "k_value":           top_k(data.get("top_k")),
         "reference_flag":    reference(data.get("reference")),
         "temp_value":        temperature(data.get("temperature")),
         "top_p_final":       top_p(data.get("top_p")),

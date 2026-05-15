@@ -15,22 +15,22 @@ REQUIRED_QUESTIONNAIRE_FIELDS = (
 
 
 def embedding_reranker(language, use_case):
-    """Pick the embedding + reranker pair for the given language/quality tradeoff."""
+    # Pick the embedding + reranker pair for the given language/quality tradeoff.
     if language == "english":
         if use_case == "fast":
             return {
                 "embedding_model": "all-MiniLM-L6-v2",
-                "reranker_model":  "cross-encoder/ms-marco-MiniLM-L6-v2",
+                "reranker_model":  "cross-encoder/ms-marco-MiniLM-L-6-v2",
             }
         if use_case == "balanced":
             return {
                 "embedding_model": "all-mpnet-base-v2",
-                "reranker_model":  "cross-encoder/ms-marco-MiniLM-L6-v2",
+                "reranker_model":  "cross-encoder/ms-marco-MiniLM-L-6-v2",
             }
         if use_case == "quality":
             return {
                 "embedding_model": "intfloat/e5-large-v2",
-                "reranker_model":  "intfloat/e5-mistral-7b-instruct",
+                "reranker_model":  "cross-encoder/ms-marco-MiniLM-L-12-v2",
             }
     # Multilingual / Arabic fall through to BGE-M3 regardless of use_case.
     return {
@@ -70,7 +70,7 @@ CHUNKING_STRATEGY_BY_CONTENT = {
 
 
 def determine_chunking_strategy(response):
-    """Map a content-type label to the chunking strategy that suits it best."""
+    # Map a content-type label to the chunking strategy that suits it best.
     response_lower = str(response).lower().strip()
     for keyword, strategy in CHUNKING_STRATEGY_BY_CONTENT.items():
         if keyword in response_lower:

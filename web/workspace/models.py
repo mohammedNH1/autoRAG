@@ -143,8 +143,6 @@ class WorkspaceConfig(models.Model):
     top_p = models.FloatField(default=1.0)
     top_k = models.IntegerField(default=5)
 
-    # Raw questionnaire answers — kept so the Settings page can prefill the
-    # RAG form without lossy reverse-mapping from derived numeric values.
     raw_answers = models.JSONField(null=True, blank=True)
 
     def __str__(self):
