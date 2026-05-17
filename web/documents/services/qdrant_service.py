@@ -177,6 +177,29 @@ class QdrantService:
         logger.info(f"Deleted document {document_id} from workspace {workspace_id}")
         return result
 
+    def count_document_chunks(
+        self,
+        collection_name: str,
+        workspace_id: int,
+        document_id: int,
+    ) -> int:
+        """Return the number of stored chunks for a document in a workspace."""
+        try:
+            result = self.client.count(
+                collection_name=collection_name,
+                count_filter=Filter(
+                    must=[
+                        FieldCondition(key="workspace_id", match=MatchValue(value=workspace_id)),
+                        FieldCondition(key="document_id", match=MatchValue(value=document_id)),
+                    ]
+                ),
+                exact=True,
+            )
+            return int(result.count)
+        except Exception as e:
+            logger.warning(f"count_document_chunks failed for doc {document_id}: {e}")
+            return 0
+
     def get_document_chunks(
         self,
         collection_name: str,

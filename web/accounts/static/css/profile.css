@@ -291,8 +291,95 @@ html, body {
 .profile-btn--primary:hover  { background: var(--pf-primary-hover); }
 .profile-btn--primary:active { transform: scale(0.97); }
 
+/* ── RTL: flip back chevron ── */
+[dir="rtl"] .profile-back__icon {
+    transform: scaleX(-1);
+}
+
+/* ── Language Switcher (inline variant for topbar) ── */
+.lang-switch {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    padding: 4px;
+    background: #f3f4f6;
+    border-radius: 10px;
+    margin: 0;
+}
+
+.lang-switch__opt {
+    height: 28px;
+    min-width: 40px;
+    padding: 0 10px;
+    border: 0;
+    background: transparent;
+    color: #4a5565;
+    font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lang-switch__opt--ar {
+    min-width: 50px;
+}
+
+.lang-switch__opt:hover:not(.is-active) {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.lang-switch__opt.is-active {
+    background: #1f64ff;
+    color: #fff;
+    box-shadow:
+        0 1px 1.5px rgba(0, 0, 0, 0.1),
+        0 1px 1px rgba(0, 0, 0, 0.1);
+    cursor: default;
+}
+
 @media (max-width: 600px) {
     .profile-card { padding: 24px; }
     .profile-grid { grid-template-columns: 1fr; }
     .profile-card__head { flex-direction: column; text-align: center; }
+}
+
+/* ====== Arabic primary font override ====== */
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-SemiBold.otf') format('opentype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:lang(ar), :lang(ar) * {
+    font-family: 'Year of Handicrafts', 'Tajawal', sans-serif !important;
 }

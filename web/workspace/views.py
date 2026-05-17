@@ -15,6 +15,7 @@ import json
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -137,6 +138,8 @@ def reject_invitation(request, invitation_id):
 @login_required
 def members(request, workspace_id):
     workspace = _get_user_workspace(request, workspace_id)
+    if manage_members.is_basic_member(workspace, request.user):
+        return redirect("chat_page", workspace_id=workspace_id)
     member_rows = manage_members.list_member_rows(workspace, request.user)
 
     return render(request, "workspace/members.html", {
@@ -315,7 +318,7 @@ def delete_session(request, workspace_id, session_id):
 def workspace_settings_page(request, workspace_id):
     workspace = _get_user_workspace(request, workspace_id)
     if not workspace_settings.can_edit_settings(workspace, request.user):
-        messages.error(request, "Only the workspace owner or an admin can view settings.")
+        messages.error(request, _("Only the workspace owner or an admin can view settings."))
         return redirect("chat_page", workspace_id=workspace_id)
 
     config = getattr(workspace, "config", None)
@@ -335,7 +338,7 @@ def workspace_settings_page(request, workspace_id):
 def update_workspace_general(request, workspace_id):
     workspace = _get_user_workspace(request, workspace_id)
     if not workspace_settings.can_edit_settings(workspace, request.user):
-        messages.error(request, "You don't have permission to edit workspace settings.")
+        messages.error(request, _("You don't have permission to edit workspace settings."))
         return redirect("workspace_settings", workspace_id=workspace_id)
 
     status, message = workspace_settings.update_general_details(
@@ -352,7 +355,7 @@ def update_workspace_general(request, workspace_id):
 def update_workspace_config(request, workspace_id):
     workspace = _get_user_workspace(request, workspace_id)
     if not workspace_settings.can_edit_settings(workspace, request.user):
-        messages.error(request, "You don't have permission to edit RAG configuration.")
+        messages.error(request, _("You don't have permission to edit RAG configuration."))
         return redirect("workspace_settings", workspace_id=workspace_id)
 
     status, message = workspace_settings.update_rag_config(
@@ -408,6 +411,8 @@ def generate_workspace_api_key(request, workspace_id):
 @login_required
 def dashboard(request, workspace_id):
     workspace = _get_user_workspace(request, workspace_id)
+    if manage_members.is_basic_member(workspace, request.user):
+        return redirect("chat_page", workspace_id=workspace_id)
     can_view_audit_trail = workspace_settings.can_edit_settings(workspace, request.user)
     context = dashboard_service.build_dashboard_context(workspace, request.user, can_view_audit_trail)
     return render(request, "workspace/dashboard.html", context)

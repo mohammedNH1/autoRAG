@@ -103,7 +103,7 @@ button {
     width: 70px;
     height: 100vh;
     background-color: #fff;
-    border-right: 1px solid #e0e0e0;
+    border-inline-end: 1px solid #e0e0e0;
     padding: 16px 0;
     overflow-y: auto;
 }
@@ -229,7 +229,7 @@ button {
     width: 280px;
     height: 100vh;
     background-color: #fafafa;
-    border-right: 1px solid #e0e0e0;
+    border-inline-end: 1px solid #e0e0e0;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -267,7 +267,7 @@ button {
     display: flex;
     align-items: center;
     padding: 12px 16px;
-    border-left: 3px solid transparent;
+    border-inline-start: 3px solid transparent;
     cursor: pointer;
     text-decoration: none;
     transition: all 0.2s ease-in-out;
@@ -279,7 +279,7 @@ button {
 }
 
 .session-item.active {
-    border-left-color: #0052cc;
+    border-inline-start-color: #0052cc;
     background-color: #f0f0f0;
 }
 
@@ -304,20 +304,20 @@ button {
 /* Session row (wraps item + kebab) */
 .session-row {
     position: relative;
-    border-left: 3px solid transparent;
+    border-inline-start: 3px solid transparent;
     background-color: #fafafa;
     transition: background 0.18s ease, border-color 0.18s ease;
 }
 
 .session-row.active {
-    border-left-color: #0052cc;
+    border-inline-start-color: #0052cc;
     background-color: #f0f0f0;
 }
 
 .session-row .session-item {
-    border-left: 0;
+    border-inline-start: 0;
     background: transparent;
-    padding-right: 40px;
+    padding-inline-end: 40px;
 }
 
 .session-row:hover { background-color: #f0f0f0; }
@@ -325,7 +325,7 @@ button {
 .session-kebab {
     position: absolute;
     top: 50%;
-    right: 8px;
+    inset-inline-end: 8px;
     transform: translateY(-50%);
     width: 26px;
     height: 26px;
@@ -356,7 +356,7 @@ button {
 .session-kebab-menu {
     position: absolute;
     top: calc(100% - 6px);
-    right: 8px;
+    inset-inline-end: 8px;
     min-width: 140px;
     background: #fff;
     border: 1px solid #e2e8f0;
@@ -369,7 +369,7 @@ button {
 .session-kebab-menu button {
     display: block;
     width: 100%;
-    text-align: left;
+    text-align: start;
     background: transparent;
     border: 0;
     padding: 8px 12px;
@@ -605,8 +605,8 @@ button {
 
 .message.user {
     justify-content: flex-end;
-    align-items: flex-end;  
-    padding-right: 16px; 
+    align-items: flex-end;
+    padding-inline-end: 16px;
 }
 
 .message.assistant {
@@ -628,13 +628,13 @@ button {
 .message.user .message-bubble {
     background-color: #0052cc;
     color: #fff;
-    border-bottom-right-radius: 4px;
+    border-end-end-radius: 4px;
 }
 
 .message.assistant .message-bubble {
     background-color: #f5f5f5;
     color: #333;
-    border-bottom-left-radius: 4px;
+    border-end-start-radius: 4px;
 }
 
 .message-content {
@@ -660,7 +660,7 @@ hr.response-divider {
 
 .message.user .message-time {
     color: rgba(255, 255, 255, 0.7);
-    text-align: right;
+    text-align: end;
 }
 
 .message.assistant .message-time {
@@ -675,7 +675,7 @@ hr.response-divider {
 }
 
 .message.user .message-sender {
-    text-align: right;
+    text-align: end;
 }
 
 /* ============ INPUT COMPOSER ============ */
@@ -921,4 +921,52 @@ hr.response-divider {
     width: 100% !important;
     min-height: 0;
     padding-top: 0;
+}
+
+/* ====== Arabic primary font override ====== */
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-SemiBold.otf') format('opentype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:lang(ar), :lang(ar) * {
+    font-family: 'Year of Handicrafts', 'Tajawal', sans-serif !important;
+}
+
+/* ── RTL: flip send arrow ── */
+[dir="rtl"] .send-button__icon {
+    transform: scaleX(-1);
+}
+
+/* ── RTL: lock message bubble positioning ──
+   Force LTR direction on the chat list so flex-end stays right
+   (user) and flex-start stays left (assistant), regardless of page dir.
+   Message content elements set their own dir for text reading. */
+[dir="rtl"] .chat-messages,
+[dir="rtl"] .message {
+    direction: ltr;
 }

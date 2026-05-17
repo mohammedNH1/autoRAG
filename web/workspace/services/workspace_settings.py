@@ -3,6 +3,8 @@ Workspace settings — general details, RAG config, API key rotation,
 delete, leave. Pure business logic; views handle HTTP.
 """
 
+from django.utils.translation import gettext_lazy as _
+
 from pipeline.api.keys import generate_api_key, hash_api_key
 
 from workspace.models import WorkspaceMembership
@@ -45,14 +47,14 @@ def update_general_details(workspace, name, description):
     name = (name or "").strip()
     description = (description or "").strip()
     if not name:
-        return "missing_name", "Workspace name is required."
+        return "missing_name", _("Workspace name is required.")
     if len(name) > 150:
-        return "name_too_long", "Name must be 150 characters or fewer."
+        return "name_too_long", _("Name must be 150 characters or fewer.")
 
     workspace.workspace_name = name
     workspace.workspace_description = description
     workspace.save(update_fields=["workspace_name", "workspace_description"])
-    return "ok", "Workspace details updated."
+    return "ok", _("Workspace details updated.")
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +70,7 @@ def update_rag_config(workspace, actor, raw_form):
     """
     config = getattr(workspace, "config", None)
     if config is None:
-        return "no_config", "Workspace has no configuration to edit."
+        return "no_config", _("Workspace has no configuration to edit.")
 
     # Imported lazily — these helpers live in the pipeline app and we don't
     # want an import-time dependency between the two apps' service layers.
@@ -86,7 +88,7 @@ def update_rag_config(workspace, actor, raw_form):
     raw = {f: (raw_form.get(f) or "").strip() for f in REQUIRED_QUESTIONNAIRE_FIELDS}
     if not all(raw.values()):
         missing = [k for k, v in raw.items() if not v]
-        return "missing_answers", f"Missing answers: {', '.join(missing)}"
+        return "missing_answers", _("Missing answers: {fields}").format(fields=", ".join(missing))
 
     raw_chunk_form = raw["chunking_strategy"]
     raw["chunking_strategy"] = CHUNKING_FORM_TO_LABEL.get(raw_chunk_form, raw_chunk_form)
@@ -95,7 +97,7 @@ def update_rag_config(workspace, actor, raw_form):
     new_values = {
         "embedding_model":   embedding_config["embedding_model"],
         "re_ranker":         embedding_config["reranker_model"],
-        "top_k":             _top_k(raw["reference"]),
+        "top_k":             _top_k(raw["main_idea_or_related"]),
         "is_citation":       _reference(raw["reference"]),
         "temperature":       _temperature(raw["temperature"]),
         "top_p":             _top_p(raw["top_p"]),
@@ -117,13 +119,15 @@ def update_rag_config(workspace, actor, raw_form):
     config.save()
 
     if changes:
+        from pipeline.services.pipeline_registry import invalidate_pipeline
+        invalidate_pipeline(workspace.workspace_id)
         activity_log.record(workspace=workspace,actor=actor,action="workspace.config_updated",target=", ".join(c["field"] for c in changes),
             changes=[
                 {"field": c["field"], "before": str(c["before"]), "after": str(c["after"])}
                 for c in changes
             ],)
 
-    return "ok", "RAG configuration updated. Note: changing embedding or chunking may require re-indexing existing documents."
+    return "ok", _("RAG configuration updated. Note: changing embedding or chunking may require re-indexing existing documents.")
 
 
 # ---------------------------------------------------------------------------
@@ -162,12 +166,12 @@ def delete_workspace_with_confirmation(workspace, actor, confirm_name):
     to guard against accidental clicks. Returns (status, message).
     """
     if workspace.workspace_owner_id != actor.id:
-        return "forbidden", "Only the workspace owner can delete this workspace."
+        return "forbidden", _("Only the workspace owner can delete this workspace.")
     if (confirm_name or "").strip() != (workspace.workspace_name or ""):
-        return "bad_confirm", "Confirmation name does not match. Workspace not deleted."
+        return "bad_confirm", _("Confirmation name does not match. Workspace not deleted.")
 
     workspace.delete()
-    return "ok", "Workspace deleted."
+    return "ok", _("Workspace deleted.")
 
 
 def leave_workspace_for_user(workspace, leaving_user):
@@ -177,13 +181,14 @@ def leave_workspace_for_user(workspace, leaving_user):
     from workspace.services.manage_members import user_display_name
 
     if workspace.workspace_owner_id == leaving_user.id:
-        return "forbidden", "Owners cannot leave their own workspace. Delete it instead."
+        return "forbidden", _("Owners cannot leave their own workspace. Delete it instead.")
 
-    deleted, _ = WorkspaceMembership.objects.filter(
+    deleted, _del_detail = WorkspaceMembership.objects.filter(
         workspace=workspace, user=leaving_user,
     ).delete()
     if not deleted:
         return "not_a_member", ""
 
     activity_log.record(workspace=workspace,actor=leaving_user,action="member.left",target=user_display_name(leaving_user),)
-    return "ok", f"You left {workspace.workspace_name or 'this workspace'}."
+    ws_name = workspace.workspace_name or _("this workspace")
+    return "ok", _("You left {name}.").format(name=ws_name)

@@ -1,15 +1,16 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Dashboard - AutoRAG</title>
+    <title>{% trans "Dashboard" %} - AutoRAG</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@400;700&family=Barlow:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260517">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
 </head>
 <body>
@@ -24,8 +25,8 @@
 
         <header class="dash-pageHeader">
             <nav class="dash-tabs" role="tablist">
-                <button type="button" class="dash-tab is-active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
-                <button type="button" class="dash-tab" data-tab="audit" role="tab" aria-selected="false">Audit Trail</button>
+                <button type="button" class="dash-tab is-active" data-tab="dashboard" role="tab" aria-selected="true">{% trans "Dashboard" %}</button>
+                <button type="button" class="dash-tab" data-tab="audit" role="tab" aria-selected="false">{% trans "Audit Trail" %}</button>
             </nav>
             <hr class="dash-divider">
         </header>
@@ -38,8 +39,8 @@
             <img class="dash-empty__art"
                  src="{% static 'dashboard/dashboard empty state image.png' %}"
                  alt="" />
-            <h2 class="dash-empty__title">There is no data to display.</h2>
-            <p class="dash-empty__subtitle">Start chatting to see your statistic</p>
+            <h2 class="dash-empty__title">{% trans "There is no data to display." %}</h2>
+            <p class="dash-empty__subtitle">{% trans "Start chatting to see your statistic" %}</p>
         </section>
         {% else %}
         <!-- ===========================
@@ -52,7 +53,7 @@
             <article class="kpi-card kpi-card--questions">
                 <div class="kpi-card__body">
                     <p class="kpi-card__value">{{ questions_count }}</p>
-                    <p class="kpi-card__label">Number of Questions</p>
+                    <p class="kpi-card__label">{% trans "Number of Questions" %}</p>
                 </div>
                 <p class="kpi-card__delta">
                     <span class="kpi-card__arrow" aria-hidden="true">
@@ -61,7 +62,7 @@
                         </svg>
                     </span>
                     <span class="kpi-card__pct">+{{ questions_this_week }}</span>
-                    <span class="kpi-card__period">this week</span>
+                    <span class="kpi-card__period">{% trans "this week" %}</span>
                 </p>
                 <img class="kpi-card__bg kpi-card__bg--question"
                      src="{% static 'dashboard/bigquestionicon.svg' %}" alt="">
@@ -70,7 +71,7 @@
             <article class="kpi-card kpi-card--documents">
                 <div class="kpi-card__body">
                     <p class="kpi-card__value">{{ documents_count }}</p>
-                    <p class="kpi-card__label">Number of documents</p>
+                    <p class="kpi-card__label">{% trans "Number of documents" %}</p>
                 </div>
                 <p class="kpi-card__delta">
                     <span class="kpi-card__arrow" aria-hidden="true">
@@ -79,7 +80,7 @@
                         </svg>
                     </span>
                     <span class="kpi-card__pct">{{ docs_this_week }}</span>
-                    <span class="kpi-card__period">documents added week</span>
+                    <span class="kpi-card__period">{% trans "documents added week" %}</span>
                 </p>
                 <img class="kpi-card__bg kpi-card__bg--document"
                      src="{% static 'dashboard/DocumentBigIcon.svg' %}" alt="">
@@ -88,7 +89,7 @@
             <article class="kpi-card kpi-card--time">
                 <div class="kpi-card__body">
                     <p class="kpi-card__value">{{ time_saved_display }}</p>
-                    <p class="kpi-card__label">Time saved</p>
+                    <p class="kpi-card__label">{% trans "Time saved" %}</p>
                 </div>
                 <p class="kpi-card__delta">
                     <span class="kpi-card__arrow" aria-hidden="true">
@@ -97,7 +98,7 @@
                         </svg>
                     </span>
                     <span class="kpi-card__pct">+{{ time_saved_this_week_display }}</span>
-                    <span class="kpi-card__period">this week</span>
+                    <span class="kpi-card__period">{% trans "this week" %}</span>
                 </p>
                 <img class="kpi-card__bg kpi-card__bg--clock"
                      src="{% static 'dashboard/bigtimeicon.svg' %}" alt="">
@@ -110,7 +111,7 @@
             <!-- Most Frequently Asked Questions -->
             <article class="detail-card detail-card--questions">
                 <header class="detail-card__head">
-                    <h3 class="detail-card__title">Most Frequently<br>Asked Questions</h3>
+                    <h3 class="detail-card__title">{% blocktrans %}Most Frequently<br>Asked Questions{% endblocktrans %}</h3>
                     <span class="detail-card__badge detail-card__badge--q">?</span>
                 </header>
                 <ol class="detail-card__list">
@@ -120,7 +121,7 @@
                         <span class="detail-card__text" title="{{ q.text }}">{{ q.text|truncatechars:48 }}</span>
                     </li>
                     {% empty %}
-                    <li class="detail-card__item detail-card__item--empty">No questions yet</li>
+                    <li class="detail-card__item detail-card__item--empty">{% trans "No questions yet" %}</li>
                     {% endfor %}
                 </ol>
             </article>
@@ -128,7 +129,7 @@
             <!-- Recently Uploaded Documents -->
             <article class="detail-card detail-card--documents">
                 <header class="detail-card__head">
-                    <h3 class="detail-card__title">Recently Uploaded Documents</h3>
+                    <h3 class="detail-card__title">{% trans "Recently Uploaded Documents" %}</h3>
                     <span class="detail-card__badge detail-card__badge--doc" aria-hidden="true">
                         <img class="detail-card__badge-icon detail-card__badge-icon--doc"
                              src="{% static 'dashboard/smalldocumenticon.svg' %}" alt="">
@@ -143,7 +144,7 @@
                         <span class="detail-card__text">{{ d.document_title|default:d.file|truncatechars:30 }}</span>
                     </li>
                     {% empty %}
-                    <li class="detail-card__item detail-card__item--empty">No documents yet</li>
+                    <li class="detail-card__item detail-card__item--empty">{% trans "No documents yet" %}</li>
                     {% endfor %}
                 </ul>
             </article>
@@ -151,7 +152,7 @@
             <!-- Time Saved -->
             <article class="detail-card detail-card--time">
                 <header class="detail-card__head detail-card__head--time">
-                    <h3 class="detail-card__title">Time Saved</h3>
+                    <h3 class="detail-card__title">{% trans "Time Saved" %}</h3>
                     <span class="detail-card__badge detail-card__badge--time" aria-hidden="true">
                         <img class="detail-card__badge-icon detail-card__badge-icon--time"
                              src="{% static 'dashboard/smalltimeicon.svg' %}" alt="">
@@ -161,7 +162,7 @@
                             <path d="M12 4v12M6 10l6 6 6-6" stroke="#1f64ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M4 20h16" stroke="#1f64ff" stroke-width="2" stroke-linecap="round"/>
                         </svg>
-                        Save Report
+                        {% trans "Save Report" %}
                     </button>
                 </header>
 
@@ -188,7 +189,7 @@
                     </ul>
                 </div>
 
-                <h4 class="detail-card__subtitle">Most Productive Days</h4>
+                <h4 class="detail-card__subtitle">{% trans "Most Productive Days" %}</h4>
                 <ol class="detail-card__list detail-card__list--days">
                     {% for day, _count in productive_days %}
                     <li class="detail-card__item">
@@ -196,7 +197,7 @@
                         <span class="detail-card__text">{{ day }}</span>
                     </li>
                     {% empty %}
-                    <li class="detail-card__item detail-card__item--empty">No activity yet</li>
+                    <li class="detail-card__item detail-card__item--empty">{% trans "No activity yet" %}</li>
                     {% endfor %}
                 </ol>
             </article>
@@ -210,14 +211,14 @@
             {% if can_view_audit_trail %}
             <div class="audit-table">
                 <div class="audit-table__head">
-                    <span>Who</span>
-                    <span>Action</span>
-                    <span>Details</span>
-                    <span>Time</span>
+                    <span>{% trans "Who" %}</span>
+                    <span>{% trans "Action" %}</span>
+                    <span>{% trans "Details" %}</span>
+                    <span>{% trans "Time" %}</span>
                 </div>
                 {% for entry in audit_trail %}
                 <div class="audit-table__row">
-                    <span>{{ entry.actor_name }}</span>
+                    <span dir="{% if LANGUAGE_BIDI %}rtl{% else %}auto{% endif %}">{{ entry.actor_name }}</span>
                     <span>{{ entry.action_label }}</span>
                     <span>
                         {% if entry.changes %}
@@ -239,13 +240,13 @@
                 </div>
                 {% empty %}
                 <div class="audit-table__row audit-table__row--empty">
-                    <span>No activity recorded yet</span>
+                    <span>{% trans "No activity recorded yet" %}</span>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
             <p class="audit-table__row audit-table__row--empty" style="padding:24px;text-align:center;">
-                Only workspace owners and admins can view the audit trail.
+                {% trans "Only workspace owners and admins can view the audit trail." %}
             </p>
             {% endif %}
         </section>

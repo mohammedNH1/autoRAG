@@ -25,7 +25,7 @@ EMBEDDING_MODEL_COLLECTION_SUFFIX = {
 
 OLLAMA_URL         = "http://ollama:11434/api/generate"
 
-OLLAMA_MODEL       = "llama3:latest"
+OLLAMA_MODEL       = "llama3:8b-instruct-q4_0"
 OLLAMA_TITLE_MODEL = "llama3:8b-instruct-q4_0"
 
 STRICT_TOP_P = 0.2

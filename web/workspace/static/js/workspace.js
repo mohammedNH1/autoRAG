@@ -5,6 +5,14 @@
 (function () {
     'use strict';
 
+    var _t = (typeof gettext === 'function') ? gettext : function (s) { return s; };
+    var _interp = (typeof interpolate === 'function') ? interpolate : function (fmt, obj) {
+        return fmt.replace(/%\(\w+\)s/g, function (m) {
+            var k = m.slice(2, -2);
+            return obj[k] != null ? obj[k] : m;
+        });
+    };
+
     // ── Modal elements ────────────────────────────────────────
     const overlay      = document.getElementById('createModal');
     const form         = document.getElementById('createWorkspaceForm');
@@ -56,12 +64,12 @@
                 return;
             }
             if (!file.type.startsWith('image/')) {
-                if (imageError) imageError.textContent = 'File must be an image.';
+                if (imageError) imageError.textContent = _t('File must be an image.');
                 imageInput.value = '';
                 return;
             }
             if (file.size > 5 * 1024 * 1024) {
-                if (imageError) imageError.textContent = 'Image must be 5 MB or smaller.';
+                if (imageError) imageError.textContent = _t('Image must be 5 MB or smaller.');
                 imageInput.value = '';
                 return;
             }
@@ -125,9 +133,9 @@
         if (ragSuccess) ragSuccess.hidden = !isSuccess;
 
         if (modalTitle) {
-            if (isName)         modalTitle.textContent = 'Create Workspace';
-            else if (isRag)     modalTitle.textContent = 'Configure RAG';
-            else if (isSuccess) modalTitle.textContent = 'Done';
+            if (isName)         modalTitle.textContent = _t('Create Workspace');
+            else if (isRag)     modalTitle.textContent = _t('Configure RAG');
+            else if (isSuccess) modalTitle.textContent = _t('Done');
         }
     }
 
@@ -200,12 +208,12 @@
 
         const name = nameInput.value.trim();
         if (!name) {
-            if (nameError) nameError.textContent = 'Workspace name is required';
+            if (nameError) nameError.textContent = _t('Workspace name is required');
             nameInput.classList.add('has-error');
             return false;
         }
         if (name.length > 150) {
-            if (nameError) nameError.textContent = 'Name must be 150 characters or fewer';
+            if (nameError) nameError.textContent = _t('Name must be 150 characters or fewer');
             nameInput.classList.add('has-error');
             return false;
         }
@@ -277,7 +285,7 @@
         ragNextBtn.addEventListener('click', function () {
             if (!currentRagAnswerFilled()) {
                 if (ragError) {
-                    ragError.textContent = 'Please select an answer';
+                    ragError.textContent = _t('Please select an answer');
                     ragError.hidden = false;
                 }
                 return;
@@ -298,14 +306,14 @@
         ragSubmitBtn.addEventListener('click', function () {
             if (!currentRagAnswerFilled()) {
                 if (ragError) {
-                    ragError.textContent = 'Please select an answer';
+                    ragError.textContent = _t('Please select an answer');
                     ragError.hidden = false;
                 }
                 return;
             }
             if (!pendingWorkspace || !pendingWorkspace.name) {
                 if (ragError) {
-                    ragError.textContent = 'Workspace details missing. Please restart.';
+                    ragError.textContent = _t('Workspace details missing. Please restart.');
                     ragError.hidden = false;
                 }
                 return;
@@ -352,7 +360,7 @@
             .then(function (result) {
                 if (!result.ok || result.data.status !== 'success') {
                     if (ragError) {
-                        ragError.textContent = (result.data && result.data.error) || 'Something went wrong';
+                        ragError.textContent = (result.data && result.data.error) || _t('Something went wrong');
                         ragError.hidden = false;
                     }
                     setRagSubmitLoading(false);
@@ -366,7 +374,7 @@
             })
             .catch(function () {
                 if (ragError) {
-                    ragError.textContent = 'Network error. Please try again.';
+                    ragError.textContent = _t('Network error. Please try again.');
                     ragError.hidden = false;
                 }
                 setRagSubmitLoading(false);
@@ -468,17 +476,23 @@
                 const row = document.createElement('div');
                 row.className = 'ws-notif__item';
                 row.setAttribute('data-invite-id', inv.invitation_id);
+                var inviteLine = _interp(
+                    _t('%(name)s invited you to %(workspace)s'),
+                    {
+                        name: escapeHtml(inv.invited_by),
+                        workspace: '<strong>' + escapeHtml(inv.workspace_name) + '</strong>'
+                    },
+                    true
+                );
+                var roleLine = _interp(_t('Role: %(role)s'), { role: escapeHtml(inv.role_label) }, true);
                 row.innerHTML =
                     '<div class="ws-notif__item-body">' +
-                        '<p class="ws-notif__item-title">' +
-                            escapeHtml(inv.invited_by) + ' invited you to ' +
-                            '<strong>' + escapeHtml(inv.workspace_name) + '</strong>' +
-                        '</p>' +
-                        '<p class="ws-notif__item-sub">Role: ' + escapeHtml(inv.role_label) + '</p>' +
+                        '<p class="ws-notif__item-title">' + inviteLine + '</p>' +
+                        '<p class="ws-notif__item-sub">' + roleLine + '</p>' +
                     '</div>' +
                     '<div class="ws-notif__item-actions">' +
-                        '<button type="button" class="ws-notif__btn ws-notif__btn--accept" data-action="accept">Accept</button>' +
-                        '<button type="button" class="ws-notif__btn ws-notif__btn--reject" data-action="reject">Reject</button>' +
+                        '<button type="button" class="ws-notif__btn ws-notif__btn--accept" data-action="accept">' + _t('Accept') + '</button>' +
+                        '<button type="button" class="ws-notif__btn ws-notif__btn--reject" data-action="reject">' + _t('Reject') + '</button>' +
                     '</div>';
                 list.appendChild(row);
             });
@@ -502,7 +516,7 @@
             })
             .catch(function () {
                 if (loading) loading.hidden = true;
-                list.innerHTML = '<div class="ws-notif__error">Failed to load.</div>';
+                list.innerHTML = '<div class="ws-notif__error">' + _t('Failed to load.') + '</div>';
             });
         }
 

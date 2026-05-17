@@ -7,6 +7,7 @@ handles HTTP concerns and translates the return values into flashes.
 """
 
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
 from workspace.models import (
     Session,
@@ -27,12 +28,12 @@ INVITER_ROLES    = ("owner", "admin", "content_manager")
 ADMIN_ROLES      = ("owner", "admin")
 
 ROLE_LABELS = {
-    "owner":           "Owner",
-    "admin":           "Admin",
-    "content_manager": "Content Manager",
-    "member":          "User",
-    "editor":          "Editor",
-    "viewer":          "Viewer",
+    "owner":           _("Owner"),
+    "admin":           _("Admin"),
+    "content_manager": _("Content Manager"),
+    "member":          _("User"),
+    "editor":          _("Editor"),
+    "viewer":          _("Viewer"),
 }
 
 
@@ -41,7 +42,7 @@ ROLE_LABELS = {
 # call sites, and the audit trail builder. Pure functions.
 # ---------------------------------------------------------------------------
 def role_label(role):
-    return ROLE_LABELS.get(role, (role or "").replace("_", " ").title() or "User")
+    return ROLE_LABELS.get(role, (role or "").replace("_", " ").title() or _("User"))
 
 
 def user_display_name(user):
@@ -80,6 +81,21 @@ def is_user_in_workspace(workspace, user):
     )
 
 
+def is_basic_member(workspace, user):
+    """True if `user` is a workspace member with the plain 'member' role.
+
+    Basic members only access chat sessions — Members/Documents/Dashboards/Settings
+    pages are hidden and direct URL access is blocked.
+    """
+    if workspace is None or user is None or not user.is_authenticated:
+        return False
+    if workspace.workspace_owner_id == user.id:
+        return False
+    return WorkspaceMembership.objects.filter(
+        workspace=workspace, user=user, role="member",
+    ).exists()
+
+
 # ---------------------------------------------------------------------------
 # Member listing — builds the rows the members.html table renders.
 # ---------------------------------------------------------------------------
@@ -106,7 +122,7 @@ def build_member_row(workspace, user, role, current_user):
         "documents_count":  documents_count,
         "activity_total":   sessions_count + questions_count + documents_count,
         "last_seen":        user.last_login or user.date_joined,
-        "status_label":     "You" if current_user.id == user.id else ("Active" if user.last_login else "No login yet"),
+        "status_label":     _("You") if current_user.id == user.id else (_("Active") if user.last_login else _("No login yet")),
     }
 
 
@@ -142,10 +158,10 @@ def invite_member_by_email(workspace, inviter, email, role):
       ("duplicate",  "...")
     """
     if not can_manage_members(workspace, inviter):
-        return "forbidden", "You don't have permission to invite members."
+        return "forbidden", _("You don't have permission to invite members.")
 
     if not email:
-        return "missing_email", "Enter the member email address."
+        return "missing_email", _("Enter the member email address.")
 
     if role not in MANAGEABLE_ROLES:
         role = "member"
@@ -153,12 +169,12 @@ def invite_member_by_email(workspace, inviter, email, role):
     User = get_user_model()
     user = User.objects.filter(email__iexact=email).first()
     if user is None:
-        return "not_found", "No account was found for that email."
+        return "not_found", _("No account was found for that email.")
 
     if user.id == workspace.workspace_owner_id or WorkspaceMembership.objects.filter(
         workspace=workspace, user=user
     ).exists():
-        return "already_member", "That user is already in this workspace."
+        return "already_member", _("That user is already in this workspace.")
 
     existing_pending = WorkspaceInvitation.objects.filter(
         workspace=workspace,
@@ -166,7 +182,7 @@ def invite_member_by_email(workspace, inviter, email, role):
         status=WorkspaceInvitation.STATUS_PENDING,
     ).first()
     if existing_pending:
-        return "duplicate", f"{user_display_name(user)} already has a pending invitation."
+        return "duplicate", _("{name} already has a pending invitation.").format(name=user_display_name(user))
 
     WorkspaceInvitation.objects.create(
         workspace=workspace,
@@ -176,7 +192,7 @@ def invite_member_by_email(workspace, inviter, email, role):
         status=WorkspaceInvitation.STATUS_PENDING,
     )
     activity_log.record(workspace=workspace,actor=inviter,action="member.invited",target=user_display_name(user),invited_email=user.email or user.username,role=role,)
-    return "ok", f"Invitation sent to {user_display_name(user)}."
+    return "ok", _("Invitation sent to {name}.").format(name=user_display_name(user))
 
 
 def accept_pending_invitation(invite, accepting_user, now):
@@ -216,15 +232,15 @@ def change_role(workspace, actor, target_user, new_role):
     so the view can flash the appropriate copy.
     """
     if workspace.workspace_owner_id != actor.id:
-        return "forbidden", "Only the workspace owner can change member roles."
+        return "forbidden", _("Only the workspace owner can change member roles.")
     if target_user.id == workspace.workspace_owner_id:
-        return "owner_locked", "The workspace owner's role cannot be changed."
+        return "owner_locked", _("The workspace owner's role cannot be changed.")
     if new_role not in MANAGEABLE_ROLES:
-        return "invalid_role", "Invalid role."
+        return "invalid_role", _("Invalid role.")
 
     membership = WorkspaceMembership.objects.filter(workspace=workspace, user=target_user).first()
     if membership is None:
-        return "not_a_member", "That user is not a member of this workspace."
+        return "not_a_member", _("That user is not a member of this workspace.")
     if membership.role == new_role:
         return "no_change", ""
 
@@ -232,19 +248,19 @@ def change_role(workspace, actor, target_user, new_role):
     membership.role = new_role
     membership.save(update_fields=["role"])
     activity_log.record(workspace=workspace,actor=actor,action="member.role_changed",target=user_display_name(target_user),previous_role=previous_role,new_role=new_role,)
-    return "ok", f"{user_display_name(target_user)} is now {role_label(new_role)}."
+    return "ok", _("{name} is now {role}.").format(name=user_display_name(target_user), role=role_label(new_role))
 
 
 def remove_member_from_workspace(workspace, actor, target_user):
     """Remove `target_user`'s membership. Returns (status, message)."""
     if not can_manage_members(workspace, actor):
-        return "forbidden", "Only workspace owners can remove members."
+        return "forbidden", _("Only workspace owners can remove members.")
     if target_user.id == workspace.workspace_owner_id:
-        return "owner_locked", "The workspace owner cannot be removed."
+        return "owner_locked", _("The workspace owner cannot be removed.")
 
-    deleted, _ = WorkspaceMembership.objects.filter(workspace=workspace, user=target_user).delete()
+    deleted, _del_detail = WorkspaceMembership.objects.filter(workspace=workspace, user=target_user).delete()
     if not deleted:
-        return "not_a_member", "That user is not a member of this workspace."
+        return "not_a_member", _("That user is not a member of this workspace.")
 
     activity_log.record(workspace=workspace,actor=actor,action="member.removed",target=user_display_name(target_user),user_email=target_user.email or target_user.username,)
-    return "ok", f"{user_display_name(target_user)} was removed from this workspace."
+    return "ok", _("{name} was removed from this workspace.").format(name=user_display_name(target_user))

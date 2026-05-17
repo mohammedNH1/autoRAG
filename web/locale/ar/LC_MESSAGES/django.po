@@ -1,0 +1,1104 @@
+# Arabic translations for AutoRAG.
+# Page 1: Login.
+msgid ""
+msgstr ""
+"Project-Id-Version: autoRAG\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+# accounts/templates/accounts/login.html
+msgid "Login"
+msgstr "تسجيل الدخول"
+
+msgid "Retrieve your information faster!"
+msgstr "استرجع معلوماتك بسرعة أكبر!"
+
+msgid "Hello Again!"
+msgstr "أهلاً مجدداً!"
+
+msgid "Welcome Back"
+msgstr "مرحباً بعودتك"
+
+msgid "Email Address"
+msgstr "البريد الإلكتروني"
+
+msgid "Password"
+msgstr "كلمة المرور"
+
+msgid "Forgot Password?"
+msgstr "نسيت كلمة المرور؟"
+
+msgid "You don't have an account yet?"
+msgstr "ليس لديك حساب بعد؟"
+
+msgid "Language"
+msgstr "اللغة"
+
+msgid "Switch to English"
+msgstr "التبديل إلى الإنجليزية"
+
+msgid "Switch to Arabic"
+msgstr "التبديل إلى العربية"
+
+# accounts/templates/accounts/signup.html
+msgid "Sign Up"
+msgstr "إنشاء حساب"
+
+msgid "Hello!"
+msgstr "مرحباً!"
+
+msgid "Sign Up to Get Started"
+msgstr "أنشئ حساباً للبدء"
+
+msgid "Full Name"
+msgstr "الاسم الكامل"
+
+msgid "Register"
+msgstr "تسجيل"
+
+msgid "Already have an account? Login"
+msgstr "لديك حساب بالفعل؟ سجّل الدخول"
+
+# accounts/templates/accounts/profile.html
+msgid "Profile"
+msgstr "الملف الشخصي"
+
+msgid "Back"
+msgstr "رجوع"
+
+msgid "Sign out"
+msgstr "تسجيل الخروج"
+
+msgid "Profile picture"
+msgstr "صورة الملف الشخصي"
+
+msgid "Choose photo"
+msgstr "اختر صورة"
+
+msgid "Remove current photo"
+msgstr "إزالة الصورة الحالية"
+
+msgid "PNG / JPG / SVG, up to 5 MB"
+msgstr "PNG / JPG / SVG، حتى 5 ميغابايت"
+
+msgid "First name"
+msgstr "الاسم الأول"
+
+msgid "Last name"
+msgstr "اسم العائلة"
+
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+msgid "Used for sign-in and notifications."
+msgstr "يُستخدم لتسجيل الدخول والإشعارات."
+
+msgid "Save changes"
+msgstr "حفظ التغييرات"
+
+msgid "File must be an image."
+msgstr "يجب أن يكون الملف صورة."
+
+msgid "Image must be 5 MB or smaller."
+msgstr "يجب ألا يتجاوز حجم الصورة 5 ميغابايت."
+
+# workspace/templates/workspace/includes/sidebar.html
+msgid "Workspaces"
+msgstr "المشاريع"
+
+msgid "Expand sidebar"
+msgstr "توسيع الشريط الجانبي"
+
+msgid "Sessions"
+msgstr "المحادثـــات"
+
+msgid "Members"
+msgstr "الأعضـــاء"
+
+msgid "Documents"
+msgstr "المستنـــدات"
+
+msgid "Dashboards"
+msgstr "الإحصائيـــات"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Edit profile"
+msgstr "تعديل الملف الشخصي"
+
+msgid "Owner"
+msgstr "المالك"
+
+msgid "Member"
+msgstr "عضو"
+
+msgid "Guest"
+msgstr "زائر"
+
+msgid "Viewer"
+msgstr "مشاهد"
+
+# workspace/templates/workspace/workspace_list.html
+#, python-format
+msgid "Welcome back, %(name)s"
+msgstr "مرحباً بعودتك، %(name)s"
+
+msgid "Search files and folders..."
+msgstr "ابحث في الملفات والمجلدات..."
+
+msgid "Clear search"
+msgstr "مسح البحث"
+
+msgid "Notifications"
+msgstr "الإشعارات"
+
+msgid "Invitations"
+msgstr "الدعوات"
+
+msgid "No pending invitations"
+msgstr "لا توجد دعوات معلقة"
+
+msgid "Loading…"
+msgstr "جارٍ التحميل…"
+
+msgid "Account"
+msgstr "الحساب"
+
+msgid "All"
+msgstr "الكل"
+
+msgid "Owned"
+msgstr "المملوكة"
+
+msgid "Joined"
+msgstr "المنضم إليها"
+
+msgid "Create workspace"
+msgstr "إنشاء مشروع"
+
+msgid "Untitled Workspace"
+msgstr "مشروع بدون عنوان"
+
+msgid "Something short and simple here"
+msgstr "وصف قصير وبسيط هنا"
+
+#, python-format
+msgid "%(counter)s Member"
+msgid_plural "%(counter)s Members"
+msgstr[0] "لا أعضاء"
+msgstr[1] "عضو واحد"
+msgstr[2] "عضوان"
+msgstr[3] "%(counter)s أعضاء"
+msgstr[4] "%(counter)s عضواً"
+msgstr[5] "%(counter)s عضو"
+
+msgid "Recently"
+msgstr "حديثاً"
+
+#, python-format
+msgid "Welcome %(name)s,"
+msgstr "مرحباً %(name)s،"
+
+msgid "let's get you started"
+msgstr "لنبدأ الإعداد"
+
+msgid "You don't have any workspaces"
+msgstr "لا توجد لديك مساحات عمل"
+
+msgid "Create Workspace"
+msgstr "إنشاء مشروع"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "New Session"
+msgstr "محادثة جديدة"
+
+# workspace/templates/workspace/dashboard.html
+msgid "Dashboard"
+msgstr "الإحصائيات"
+
+msgid "Audit Trail"
+msgstr "سجل النشاط"
+
+msgid "There is no data to display."
+msgstr "لا توجد بيانات للعرض."
+
+msgid "Start chatting to see your statistic"
+msgstr "ابدأ المحادثة لرؤية إحصائياتك"
+
+msgid "Number of Questions"
+msgstr "عدد الأسئلة"
+
+msgid "Number of documents"
+msgstr "عدد المستندات"
+
+msgid "this week"
+msgstr "هذا الأسبوع"
+
+msgid "documents added week"
+msgstr "مستندات أُضيفت هذا الأسبوع"
+
+msgid "Time saved"
+msgstr "الوقت الموفر"
+
+msgid "Most Frequently<br>Asked Questions"
+msgstr "الأسئلة الأكثر تكراراً"
+
+msgid "No questions yet"
+msgstr "لا توجد أسئلة بعد"
+
+msgid "Recently Uploaded Documents"
+msgstr "المستندات المرفوعة مؤخراً"
+
+msgid "Time Saved"
+msgstr "الوقت الموفر"
+
+msgid "Save Report"
+msgstr "حفظ التقرير"
+
+msgid "Most Productive Days"
+msgstr "أكثر الأيام إنتاجية"
+
+msgid "No activity yet"
+msgstr "لا يوجد نشاط بعد"
+
+msgid "Who"
+msgstr "من"
+
+msgid "Action"
+msgstr "الإجراء"
+
+msgid "Details"
+msgstr "التفاصيل"
+
+msgid "Time"
+msgstr "الوقت"
+
+msgid "No activity recorded yet"
+msgstr "لم يُسجل أي نشاط بعد"
+
+msgid "Only workspace owners and admins can view the audit trail."
+msgstr "يمكن لمالكي المشروع والمشرفين فقط عرض سجل النشاط."
+
+# workspace/services/dashboard_service.py — weekday labels
+msgid "Sunday"
+msgstr "الأحد"
+
+msgid "Monday"
+msgstr "الإثنين"
+
+msgid "Tuesday"
+msgstr "الثلاثاء"
+
+msgid "Wednesday"
+msgstr "الأربعاء"
+
+msgid "Thursday"
+msgstr "الخميس"
+
+msgid "Friday"
+msgstr "الجمعة"
+
+msgid "Saturday"
+msgstr "السبت"
+
+msgid "System"
+msgstr "النظام"
+
+# workspace/services/dashboard_service.py — format_time_saved
+#, python-format
+msgid "%(count)s min"
+msgid_plural "%(count)s mins"
+msgstr[0] "%(count)s دقيقة"
+msgstr[1] "%(count)s دقيقة"
+msgstr[2] "%(count)s دقيقتان"
+msgstr[3] "%(count)s دقائق"
+msgstr[4] "%(count)s دقيقة"
+msgstr[5] "%(count)s دقيقة"
+
+#, python-format
+msgid "%(count)s hour"
+msgid_plural "%(count)s hours"
+msgstr[0] "%(count)s ساعة"
+msgstr[1] "%(count)s ساعة"
+msgstr[2] "%(count)s ساعتان"
+msgstr[3] "%(count)s ساعات"
+msgstr[4] "%(count)s ساعة"
+msgstr[5] "%(count)s ساعة"
+
+# workspace/services/activity_log.py — ACTION_LABELS
+msgid "Document uploaded"
+msgstr "تم رفع مستند"
+
+msgid "Document deleted"
+msgstr "تم حذف مستند"
+
+msgid "Member joined"
+msgstr "انضم عضو"
+
+msgid "Member left"
+msgstr "غادر عضو"
+
+msgid "Member removed"
+msgstr "تمت إزالة عضو"
+
+msgid "Member invited"
+msgstr "تمت دعوة عضو"
+
+msgid "Member role changed"
+msgstr "تم تغيير دور عضو"
+
+msgid "API key created"
+msgstr "تم إنشاء مفتاح API"
+
+msgid "API key regenerated"
+msgstr "تم تجديد مفتاح API"
+
+msgid "Workspace configuration updated"
+msgstr "تم تحديث إعدادات المشروع"
+
+# workspace/services/activity_log.py — CONFIG_FIELD_LABELS
+msgid "Embedding model"
+msgstr "نموذج التمثيل"
+
+msgid "Reranker"
+msgstr "أداة إعادة الترتيب"
+
+msgid "Top-K"
+msgstr "Top-K"
+
+msgid "Citations"
+msgstr "الاستشهادات"
+
+msgid "Temperature"
+msgstr "درجة الحرارة"
+
+msgid "Top-P"
+msgstr "Top-P"
+
+msgid "Show file details"
+msgstr "إظهار تفاصيل الملف"
+
+msgid "Chunking strategy"
+msgstr "استراتيجية التقسيم"
+
+# workspace/templates/workspace/settings.html
+msgid "General"
+msgstr "عام"
+
+msgid "Workspace name and description."
+msgstr "اسم المشروع ووصفه."
+
+msgid "RAG configuration"
+msgstr "إعدادات RAG"
+
+msgid "Re-tune the questionnaire answers. Changing embedding or chunking may require re-indexing existing documents."
+msgstr "أعد ضبط إجابات الاستبيان. تغيير التضمين أو التقسيم قد يتطلب إعادة فهرسة المستندات الحالية."
+
+msgid "Answer scope"
+msgstr "نطاق الإجابة"
+
+msgid "Show file details with answers?"
+msgstr "إظهار تفاصيل الملف مع الإجابات؟"
+
+msgid "Content type"
+msgstr "نوع المحتوى"
+
+msgid "Source references"
+msgstr "مراجع المصدر"
+
+msgid "Model creativity"
+msgstr "إبداع النموذج"
+
+msgid "Source strictness"
+msgstr "صرامة المصدر"
+
+msgid "Save configuration"
+msgstr "حفظ الإعدادات"
+
+msgid "Only owners and admins can edit RAG configuration."
+msgstr "يمكن لمالكي المشروع والمشرفين فقط تعديل إعدادات RAG."
+
+msgid "No RAG configuration found for this workspace."
+msgstr "لم يتم العثور على إعدادات RAG لهذا المشروع."
+
+msgid "Only owners and admins can edit these fields."
+msgstr "يمكن لمالكي المشروع والمشرفين فقط تعديل هذه الحقول."
+
+msgid "API access"
+msgstr "الوصول عبر API"
+
+msgid "Generate an API key to query this workspace from your own systems. The raw key is shown only once — copy and store it somewhere safe."
+msgstr "أنشئ مفتاح API للاستعلام عن هذا المشروع من أنظمتك الخاصة. سيُعرض المفتاح مرة واحدة فقط — انسخه واحفظه في مكان آمن."
+
+msgid "An API key exists for this workspace."
+msgstr "يوجد مفتاح API لهذا المشروع."
+
+#, python-format
+msgid "Created on %(created)s."
+msgstr "أُنشئ في %(created)s."
+
+msgid "Regenerating will immediately invalidate the previous key."
+msgstr "إعادة الإنشاء ستُلغي المفتاح السابق فوراً."
+
+msgid "No API key has been generated yet."
+msgstr "لم يُنشأ أي مفتاح API بعد."
+
+msgid "Regenerate API key"
+msgstr "إعادة إنشاء مفتاح API"
+
+msgid "Generate API key"
+msgstr "إنشاء مفتاح API"
+
+msgid "<strong>Copy this key now.</strong> It will not be shown again — if you lose it, you'll have to regenerate."
+msgstr "<strong>انسخ المفتاح الآن.</strong> لن يُعرض مرة أخرى — إن فقدته ستضطر لإعادة الإنشاء."
+
+msgid "Copy"
+msgstr "نسخ"
+
+msgid "How to use this key"
+msgstr "كيفية استخدام المفتاح"
+
+msgid "Send a <strong>POST</strong> request to the endpoint below. Replace the example question with anything you want to ask your documents."
+msgstr "أرسل طلب <strong>POST</strong> إلى نقطة النهاية أدناه. استبدل السؤال النموذجي بأي سؤال تريد طرحه على مستنداتك."
+
+msgid "URL"
+msgstr "الرابط"
+
+msgid "Method"
+msgstr "الطريقة"
+
+msgid "Headers"
+msgstr "الترويسات"
+
+msgid "Body (JSON)"
+msgstr "النص (JSON)"
+
+msgid "Response (JSON)"
+msgstr "الاستجابة (JSON)"
+
+msgid "Copy-paste examples"
+msgstr "أمثلة جاهزة للنسخ"
+
+msgid "Danger zone"
+msgstr "منطقة الخطر"
+
+msgid "Irreversible actions."
+msgstr "إجراءات لا يمكن التراجع عنها."
+
+msgid "Delete workspace"
+msgstr "حذف المشروع"
+
+msgid "Permanently remove this workspace, its documents, sessions, and configuration. This cannot be undone."
+msgstr "احذف هذا المشروع نهائياً مع مستنداته ومحادثاته وإعداداته. لا يمكن التراجع."
+
+msgid "This will permanently delete the workspace and all its data. Continue?"
+msgstr "سيؤدي هذا إلى حذف المشروع وجميع بياناته نهائياً. متابعة؟"
+
+msgid "Type workspace name to confirm"
+msgstr "اكتب اسم المشروع للتأكيد"
+
+msgid "Leave workspace"
+msgstr "مغادرة المشروع"
+
+msgid "Remove your access to this workspace. You can be re-invited later."
+msgstr "أزل وصولك إلى هذا المشروع. يمكن دعوتك مجدداً لاحقاً."
+
+msgid "Leave this workspace?"
+msgstr "مغادرة هذا المشروع؟"
+
+# workspace/services/workspace_settings.py — flash messages
+msgid "Workspace name is required."
+msgstr "اسم المشروع مطلوب."
+
+msgid "Name must be 150 characters or fewer."
+msgstr "يجب ألا يتجاوز الاسم 150 حرفاً."
+
+msgid "Workspace details updated."
+msgstr "تم تحديث تفاصيل المشروع."
+
+msgid "Workspace has no configuration to edit."
+msgstr "لا توجد إعدادات للمشروع لتعديلها."
+
+msgid "Missing answers: {fields}"
+msgstr "إجابات ناقصة: {fields}"
+
+msgid "RAG configuration updated. Note: changing embedding or chunking may require re-indexing existing documents."
+msgstr "تم تحديث إعدادات RAG. ملاحظة: تغيير التضمين أو التقسيم قد يتطلب إعادة فهرسة المستندات الحالية."
+
+msgid "Only the workspace owner can delete this workspace."
+msgstr "يستطيع مالك المشروع فقط حذف هذا المشروع."
+
+msgid "Confirmation name does not match. Workspace not deleted."
+msgstr "اسم التأكيد غير مطابق. لم يتم حذف المشروع."
+
+msgid "Workspace deleted."
+msgstr "تم حذف المشروع."
+
+msgid "Owners cannot leave their own workspace. Delete it instead."
+msgstr "لا يمكن للمالكين مغادرة مشروعهم. احذفه بدلاً من ذلك."
+
+msgid "this workspace"
+msgstr "هذا المشروع"
+
+msgid "You left {name}."
+msgstr "غادرت {name}."
+
+msgid "Workspace image"
+msgstr "صورة المشروع"
+
+msgid "(optional)"
+msgstr "(اختياري)"
+
+msgid "Choose image"
+msgstr "اختر صورة"
+
+msgid "Name"
+msgstr "الاسم"
+
+msgid "e.g. Customer Support KB"
+msgstr "مثال: قاعدة معرفة دعم العملاء"
+
+msgid "Description"
+msgstr "الوصف"
+
+msgid "optional"
+msgstr "اختياري"
+
+msgid "What is this workspace for?"
+msgstr "لأي غرض سيُستخدم هذا المشروع؟"
+
+msgid "Cancel"
+msgstr "إلغاء"
+
+msgid "Next"
+msgstr "التالي"
+
+msgid "Creating..."
+msgstr "جارٍ الإنشاء..."
+
+#, python-format
+msgid "Question <span id=\"ragStepNum\">1</span> of %(total)s"
+msgstr "سؤال <span id=\"ragStepNum\">1</span> من %(total)s"
+
+msgid "Language of your documents?"
+msgstr "ما لغة مستنداتك؟"
+
+msgid "English"
+msgstr "الإنجليزية"
+
+msgid "Arabic"
+msgstr "العربية"
+
+msgid "Multilingual"
+msgstr "متعدد اللغات"
+
+msgid "Do you prefer speed or quality?"
+msgstr "هل تفضل السرعة أم الجودة؟"
+
+msgid "Speed"
+msgstr "السرعة"
+
+msgid "Quality"
+msgstr "الجودة"
+
+msgid "Balanced"
+msgstr "متوازن"
+
+msgid "Do you want just the main idea or also with related points?"
+msgstr "هل تريد الفكرة الرئيسية فقط أم مع نقاط ذات صلة؟"
+
+msgid "Main Idea Only"
+msgstr "الفكرة الرئيسية فقط"
+
+msgid "Include Related Points"
+msgstr "تضمين النقاط ذات الصلة"
+
+msgid "Would you like to see details about the files used in the answer?"
+msgstr "هل ترغب في رؤية تفاصيل الملفات المستخدمة في الإجابة؟"
+
+msgid "No, show only the answer"
+msgstr "لا، اعرض الإجابة فقط"
+
+msgid "Yes, show file details"
+msgstr "نعم، اعرض تفاصيل الملفات"
+
+msgid "What kind of content will you mostly upload to this workspace?"
+msgstr "ما نوع المحتوى الذي ستقوم برفعه غالباً في هذا المشروع؟"
+
+msgid "Slide Deck"
+msgstr "عرض شرائح"
+
+msgid "Meeting Notes"
+msgstr "محاضر اجتماعات"
+
+msgid "Article"
+msgstr "مقال"
+
+msgid "Research Paper"
+msgstr "ورقة بحثية"
+
+msgid "Policy Document"
+msgstr "وثيقة سياسة"
+
+msgid "Books or Long Manuals"
+msgstr "كتب أو أدلة طويلة"
+
+msgid "Undecided"
+msgstr "غير محدد"
+
+msgid "Should the answers include reference to the source documents?"
+msgstr "هل تريد ان يتضمن الرد مصدر الإجابة من المستندات المرفوعة؟"
+
+msgid "Yes"
+msgstr "نعم"
+
+msgid "No"
+msgstr "لا"
+
+msgid "Do you want the model to be precise or creative?"
+msgstr "وش تفضّل أسلوب الذكاء الاصطناعي يكون؟"
+
+msgid "Precise"
+msgstr "دقيق"
+
+msgid "Creative"
+msgstr "إبداعي"
+
+msgid "Should the system stick strictly to the source content, or allow uncommon suggestions?"
+msgstr "هل يلتزم النظام بالمحتوى المصدر بدقة، أم يسمح باقتراحات غير مألوفة؟"
+
+msgid "Stick to Source"
+msgstr "الالتزام بالمصدر"
+
+msgid "Allow Suggestions"
+msgstr "السماح بالاقتراحات"
+
+msgid "← Back"
+msgstr "→ رجوع"
+
+msgid "Next →"
+msgstr "التالي ←"
+
+msgid "Submit"
+msgstr "إرسال"
+
+msgid "Saving..."
+msgstr "جارٍ الحفظ..."
+
+msgid "Workspace ready"
+msgstr "المشروع جاهز"
+
+msgid "Redirecting to chat…"
+msgstr "جارٍ التحويل إلى المحادثة…"
+
+msgid "Configure RAG"
+msgstr "إعداد RAG"
+
+msgid "Done"
+msgstr "تم"
+
+# workspace/templates/workspace/members.html
+msgid "Workspace"
+msgstr "مشروع"
+
+#, python-format
+msgid "%(counter)s member in this workspace"
+msgid_plural "%(counter)s members in this workspace"
+msgstr[0] "لا أعضاء في هذا المشروع"
+msgstr[1] "عضو واحد في هذا المشروع"
+msgstr[2] "عضوان في هذا المشروع"
+msgstr[3] "%(counter)s أعضاء في هذا المشروع"
+msgstr[4] "%(counter)s عضواً في هذا المشروع"
+msgstr[5] "%(counter)s عضو في هذا المشروع"
+
+msgid "Search members..."
+msgstr "ابحث عن الأعضاء..."
+
+msgid "Add member"
+msgstr "إضافة عضو"
+
+msgid "Member summary"
+msgstr "ملخص الأعضاء"
+
+msgid "Total members"
+msgstr "إجمالي الأعضاء"
+
+msgid "Active contributors"
+msgstr "المساهمون النشطون"
+
+msgid "Workspace directory"
+msgstr "أعضاء المشروع"
+
+#, python-format
+msgid "%(count)s total"
+msgstr "%(count)s إجمالاً"
+
+msgid "Role"
+msgstr "الدور"
+
+msgid "Activity"
+msgstr "النشاط"
+
+msgid "Last seen"
+msgstr "آخر ظهور"
+
+msgid "Questions"
+msgstr "الأسئلة"
+
+msgid "Docs"
+msgstr "مستندات"
+
+msgid "More"
+msgstr "المزيد"
+
+msgid "Change Role"
+msgstr "تغيير الدور"
+
+msgid "Remove Member"
+msgstr "إزالة العضو"
+
+msgid "Assign role"
+msgstr "تعيين دور"
+
+msgid "No members yet"
+msgstr "لا يوجد أعضاء بعد"
+
+msgid "Add an existing AutoRAG account to start collaborating."
+msgstr "أضف حساب AutoRAG موجود لبدء التعاون."
+
+msgid "No matching members"
+msgstr "لا يوجد أعضاء مطابقون"
+
+msgid "Try a different name, email, or role."
+msgstr "جرّب اسماً أو بريداً إلكترونياً أو دوراً مختلفاً."
+
+# workspace/services/manage_members.py — role labels
+msgid "Admin"
+msgstr "مشرف"
+
+msgid "Content Manager"
+msgstr "مدير المحتوى"
+
+msgid "User"
+msgstr "مستخدم"
+
+msgid "Editor"
+msgstr "محرر"
+
+# workspace/services/manage_members.py — flash messages
+msgid "You don't have permission to invite members."
+msgstr "ليست لديك صلاحية لدعوة أعضاء."
+
+msgid "Enter the member email address."
+msgstr "أدخل البريد الإلكتروني للعضو."
+
+msgid "No account was found for that email."
+msgstr "لا يوجد حساب لهذا البريد الإلكتروني."
+
+msgid "That user is already in this workspace."
+msgstr "هذا المستخدم عضو في المشروع بالفعل."
+
+msgid "{name} already has a pending invitation."
+msgstr "{name} لديه دعوة معلقة بالفعل."
+
+msgid "Invitation sent to {name}."
+msgstr "تم إرسال الدعوة إلى {name}."
+
+msgid "Only the workspace owner can change member roles."
+msgstr "يستطيع مالك المشروع فقط تغيير أدوار الأعضاء."
+
+msgid "The workspace owner's role cannot be changed."
+msgstr "لا يمكن تغيير دور مالك المشروع."
+
+msgid "Invalid role."
+msgstr "دور غير صالح."
+
+msgid "That user is not a member of this workspace."
+msgstr "هذا المستخدم ليس عضواً في هذا المشروع."
+
+msgid "{name} is now {role}."
+msgstr "{name} أصبح {role}."
+
+msgid "Only workspace owners can remove members."
+msgstr "يستطيع مالك المشروع فقط إزالة الأعضاء."
+
+msgid "The workspace owner cannot be removed."
+msgstr "لا يمكن إزالة مالك المشروع."
+
+msgid "{name} was removed from this workspace."
+msgstr "تمت إزالة {name} من هذا المشروع."
+
+# workspace/views.py — flash messages
+msgid "Only the workspace owner or an admin can view settings."
+msgstr "يستطيع مالك المشروع أو المشرف فقط عرض الإعدادات."
+
+msgid "You don't have permission to edit workspace settings."
+msgstr "ليست لديك صلاحية لتعديل إعدادات المشروع."
+
+msgid "You don't have permission to edit RAG configuration."
+msgstr "ليست لديك صلاحية لتعديل إعدادات RAG."
+
+# workspace/services/manage_members.py — status labels
+msgid "You"
+msgstr "أنت"
+
+msgid "Active"
+msgstr "نشط"
+
+msgid "No login yet"
+msgstr "لم يسجل الدخول بعد"
+
+# documents/templates/documents/Documents.html
+#, python-format
+msgid "%(counter)s Item"
+msgid_plural "%(counter)s Items"
+msgstr[0] "لا عناصر"
+msgstr[1] "عنصر واحد"
+msgstr[2] "عنصران"
+msgstr[3] "%(counter)s عناصر"
+msgstr[4] "%(counter)s عنصراً"
+msgstr[5] "%(counter)s عنصر"
+
+msgid "Newest First"
+msgstr "الأحدث أولاً"
+
+msgid "Oldest First"
+msgstr "الأقدم أولاً"
+
+msgid "Filter"
+msgstr "تصفية"
+
+msgid "Upload document"
+msgstr "رفع مستند"
+
+msgid "More options"
+msgstr "المزيد من الخيارات"
+
+msgid "No documents yet"
+msgstr "لا توجد مستندات بعد"
+
+msgid "Upload your first document to get started."
+msgstr "ارفع أول مستند للبدء."
+
+msgid "File Details"
+msgstr "تفاصيل الملف"
+
+msgid "File Overview"
+msgstr "نظرة عامة على الملف"
+
+msgid "Uploaded by"
+msgstr "رفع بواسطة"
+
+msgid "Uploaded at"
+msgstr "تاريخ الرفع"
+
+msgid "Indexed"
+msgstr "مفهرس"
+
+msgid "Delete"
+msgstr "حذف"
+
+msgid "Delete file?"
+msgstr "حذف الملف؟"
+
+msgid "Are you sure you want to delete <span id=\"deleteModalFilename\" style=\"color:#333;font-weight:600;\"></span>? This action cannot be undone."
+msgstr "هل أنت متأكد أنك تريد حذف <span id=\"deleteModalFilename\" style=\"color:#333;font-weight:600;\"></span>؟ لا يمكن التراجع عن هذا الإجراء."
+
+# documents/templates/documents/upload-modal.html
+msgid "File Upload"
+msgstr "رفع ملف"
+
+msgid "Choose a file and upload securely to proceed."
+msgstr "اختر ملفاً وارفعه بأمان للمتابعة."
+
+msgid "Upload documents"
+msgstr "رفع المستندات"
+
+msgid "Drag and drop your files"
+msgstr "اسحب وأفلت ملفاتك هنا"
+
+msgid "PDF, TXT, CSV, DOC, DOCX, XLS, XLSX, PPT, and PPTX formats."
+msgstr "صيغ PDF و TXT و CSV و DOC و DOCX و XLS و XLSX و PPT و PPTX."
+
+msgid "Upload"
+msgstr "رفع"
+
+msgid "Text Input"
+msgstr "إدخال نص"
+
+msgid "Uploaded Files"
+msgstr "الملفات المرفوعة"
+
+# documents/templates/documents/text_input.html
+msgid "Back to Documents"
+msgstr "العودة إلى المستندات"
+
+msgid "Add New Post"
+msgstr "إضافة منشور جديد"
+
+msgid "Clear editor"
+msgstr "مسح المحرر"
+
+msgid "Enter a title..."
+msgstr "أدخل عنواناً..."
+
+msgid "Title"
+msgstr "العنوان"
+
+msgid "Edit title"
+msgstr "تعديل العنوان"
+
+msgid "Text"
+msgstr "نص"
+
+msgid "Paragraph"
+msgstr "فقرة"
+
+msgid "Header"
+msgstr "عنوان رئيسي"
+
+msgid "Sub-header"
+msgstr "عنوان فرعي"
+
+msgid "Font color"
+msgstr "لون الخط"
+
+msgid "Highlight"
+msgstr "تظليل"
+
+msgid "Highlight color"
+msgstr "لون التظليل"
+
+msgid "Bold"
+msgstr "غامق"
+
+msgid "Italic"
+msgstr "مائل"
+
+msgid "Underline"
+msgstr "تسطير"
+
+msgid "Strikethrough"
+msgstr "يتوسطه خط"
+
+msgid "Align left"
+msgstr "محاذاة لليسار"
+
+msgid "Align center"
+msgstr "توسيط"
+
+msgid "Align right"
+msgstr "محاذاة لليمين"
+
+msgid "Ordered list"
+msgstr "قائمة مرقمة"
+
+msgid "Unordered list"
+msgstr "قائمة نقطية"
+
+msgid "Attach file"
+msgstr "إرفاق ملف"
+
+msgid "Remove attachment"
+msgstr "إزالة المرفق"
+
+msgid "Remove attached file"
+msgstr "إزالة الملف المرفق"
+
+msgid "Start writing your content here..."
+msgstr "ابدأ بكتابة المحتوى هنا..."
+
+#, python-format
+msgid "Word Count: %(count)s"
+msgstr "عدد الكلمات: %(count)s"
+
+#, python-format
+msgid "Reading Time: ~%(mins)s min"
+msgstr "وقت القراءة: ~%(mins)s دقيقة"
+
+msgid "Publish"
+msgstr "نشر"
+
+msgid "Collapse"
+msgstr "طي"
+
+msgid "Status:"
+msgstr "الحالة:"
+
+msgid "Draft"
+msgstr "مسودة"
+
+msgid "Edit"
+msgstr "تعديل"
+
+msgid "Visibility:"
+msgstr "الظهور:"
+
+msgid "Public"
+msgstr "عام"
+
+msgid "Only me"
+msgstr "أنا فقط"
+
+msgid "Schedule:"
+msgstr "الجدولة:"
+
+msgid "Off"
+msgstr "إيقاف"
+
+msgid "Clear"
+msgstr "مسح"
+
+msgid "Save Draft"
+msgstr "حفظ المسودة"
+
+msgid "OK"
+msgstr "موافق"
+
+# workspace/templates/chat.html
+msgid "Chat"
+msgstr "محادثة"
+
+#, python-format
+msgid "%(count)s Total"
+msgstr "الإجمالي: %(count)s"
+
+msgid "+ New Session"
+msgstr "+ إنشاء محادثة جديدة"
+
+msgid "Rename"
+msgstr "إعادة تسمية"
+
+msgid "Rename session"
+msgstr "إعادة تسمية الجلسة"
+
+msgid "Ask AutoRAG..."
+msgstr "اسأل AutoRAG..."
+
+msgid "AutoRAG can make mistakes. Check our Terms & Conditions."
+msgstr "قد يخطئ AutoRAG. راجع الشروط والأحكام."
+
+msgid "Error"
+msgstr "خطأ"
+
+msgid "An error occurred. Please try again."
+msgstr "حدث خطأ. حاول مرة أخرى."
+
+msgid "Leave"
+msgstr "مغادرة"
+
+msgid "You will lose access to this workspace. An owner or admin can re-invite you later."
+msgstr "ستفقد الوصول إلى هذا المشروع. يمكن للمالك أو المسؤول إعادة دعوتك لاحقًا."
+
+msgid "Account menu"
+msgstr "قائمة الحساب"
+
+msgid "Open account menu"
+msgstr "فتح قائمة الحساب"

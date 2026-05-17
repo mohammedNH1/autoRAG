@@ -6,6 +6,7 @@ Maps raw questionnaire answers to concrete RAG configuration values.
 REQUIRED_QUESTIONNAIRE_FIELDS = (
     "language",
     "use_case",
+    "main_idea_or_related",
     "reference",
     "temperature",
     "top_p",
@@ -40,7 +41,7 @@ def embedding_reranker(language, use_case):
 
 
 def top_k(top_k_value):
-    return 5 if top_k_value == "main" else 10
+    return 5 if top_k_value == "main_only" else 10
 
 
 def temperature(temperature_value):

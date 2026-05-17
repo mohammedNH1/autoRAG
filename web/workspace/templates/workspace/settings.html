@@ -1,15 +1,17 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Settings — AutoRAG</title>
+    <title>{% trans "Settings" %} — AutoRAG</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/settings.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'css/settings.css' %}?v=20260517">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
+    <script src="{% url 'javascript-catalog' %}"></script>
 </head>
 <body>
 <div class="dash-layout settings-layout">
@@ -17,8 +19,7 @@
 
     <main class="settings-main">
         <header class="settings-header">
-            <p class="settings-eyebrow">{{ workspace.workspace_name|default:"Workspace" }}</p>
-            <h1 class="settings-title">Settings</h1>
+            <h1 class="settings-title">{% trans "Settings" %}</h1>
         </header>
 
         {% if messages %}
@@ -34,29 +35,29 @@
              =========================================== -->
         <section class="settings-section">
             <div class="settings-section__head">
-                <h2>General</h2>
-                <p>Workspace name and description.</p>
+                <h2>{% trans "General" %}</h2>
+                <p>{% trans "Workspace name and description." %}</p>
             </div>
 
             <form method="post" action="{% url 'workspace_settings_general' workspace_id %}" class="settings-form">
                 {% csrf_token %}
 
                 <label class="settings-field">
-                    <span class="settings-field__label">Name</span>
+                    <span class="settings-field__label">{% trans "Name" %}</span>
                     <input type="text" name="name" value="{{ workspace.workspace_name }}" maxlength="150" {% if not can_edit %}disabled{% endif %} required>
                 </label>
 
                 <label class="settings-field">
-                    <span class="settings-field__label">Description</span>
+                    <span class="settings-field__label">{% trans "Description" %}</span>
                     <textarea name="description" rows="4" maxlength="500" {% if not can_edit %}disabled{% endif %}>{{ workspace.workspace_description }}</textarea>
                 </label>
 
                 {% if can_edit %}
                 <div class="settings-form__actions">
-                    <button type="submit" class="settings-btn settings-btn--primary">Save changes</button>
+                    <button type="submit" class="settings-btn settings-btn--primary">{% trans "Save changes" %}</button>
                 </div>
                 {% else %}
-                <p class="settings-note">Only owners and admins can edit these fields.</p>
+                <p class="settings-note">{% trans "Only owners and admins can edit these fields." %}</p>
                 {% endif %}
             </form>
         </section>
@@ -66,81 +67,84 @@
              =========================================== -->
         <section class="settings-section">
             <div class="settings-section__head">
-                <h2>RAG configuration</h2>
-                <p>Re-tune the questionnaire answers. Changing embedding or chunking may require re-indexing existing documents.</p>
+                <h2>{% trans "RAG configuration" %}</h2>
+                <p>{% trans "Re-tune the questionnaire answers. Changing embedding or chunking may require re-indexing existing documents." %}</p>
             </div>
 
             {% if config %}
             <form method="post" action="{% url 'workspace_settings_config' workspace_id %}" class="settings-form settings-form--rag">
                 {% csrf_token %}
 
+                <input type="hidden" name="language" value="{{ raw_answers.language }}">
+                <input type="hidden" name="use_case" value="{{ raw_answers.use_case }}">
+
                 <div class="settings-grid">
                     <label class="settings-field">
-                        <span class="settings-field__label">Answer scope</span>
+                        <span class="settings-field__label">{% trans "Answer scope" %}</span>
                         <select name="main_idea_or_related" {% if not can_edit %}disabled{% endif %}>
-                            <option value="main_only"    {% if raw_answers.main_idea_or_related == 'main_only' %}selected{% endif %}>Main Idea Only</option>
-                            <option value="with_related" {% if raw_answers.main_idea_or_related == 'with_related' %}selected{% endif %}>Include Related Points</option>
+                            <option value="main_only"    {% if raw_answers.main_idea_or_related == 'main_only' %}selected{% endif %}>{% trans "Main Idea Only" %}</option>
+                            <option value="with_related" {% if raw_answers.main_idea_or_related == 'with_related' %}selected{% endif %}>{% trans "Include Related Points" %}</option>
                         </select>
                     </label>
 
                     <label class="settings-field">
-                        <span class="settings-field__label">Show file details with answers?</span>
+                        <span class="settings-field__label">{% trans "Show file details with answers?" %}</span>
                         <select name="metadata" {% if not can_edit %}disabled{% endif %}>
-                            <option value="no"  {% if raw_answers.metadata == 'no' %}selected{% endif %}>No, show only the answer</option>
-                            <option value="yes" {% if raw_answers.metadata == 'yes' %}selected{% endif %}>Yes, show file details</option>
+                            <option value="no"  {% if raw_answers.metadata == 'no' %}selected{% endif %}>{% trans "No, show only the answer" %}</option>
+                            <option value="yes" {% if raw_answers.metadata == 'yes' %}selected{% endif %}>{% trans "Yes, show file details" %}</option>
                         </select>
                     </label>
 
                     <label class="settings-field">
-                        <span class="settings-field__label">Content type</span>
+                        <span class="settings-field__label">{% trans "Content type" %}</span>
                         <select name="chunking_strategy" {% if not can_edit %}disabled{% endif %}>
-                            <option value="slide_deck"          {% if raw_answers.chunking_strategy == 'slide_deck' %}selected{% endif %}>Slide Deck</option>
-                            <option value="meeting_notes"       {% if raw_answers.chunking_strategy == 'meeting_notes' %}selected{% endif %}>Meeting Notes</option>
-                            <option value="article"             {% if raw_answers.chunking_strategy == 'article' %}selected{% endif %}>Article</option>
-                            <option value="research_paper"      {% if raw_answers.chunking_strategy == 'research_paper' %}selected{% endif %}>Research Paper</option>
-                            <option value="policy"              {% if raw_answers.chunking_strategy == 'policy' %}selected{% endif %}>Policy Document</option>
-                            <option value="books_long_manuals"  {% if raw_answers.chunking_strategy == 'books_long_manuals' %}selected{% endif %}>Books or Long Manuals</option>
-                            <option value="undecided"           {% if raw_answers.chunking_strategy == 'undecided' %}selected{% endif %}>Undecided</option>
+                            <option value="slide_deck"          {% if raw_answers.chunking_strategy == 'slide_deck' %}selected{% endif %}>{% trans "Slide Deck" %}</option>
+                            <option value="meeting_notes"       {% if raw_answers.chunking_strategy == 'meeting_notes' %}selected{% endif %}>{% trans "Meeting Notes" %}</option>
+                            <option value="article"             {% if raw_answers.chunking_strategy == 'article' %}selected{% endif %}>{% trans "Article" %}</option>
+                            <option value="research_paper"      {% if raw_answers.chunking_strategy == 'research_paper' %}selected{% endif %}>{% trans "Research Paper" %}</option>
+                            <option value="policy"              {% if raw_answers.chunking_strategy == 'policy' %}selected{% endif %}>{% trans "Policy Document" %}</option>
+                            <option value="books_long_manuals"  {% if raw_answers.chunking_strategy == 'books_long_manuals' %}selected{% endif %}>{% trans "Books or Long Manuals" %}</option>
+                            <option value="undecided"           {% if raw_answers.chunking_strategy == 'undecided' %}selected{% endif %}>{% trans "Undecided" %}</option>
                         </select>
                     </label>
 
                     <label class="settings-field">
-                        <span class="settings-field__label">Source references</span>
+                        <span class="settings-field__label">{% trans "Source references" %}</span>
                         <select name="reference" {% if not can_edit %}disabled{% endif %}>
-                            <option value="yes" {% if raw_answers.reference == 'yes' %}selected{% endif %}>Yes</option>
-                            <option value="no"  {% if raw_answers.reference == 'no' %}selected{% endif %}>No</option>
+                            <option value="yes" {% if raw_answers.reference == 'yes' %}selected{% endif %}>{% trans "Yes" %}</option>
+                            <option value="no"  {% if raw_answers.reference == 'no' %}selected{% endif %}>{% trans "No" %}</option>
                         </select>
                     </label>
 
                     <label class="settings-field">
-                        <span class="settings-field__label">Model creativity</span>
+                        <span class="settings-field__label">{% trans "Model creativity" %}</span>
                         <select name="temperature" {% if not can_edit %}disabled{% endif %}>
-                            <option value="precise"  {% if raw_answers.temperature == 'precise' %}selected{% endif %}>Precise</option>
-                            <option value="balanced" {% if raw_answers.temperature == 'balanced' %}selected{% endif %}>Balanced</option>
-                            <option value="creative" {% if raw_answers.temperature == 'creative' %}selected{% endif %}>Creative</option>
+                            <option value="precise"  {% if raw_answers.temperature == 'precise' %}selected{% endif %}>{% trans "Precise" %}</option>
+                            <option value="balanced" {% if raw_answers.temperature == 'balanced' %}selected{% endif %}>{% trans "Balanced" %}</option>
+                            <option value="creative" {% if raw_answers.temperature == 'creative' %}selected{% endif %}>{% trans "Creative" %}</option>
                         </select>
                     </label>
 
                     <label class="settings-field">
-                        <span class="settings-field__label">Source strictness</span>
+                        <span class="settings-field__label">{% trans "Source strictness" %}</span>
                         <select name="top_p" {% if not can_edit %}disabled{% endif %}>
-                            <option value="strict"       {% if raw_answers.top_p == 'strict' %}selected{% endif %}>Stick to Source</option>
-                            <option value="balanced"     {% if raw_answers.top_p == 'balanced' %}selected{% endif %}>Balanced</option>
-                            <option value="exploratory"  {% if raw_answers.top_p == 'exploratory' %}selected{% endif %}>Allow Suggestions</option>
+                            <option value="strict"       {% if raw_answers.top_p == 'strict' %}selected{% endif %}>{% trans "Stick to Source" %}</option>
+                            <option value="balanced"     {% if raw_answers.top_p == 'balanced' %}selected{% endif %}>{% trans "Balanced" %}</option>
+                            <option value="exploratory"  {% if raw_answers.top_p == 'exploratory' %}selected{% endif %}>{% trans "Allow Suggestions" %}</option>
                         </select>
                     </label>
                 </div>
 
                 {% if can_edit %}
                 <div class="settings-form__actions">
-                    <button type="submit" class="settings-btn settings-btn--primary">Save configuration</button>
+                    <button type="submit" class="settings-btn settings-btn--primary">{% trans "Save configuration" %}</button>
                 </div>
                 {% else %}
-                <p class="settings-note">Only owners and admins can edit RAG configuration.</p>
+                <p class="settings-note">{% trans "Only owners and admins can edit RAG configuration." %}</p>
                 {% endif %}
             </form>
             {% else %}
-            <p class="settings-note">No RAG configuration found for this workspace.</p>
+            <p class="settings-note">{% trans "No RAG configuration found for this workspace." %}</p>
             {% endif %}
         </section>
 
@@ -150,70 +154,70 @@
         {% if is_owner %}
         <section class="settings-section" id="api-access-section">
             <div class="settings-section__head">
-                <h2>API access</h2>
-                <p>Generate an API key to query this workspace from your own systems. The raw key is shown only once — copy and store it somewhere safe.</p>
+                <h2>{% trans "API access" %}</h2>
+                <p>{% trans "Generate an API key to query this workspace from your own systems. The raw key is shown only once — copy and store it somewhere safe." %}</p>
             </div>
 
-            <div class="api-access" data-generate-url="{% url 'workspace_generate_api_key' workspace_id %}">
+            <div class="api-access" data-generate-url="{% url 'workspace_generate_api_key' workspace_id %}" data-has-key="{% if workspace.api_key %}1{% else %}0{% endif %}">
                 <div class="api-access__status">
                     {% if workspace.api_key %}
                         <p class="settings-note" id="api-key-status">
-                            An API key exists for this workspace.
+                            {% trans "An API key exists for this workspace." %}
                             {% if workspace.api_key_created_at %}
-                                Created on {{ workspace.api_key_created_at|date:"d M Y, H:i" }}.
+                                {% blocktrans with created=workspace.api_key_created_at|date:"d M Y, H:i" %}Created on {{ created }}.{% endblocktrans %}
                             {% endif %}
-                            Regenerating will immediately invalidate the previous key.
+                            {% trans "Regenerating will immediately invalidate the previous key." %}
                         </p>
                     {% else %}
-                        <p class="settings-note" id="api-key-status">No API key has been generated yet.</p>
+                        <p class="settings-note" id="api-key-status">{% trans "No API key has been generated yet." %}</p>
                     {% endif %}
                 </div>
 
                 <div class="settings-form__actions">
                     <button type="button" id="generate-api-key-btn" class="settings-btn settings-btn--primary">
-                        {% if workspace.api_key %}Regenerate API key{% else %}Generate API key{% endif %}
+                        {% if workspace.api_key %}{% trans "Regenerate API key" %}{% else %}{% trans "Generate API key" %}{% endif %}
                     </button>
                 </div>
 
                 <!-- One-time reveal — populated by JS after a successful generate. -->
                 <div id="api-key-reveal" class="api-key-reveal" hidden>
                     <p class="api-key-reveal__warning">
-                        <strong>Copy this key now.</strong> It will not be shown again — if you lose it, you'll have to regenerate.
+                        {% blocktrans %}<strong>Copy this key now.</strong> It will not be shown again — if you lose it, you'll have to regenerate.{% endblocktrans %}
                     </p>
                     <div class="api-key-reveal__row">
-                        <input type="text" id="api-key-value" readonly>
-                        <button type="button" id="copy-api-key-btn" class="settings-btn settings-btn--primary">Copy</button>
+                        <input type="text" id="api-key-value" readonly dir="ltr">
+                        <button type="button" id="copy-api-key-btn" class="settings-btn settings-btn--primary">{% trans "Copy" %}</button>
                     </div>
 
                     <div class="api-key-usage">
-                        <h4 class="api-key-usage__title">How to use this key</h4>
+                        <h4 class="api-key-usage__title">{% trans "How to use this key" %}</h4>
                         <p class="api-key-usage__intro">
-                            Send a <strong>POST</strong> request to the endpoint below. Replace the example question with anything you want to ask your documents.
+                            {% blocktrans %}Send a <strong>POST</strong> request to the endpoint below. Replace the example question with anything you want to ask your documents.{% endblocktrans %}
                         </p>
 
                         <dl class="api-key-usage__spec">
-                            <dt>URL</dt>
-                            <dd><code id="api-usage-url"></code></dd>
+                            <dt>{% trans "URL" %}</dt>
+                            <dd><code id="api-usage-url" dir="ltr"></code></dd>
 
-                            <dt>Method</dt>
-                            <dd><code>POST</code></dd>
+                            <dt>{% trans "Method" %}</dt>
+                            <dd><code dir="ltr">POST</code></dd>
 
-                            <dt>Headers</dt>
-                            <dd>
+                            <dt>{% trans "Headers" %}</dt>
+                            <dd dir="ltr">
                                 <code>X-API-Key: <span id="api-usage-key"></span></code><br>
                                 <code>Content-Type: application/json</code>
                             </dd>
 
-                            <dt>Body (JSON)</dt>
+                            <dt>{% trans "Body (JSON)" %}</dt>
                             <dd>
-<pre class="api-key-usage__code">{
+<pre class="api-key-usage__code" dir="ltr">{
   "question": "What is our refund policy?"
 }</pre>
                             </dd>
 
-                            <dt>Response (JSON)</dt>
+                            <dt>{% trans "Response (JSON)" %}</dt>
                             <dd>
-<pre class="api-key-usage__code">{
+<pre class="api-key-usage__code" dir="ltr">{
   "answer": "Refunds are processed within 5 business days...",
   "citations": [
     {
@@ -226,24 +230,24 @@
                             </dd>
                         </dl>
 
-                        <h4 class="api-key-usage__title">Copy-paste examples</h4>
+                        <h4 class="api-key-usage__title">{% trans "Copy-paste examples" %}</h4>
 
                         <p class="api-key-usage__label">curl</p>
                         <div class="api-key-usage__code-wrap">
-<pre class="api-key-usage__code" id="api-usage-curl"></pre>
-                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-curl">Copy</button>
+<pre class="api-key-usage__code" id="api-usage-curl" dir="ltr"></pre>
+                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-curl">{% trans "Copy" %}</button>
                         </div>
 
                         <p class="api-key-usage__label">Python (requests)</p>
                         <div class="api-key-usage__code-wrap">
-<pre class="api-key-usage__code" id="api-usage-python"></pre>
-                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-python">Copy</button>
+<pre class="api-key-usage__code" id="api-usage-python" dir="ltr"></pre>
+                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-python">{% trans "Copy" %}</button>
                         </div>
 
                         <p class="api-key-usage__label">JavaScript (fetch)</p>
                         <div class="api-key-usage__code-wrap">
-<pre class="api-key-usage__code" id="api-usage-js"></pre>
-                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-js">Copy</button>
+<pre class="api-key-usage__code" id="api-usage-js" dir="ltr"></pre>
+                            <button type="button" class="settings-btn settings-btn--primary api-key-usage__copy" data-copy-target="api-usage-js">{% trans "Copy" %}</button>
                         </div>
                     </div>
                 </div>
@@ -258,31 +262,31 @@
              =========================================== -->
         <section class="settings-section settings-section--danger">
             <div class="settings-section__head">
-                <h2>Danger zone</h2>
-                <p>Irreversible actions.</p>
+                <h2>{% trans "Danger zone" %}</h2>
+                <p>{% trans "Irreversible actions." %}</p>
             </div>
 
             {% if is_owner %}
             <div class="settings-danger">
                 <div class="settings-danger__copy">
-                    <h3>Delete workspace</h3>
-                    <p>Permanently remove this workspace, its documents, sessions, and configuration. This cannot be undone.</p>
+                    <h3>{% trans "Delete workspace" %}</h3>
+                    <p>{% trans "Permanently remove this workspace, its documents, sessions, and configuration. This cannot be undone." %}</p>
                 </div>
-                <form method="post" action="{% url 'workspace_settings_delete' workspace_id %}" class="settings-danger__form" onsubmit="return confirm('This will permanently delete the workspace and all its data. Continue?');">
+                <form method="post" action="{% url 'workspace_settings_delete' workspace_id %}" class="settings-danger__form" onsubmit="return confirm('{% trans "This will permanently delete the workspace and all its data. Continue?" %}');">
                     {% csrf_token %}
-                    <input type="text" name="confirm_name" placeholder="Type workspace name to confirm" required>
-                    <button type="submit" class="settings-btn settings-btn--danger">Delete</button>
+                    <input type="text" name="confirm_name" placeholder="{% trans 'Type workspace name to confirm' %}" required>
+                    <button type="submit" class="settings-btn settings-btn--danger">{% trans "Delete" %}</button>
                 </form>
             </div>
             {% else %}
             <div class="settings-danger">
                 <div class="settings-danger__copy">
-                    <h3>Leave workspace</h3>
-                    <p>Remove your access to this workspace. You can be re-invited later.</p>
+                    <h3>{% trans "Leave workspace" %}</h3>
+                    <p>{% trans "Remove your access to this workspace. You can be re-invited later." %}</p>
                 </div>
-                <form method="post" action="{% url 'workspace_settings_leave' workspace_id %}" class="settings-danger__form" onsubmit="return confirm('Leave this workspace?');">
+                <form method="post" action="{% url 'workspace_settings_leave' workspace_id %}" class="settings-danger__form" onsubmit="return confirm('{% trans "Leave this workspace?" %}');">
                     {% csrf_token %}
-                    <button type="submit" class="settings-btn settings-btn--danger">Leave workspace</button>
+                    <button type="submit" class="settings-btn settings-btn--danger">{% trans "Leave workspace" %}</button>
                 </form>
             </div>
             {% endif %}
@@ -328,7 +332,7 @@
     }
     .api-key-usage__code-wrap { position: relative; }
     .api-key-usage__copy {
-        position: absolute; top: 8px; right: 8px;
+        position: absolute; top: 8px; inset-inline-end: 8px;
         padding: 4px 10px !important; font-size: 11px !important;
     }
 
@@ -337,6 +341,14 @@
 
 <script>
 (function () {
+    const _t = (typeof gettext === 'function') ? gettext : (s) => s;
+    const _interp = (typeof interpolate === 'function') ? interpolate : function (fmt, obj) {
+        return fmt.replace(/%\(\w+\)s/g, function (m) {
+            var k = m.slice(2, -2);
+            return obj[k] != null ? obj[k] : m;
+        });
+    };
+
     const container = document.querySelector(".api-access");
     if (!container) return;  // not the owner — section not rendered
 
@@ -351,15 +363,15 @@
     const errorBox  = document.getElementById("api-key-error");
 
     btn.addEventListener("click", async function () {
-        // Confirm before destroying an existing key.
-        const isRegenerate = btn.textContent.trim().toLowerCase().startsWith("regenerate");
+        // Detect regenerate state from data attribute (set after first successful key generation).
+        const isRegenerate = container.dataset.hasKey === "1";
         if (isRegenerate) {
-            const ok = confirm("Regenerating will immediately invalidate the current API key. Continue?");
+            const ok = confirm(_t("Regenerating will immediately invalidate the current API key. Continue?"));
             if (!ok) return;
         }
 
         btn.disabled = true;
-        btn.textContent = "Generating…";
+        btn.textContent = _t("Generating…");
         errorBox.hidden = true;
 
         try {
@@ -370,7 +382,7 @@
             });
             if (!resp.ok) {
                 const text = await resp.text();
-                throw new Error("Server returned " + resp.status + ": " + text);
+                throw new Error(_interp(_t("Server returned %(status)s: %(text)s"), { status: resp.status, text: text }, true));
             }
             const data = await resp.json();
 
@@ -412,16 +424,20 @@
             keyInput.focus();
             keyInput.select();
 
-            const created = new Date(data.created_at).toLocaleString();
-            status.textContent =
-                "An API key exists for this workspace. Created on " + created +
-                ". Regenerating will immediately invalidate the previous key.";
+            const locale = (document.documentElement.lang || 'en');
+            const created = new Date(data.created_at).toLocaleString(locale);
+            status.textContent = _interp(
+                _t("An API key exists for this workspace. Created on %(created)s. Regenerating will immediately invalidate the previous key."),
+                { created: created },
+                true
+            );
 
-            btn.textContent = "Regenerate API key";
+            container.dataset.hasKey = "1";
+            btn.textContent = _t("Regenerate API key");
         } catch (err) {
-            errorBox.textContent = "Could not generate API key — " + err.message;
+            errorBox.textContent = _interp(_t("Could not generate API key — %(msg)s"), { msg: err.message }, true);
             errorBox.hidden = false;
-            btn.textContent = isRegenerate ? "Regenerate API key" : "Generate API key";
+            btn.textContent = isRegenerate ? _t("Regenerate API key") : _t("Generate API key");
         } finally {
             btn.disabled = false;
         }
@@ -440,7 +456,7 @@
             document.body.removeChild(ta);
         }
         const original = button.textContent;
-        button.textContent = "Copied!";
+        button.textContent = _t("Copied!");
         setTimeout(() => { button.textContent = original; }, 1500);
     }
 

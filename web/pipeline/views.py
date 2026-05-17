@@ -87,7 +87,7 @@ def questionnaire(request):
 
     embedding_config = embedding_reranker(data.get("language"), data.get("use_case"))
     config_values = {
-        "k_value":           top_k(data.get("top_k")),
+        "k_value":           top_k(data.get("main_idea_or_related")),
         "reference_flag":    reference(data.get("reference")),
         "temp_value":        temperature(data.get("temperature")),
         "top_p_final":       top_p(data.get("top_p")),
@@ -307,17 +307,34 @@ def _format_appendix(sources, is_citation, metadata_flag):
     return "\n\n---\n" + "\n\n".join(parts) if parts else ""
 
 
+def _is_arabic_query(query):
+    """True if the query contains Arabic characters (U+0600..U+06FF block)."""
+    return any("؀" <= ch <= "ۿ" for ch in (query or ""))
+
+
 def _generate_session_title(query, llm_response):
-    """Ask the LLM for a short title; fall back to a truncated query on failure."""
+    """Ask the LLM for a short title; fall back to a truncated query on failure.
+    Prompt language follows the query language so an Arabic question yields
+    an Arabic title."""
     fallback_title = (query[:60] + "…") if len(query) > 60 else query
-    title_prompt = (
-        "Generate a short, specific chat title (max 6 words). "
-        "No quotes, no trailing punctuation, no prefix like 'Title:'. "
-        "Reply with only the title.\n\n"
-        f"User: {query}\n"
-        f"Assistant: {llm_response[:500]}\n\n"
-        "Title:"
-    )
+    if _is_arabic_query(query):
+        title_prompt = (
+            "أنشئ عنواناً قصيراً ومحدداً للمحادثة (بحد أقصى 6 كلمات) باللغة العربية. "
+            "بدون علامات اقتباس، بدون علامات ترقيم في النهاية، بدون بادئة مثل 'العنوان:'. "
+            "أعد العنوان فقط.\n\n"
+            f"المستخدم: {query}\n"
+            f"المساعد: {llm_response[:500]}\n\n"
+            "العنوان:"
+        )
+    else:
+        title_prompt = (
+            "Generate a short, specific chat title (max 6 words). "
+            "No quotes, no trailing punctuation, no prefix like 'Title:'. "
+            "Reply with only the title.\n\n"
+            f"User: {query}\n"
+            f"Assistant: {llm_response[:500]}\n\n"
+            "Title:"
+        )
     try:
         resp = requests.post(
             OLLAMA_URL,

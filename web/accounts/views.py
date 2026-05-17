@@ -43,36 +43,69 @@ def _safe_back_url(request, fallback):
     return fallback
 
 
+MIN_PASSWORD_LEN = 8
+
+
 def login_view(request):
+    field_errors = {}
+    form_values = {}
 
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
         password = request.POST.get("password", "")
+        form_values = {"email": email}
 
-        try:
-            user = User.objects.get(email=email)
-            user = authenticate(request, username=user.username, password=password)
-        except User.DoesNotExist:
-            user = None
+        if not email:
+            field_errors["email"] = "Email is required."
+        if not password:
+            field_errors["password"] = "Password is required."
 
-        if user is not None:
-            login(request, user)
-            return redirect("workspace_list")
-        else:
+        if not field_errors:
+            try:
+                user = User.objects.get(email=email)
+                user = authenticate(request, username=user.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
+            if user is not None:
+                login(request, user)
+                return redirect("workspace_list")
             messages.error(request, "Invalid email or password.")
 
-    return render(request, "accounts/login.html")
+    return render(request, "accounts/login.html", {
+        "field_errors": field_errors,
+        "form_values": form_values,
+    })
 
 
 def signup_view(request):
+    field_errors = {}
+    form_values = {}
+
     if request.method == "POST":
         full_name = request.POST.get("full_name", "").strip()
         email = request.POST.get("email", "").strip()
         password = request.POST.get("password", "")
+        form_values = {"full_name": full_name, "email": email}
 
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "An account with this email already exists.")
-        else:
+        if not full_name:
+            field_errors["full_name"] = "Full name is required."
+
+        if not email:
+            field_errors["email"] = "Email is required."
+        elif not EMAIL_RE.match(email):
+            field_errors["email"] = "Enter a valid email address."
+        elif User.objects.filter(email=email).exists():
+            field_errors["email"] = "An account with this email already exists."
+
+        if not password:
+            field_errors["password"] = "Password is required."
+        elif len(password) < MIN_PASSWORD_LEN:
+            field_errors["password"] = (
+                f"Password must be at least {MIN_PASSWORD_LEN} characters."
+            )
+
+        if not field_errors:
             first_name, _, last_name = full_name.partition(" ")
             user = User.objects.create_user(
                 username=email,
@@ -84,7 +117,12 @@ def signup_view(request):
             login(request, user)
             return redirect("workspace_list")
 
-    return render(request, "accounts/signup.html")
+        messages.error(request, "Please correct the errors below.")
+
+    return render(request, "accounts/signup.html", {
+        "field_errors": field_errors,
+        "form_values": form_values,
+    })
 
 
 def logout_view(request):

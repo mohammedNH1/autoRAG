@@ -1,16 +1,19 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Members - AutoRAG</title>
+    <title>{% trans "Members" %} - AutoRAG</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/members.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/members.css' %}?v=20260517">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
+    <script src="{% url 'javascript-catalog' %}"></script>
+    {% get_current_language as CUR_LANG %}
 </head>
 <body>
 <div class="dash-layout members-layout">
@@ -19,9 +22,8 @@
     <main class="members-main">
         <header class="members-header">
             <div class="members-header__copy">
-                <p class="members-eyebrow">{{ workspace.workspace_name|default:"Workspace" }}</p>
-                <h1 class="members-title">Members</h1>
-                <p class="members-subtitle">{{ member_count }} member{{ member_count|pluralize }} in this workspace</p>
+                <h1 class="members-title">{% trans "Members" %}</h1>
+                <p class="members-subtitle">{% blocktrans count counter=member_count %}{{ counter }} member in this workspace{% plural %}{{ counter }} members in this workspace{% endblocktrans %}</p>
             </div>
 
             <div class="members-header__actions">
@@ -30,7 +32,7 @@
                         <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/>
                         <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
-                    <input id="memberSearch" type="search" placeholder="Search members..." autocomplete="off">
+                    <input id="memberSearch" type="search" placeholder="{% trans 'Search members...' %}" autocomplete="off">
                 </label>
 
                 {% if can_manage_members %}
@@ -38,7 +40,7 @@
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
-                    Add member
+                    {% trans "Add member" %}
                 </button>
                 {% endif %}
             </div>
@@ -52,14 +54,14 @@
         </div>
         {% endif %}
 
-        <section class="members-stats" aria-label="Member summary">
+        <section class="members-stats" aria-label="{% trans 'Member summary' %}">
             <article class="members-stat">
                 <span class="members-stat__icon members-stat__icon--blue">
                     <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="">
                 </span>
                 <div>
                     <p class="members-stat__value">{{ member_count }}</p>
-                    <p class="members-stat__label">Total members</p>
+                    <p class="members-stat__label">{% trans "Total members" %}</p>
                 </div>
             </article>
 
@@ -72,23 +74,23 @@
                 </span>
                 <div>
                     <p class="members-stat__value">{{ contributors_count }}</p>
-                    <p class="members-stat__label">Active contributors</p>
+                    <p class="members-stat__label">{% trans "Active contributors" %}</p>
                 </div>
             </article>
         </section>
 
         <section class="members-directory">
             <div class="members-directory__head">
-                <h2>Workspace directory</h2>
-                <span>{{ member_count }} total</span>
+                <h2>{% trans "Workspace directory" %}</h2>
+                <span>{% blocktrans with count=member_count %}{{ count }} total{% endblocktrans %}</span>
             </div>
 
             <div class="members-table{% if can_manage_members %} members-table--managed{% endif %}" id="memberList">
                 <div class="members-table__head" aria-hidden="true">
-                    <span>Member</span>
-                    <span>Role</span>
-                    <span>Activity</span>
-                    <span>Last seen</span>
+                    <span>{% trans "Member" %}</span>
+                    <span>{% trans "Role" %}</span>
+                    <span>{% trans "Activity" %}</span>
+                    <span>{% trans "Last seen" %}</span>
                     {% if can_manage_members %}<span></span>{% endif %}
                 </div>
 
@@ -111,15 +113,15 @@
 
                     <dl class="member-activity">
                         <div>
-                            <dt>Sessions</dt>
+                            <dt>{% trans "Sessions" %}</dt>
                             <dd>{{ member.sessions_count }}</dd>
                         </div>
                         <div>
-                            <dt>Questions</dt>
+                            <dt>{% trans "Questions" %}</dt>
                             <dd>{{ member.questions_count }}</dd>
                         </div>
                         <div>
-                            <dt>Docs</dt>
+                            <dt>{% trans "Docs" %}</dt>
                             <dd>{{ member.documents_count }}</dd>
                         </div>
                     </dl>
@@ -132,10 +134,10 @@
                     {% if can_manage_members %}
                     <div class="member-actions">
                         {% if member.is_owner %}
-                        <span class="member-actions__locked">Owner</span>
+                        <span class="member-actions__locked">{% trans "Owner" %}</span>
                         {% elif is_owner %}
                         <div class="member-kebab" data-kebab>
-                            <button type="button" class="member-kebab__btn" data-kebab-toggle aria-haspopup="true" aria-expanded="false" title="More">
+                            <button type="button" class="member-kebab__btn" data-kebab-toggle aria-haspopup="true" aria-expanded="false" title="{% trans 'More' %}">
                                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                                     <circle cx="12" cy="5"  r="1.7" fill="currentColor"/>
                                     <circle cx="12" cy="12" r="1.7" fill="currentColor"/>
@@ -145,16 +147,16 @@
 
                             <div class="member-kebab__menu" data-kebab-menu hidden>
                                 <button type="button" class="member-kebab__item" data-kebab-action="change-role">
-                                    Change Role
-                                    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                                    {% trans "Change Role" %}
+                                    <svg class="member-kebab__chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M3 1l4 4-4 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
                                 </button>
-                                <button type="button" class="member-kebab__item member-kebab__item--danger" data-kebab-action="remove">Remove Member</button>
+                                <button type="button" class="member-kebab__item member-kebab__item--danger" data-kebab-action="remove">{% trans "Remove Member" %}</button>
                             </div>
 
                             <div class="member-kebab__submenu" data-kebab-submenu hidden>
-                                <p class="member-kebab__subhead">Assign role</p>
+                                <p class="member-kebab__subhead">{% trans "Assign role" %}</p>
                                 {% for role in role_choices %}
                                 <form method="post" action="{% url 'workspace_change_member_role' workspace_id member.user.id %}" class="member-kebab__roleform">
                                     {% csrf_token %}
@@ -178,15 +180,15 @@
                 {% empty %}
                 <div class="members-empty">
                     <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="">
-                    <h2>No members yet</h2>
-                    <p>Add an existing AutoRAG account to start collaborating.</p>
+                    <h2>{% trans "No members yet" %}</h2>
+                    <p>{% trans "Add an existing AutoRAG account to start collaborating." %}</p>
                 </div>
                 {% endfor %}
 
                 <div class="members-empty members-empty--search" id="memberNoResults" hidden>
                     <img src="{% static 'Sidebar_icons/Members.svg' %}" alt="">
-                    <h2>No matching members</h2>
-                    <p>Try a different name, email, or role.</p>
+                    <h2>{% trans "No matching members" %}</h2>
+                    <p>{% trans "Try a different name, email, or role." %}</p>
                 </div>
             </div>
         </section>
@@ -196,19 +198,19 @@
 {% if can_manage_members %}
 <div class="member-modal" data-modal hidden>
     <div class="member-modal__panel" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
-        <button class="member-modal__close" type="button" aria-label="Close" data-modal-close>
+        <button class="member-modal__close" type="button" aria-label="{% trans 'Close' %}" data-modal-close>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                 <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
         </button>
 
-        <h2 id="memberModalTitle">Add member</h2>
+        <h2 id="memberModalTitle">{% trans "Add member" %}</h2>
         <form method="post" action="{% url 'workspace_add_member' workspace_id %}" class="member-form">
             {% csrf_token %}
-            <label for="memberEmail">Email</label>
+            <label for="memberEmail">{% trans "Email" %}</label>
             <input id="memberEmail" name="email" type="email" placeholder="name@example.com" required autocomplete="email">
 
-            <label for="memberRole">Role</label>
+            <label for="memberRole">{% trans "Role" %}</label>
             <select id="memberRole" name="role">
                 {% for role in role_choices %}
                 <option value="{{ role.value }}">{{ role.label }}</option>
@@ -216,8 +218,8 @@
             </select>
 
             <div class="member-form__actions">
-                <button class="member-form__cancel" type="button" data-modal-close>Cancel</button>
-                <button class="member-form__submit" type="submit">Add member</button>
+                <button class="member-form__cancel" type="button" data-modal-close>{% trans "Cancel" %}</button>
+                <button class="member-form__submit" type="submit">{% trans "Add member" %}</button>
             </div>
         </form>
     </div>
@@ -226,6 +228,7 @@
 
 <script>
     (function () {
+        var _t = (typeof gettext === 'function') ? gettext : function (s) { return s; };
         var search = document.getElementById('memberSearch');
         var rows = Array.prototype.slice.call(document.querySelectorAll('[data-member-row]'));
         var noResults = document.getElementById('memberNoResults');
@@ -315,7 +318,7 @@
                         menu.hidden = true;
                         submenu.hidden = false;
                     } else if (action === 'remove') {
-                        if (confirm('Remove this member from the workspace?')) {
+                        if (confirm(_t('Remove this member from the workspace?'))) {
                             removeFm.submit();
                         }
                     }

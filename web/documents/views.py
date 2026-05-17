@@ -2,7 +2,7 @@ import os
 import json
 import logging
 
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from django.conf import settings
 
@@ -12,7 +12,7 @@ from .services.embedding_service import EmbeddingService
 from .services.model_selector import ModelSelector
 from .services.qdrant_service import QdrantService
 from workspace.models import Workspace
-from workspace.services import activity_log
+from workspace.services import activity_log, manage_members
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,8 @@ def _require_config(workspace) -> tuple:
 
 def documents_page(request, workspace_id):
     workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
+    if request.user.is_authenticated and manage_members.is_basic_member(workspace, request.user):
+        return redirect("chat_page", workspace_id=workspace_id)
     documents = Document.objects.filter(workspace=workspace).order_by("-upload_time")
     return render(request, "documents/Documents.html", {
         "workspace":      workspace,
@@ -111,6 +113,8 @@ def document_details(request, workspace_id, document_id):
 
 def text_input_page(request, workspace_id):
     workspace = get_object_or_404(Workspace, workspace_id=workspace_id)
+    if request.user.is_authenticated and manage_members.is_basic_member(workspace, request.user):
+        return redirect("chat_page", workspace_id=workspace_id)
     return render(request, "documents/text_input.html", {"workspace": workspace})
 
 

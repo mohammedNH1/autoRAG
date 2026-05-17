@@ -210,6 +210,47 @@ button {
     color: #666;
 }
 
+.sort-container {
+    position: relative;
+}
+
+.sort-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    inset-inline-start: 0;
+    min-width: 160px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    padding: 4px;
+    z-index: 100;
+}
+
+.sort-menu__item {
+    display: block;
+    width: 100%;
+    text-align: start;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sort-menu__item:hover {
+    background: #f4f4f4;
+}
+
+.sort-menu__item.is-active {
+    background: #eef2ff;
+    color: #1f3bb3;
+    font-weight: 600;
+}
+
 .toolbar-right {
     display: flex;
     align-items: center;

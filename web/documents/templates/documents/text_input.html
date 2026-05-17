@@ -1,17 +1,19 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Text Input - AutoRAG</title>
+    <title>{% trans "Text Input" %} - AutoRAG</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'documents/css/text_input.css' %}">
+    <link rel="stylesheet" href="{% static 'documents/css/text_input.css' %}?v=2">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
+    <script src="{% url 'javascript-catalog' %}"></script>
 </head>
 
 <body>
@@ -25,19 +27,19 @@
     <div class="ti-main">
 
         <!-- FIX 2: Back to Documents link -->
-        <a href="{% url 'documents:documents_page' workspace.workspace_id %}" class="ti-back-link" id="backToDocuments" title="Back to Documents">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <a href="{% url 'documents:documents_page' workspace.workspace_id %}" class="ti-back-link" id="backToDocuments" title="{% trans 'Back to Documents' %}">
+            <svg class="ti-back-link__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Back to Documents
+            {% trans "Back to Documents" %}
         </a>
 
         <!-- Page Header -->
         <header class="ti-header">
-            <h1 class="ti-header__title">Add New Post</h1>
+            <h1 class="ti-header__title">{% trans "Add New Post" %}</h1>
             <div class="ti-header__actions">
                 <!-- FIX 4: Trash icon — clears editor content with a confirm modal -->
-                <button class="ti-icon-btn" id="clearEditorBtn" title="Clear editor" aria-label="Clear editor">
+                <button class="ti-icon-btn" id="clearEditorBtn" title="{% trans 'Clear editor' %}" aria-label="{% trans 'Clear editor' %}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -59,12 +61,13 @@
                         class="ti-title-input"
                         type="text"
                         id="postTitle"
-                        placeholder="Enter a title..."
-                        value="Title"
+                        placeholder="{% trans 'Enter a title...' %}"
+                        value="{% trans 'Title' %}"
                         autocomplete="off"
+                        dir="auto"
                     >
                     <!-- FIX 6: Edit icon focuses + selects all title text -->
-                    <button class="ti-title-edit" id="titleEditBtn" aria-label="Edit title">
+                    <button class="ti-title-edit" id="titleEditBtn" aria-label="{% trans 'Edit title' %}">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -77,7 +80,7 @@
 
                     <!-- Tab bar -->
                     <div class="ti-editor-tabs">
-                        <button class="ti-tab active">Text</button>
+                        <button class="ti-tab active">{% trans "Text" %}</button>
                     </div>
 
                     <!-- Formatting toolbar -->
@@ -86,15 +89,15 @@
                         <!-- FIX 2: Paragraph / Header dropdown -->
                         <div class="ti-toolbar__group ti-toolbar__group--separator ti-style-wrap">
                             <button class="ti-toolbar__select" id="styleSelect" aria-haspopup="true" aria-expanded="false">
-                                <span id="styleLabel">Paragraph</span>
+                                <span id="styleLabel">{% trans "Paragraph" %}</span>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                                     <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
                             <div class="ti-style-dropdown" id="styleDropdown" role="menu">
-                                <button class="ti-style-option ti-style-option--paragraph ti-style-option--active" data-tag="p"  role="menuitem">Paragraph</button>
-                                <button class="ti-style-option ti-style-option--header"    data-tag="h2" role="menuitem">Header</button>
-                                <button class="ti-style-option ti-style-option--subheader" data-tag="h3" role="menuitem">Sub-header</button>
+                                <button class="ti-style-option ti-style-option--paragraph ti-style-option--active" data-tag="p"  role="menuitem">{% trans "Paragraph" %}</button>
+                                <button class="ti-style-option ti-style-option--header"    data-tag="h2" role="menuitem">{% trans "Header" %}</button>
+                                <button class="ti-style-option ti-style-option--subheader" data-tag="h3" role="menuitem">{% trans "Sub-header" %}</button>
                             </div>
                         </div>
 
@@ -102,56 +105,56 @@
                         <div class="ti-toolbar__group ti-toolbar__group--separator">
 
                             <!-- FIX 9c: Font color via native color picker -->
-                            <label class="ti-toolbar__btn ti-color-wrap" title="Font color">
+                            <label class="ti-toolbar__btn ti-color-wrap" title="{% trans 'Font color' %}">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                     <path d="M5 20h14M12 4L6 18h2l1.5-4h5l1.5 4h2L12 4zm-1.75 8L12 7.5l1.75 4.5h-3.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
-                                <input type="color" id="fontColorPicker" value="#1e293b" aria-label="Font color" tabindex="-1">
+                                <input type="color" id="fontColorPicker" value="#1e293b" aria-label="{% trans 'Font color' %}" tabindex="-1">
                             </label>
 
                             <!-- FIX 9d: Highlight via native color picker -->
-                            <label class="ti-toolbar__btn ti-color-wrap" title="Highlight">
+                            <label class="ti-toolbar__btn ti-color-wrap" title="{% trans 'Highlight' %}">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                     <path d="M9 11l-5 7h4l1.5-2h5L16 18h4l-5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                     <path d="M7.5 9L12 3l4.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                     <line x1="4" y1="20" x2="20" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                                 </svg>
-                                <input type="color" id="highlightPicker" value="#facc15" aria-label="Highlight color" tabindex="-1">
+                                <input type="color" id="highlightPicker" value="#facc15" aria-label="{% trans 'Highlight color' %}" tabindex="-1">
                             </label>
 
                             <!-- FIX 9a: Bold / Italic / Underline / Strikethrough with active state -->
-                            <button class="ti-toolbar__btn" id="btnBold"      title="Bold"          data-cmd="bold"><strong>B</strong></button>
-                            <button class="ti-toolbar__btn" id="btnItalic"    title="Italic"        data-cmd="italic"><em>I</em></button>
-                            <button class="ti-toolbar__btn" id="btnUnderline" title="Underline"     data-cmd="underline"><u>U</u></button>
-                            <button class="ti-toolbar__btn" id="btnStrike"    title="Strikethrough" data-cmd="strikeThrough"><s>S</s></button>
+                            <button class="ti-toolbar__btn" id="btnBold"      title="{% trans 'Bold' %}"          data-cmd="bold"><strong>B</strong></button>
+                            <button class="ti-toolbar__btn" id="btnItalic"    title="{% trans 'Italic' %}"        data-cmd="italic"><em>I</em></button>
+                            <button class="ti-toolbar__btn" id="btnUnderline" title="{% trans 'Underline' %}"     data-cmd="underline"><u>U</u></button>
+                            <button class="ti-toolbar__btn" id="btnStrike"    title="{% trans 'Strikethrough' %}" data-cmd="strikeThrough"><s>S</s></button>
                         </div>
 
                         <!-- FIX 9b: Alignment -->
                         <div class="ti-toolbar__group ti-toolbar__group--separator">
-                            <button class="ti-toolbar__btn" title="Align left"   data-cmd="justifyLeft">
+                            <button class="ti-toolbar__btn" title="{% trans 'Align left' %}"   data-cmd="justifyLeft">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h12M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             </button>
-                            <button class="ti-toolbar__btn" title="Align center" data-cmd="justifyCenter">
+                            <button class="ti-toolbar__btn" title="{% trans 'Align center' %}" data-cmd="justifyCenter">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M6 12h12M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             </button>
-                            <button class="ti-toolbar__btn" title="Align right"  data-cmd="justifyRight">
+                            <button class="ti-toolbar__btn" title="{% trans 'Align right' %}"  data-cmd="justifyRight">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M9 12h12M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             </button>
                         </div>
 
                         <!-- Lists -->
                         <div class="ti-toolbar__group ti-toolbar__group--separator">
-                            <button class="ti-toolbar__btn" title="Ordered list"   data-cmd="insertOrderedList">
+                            <button class="ti-toolbar__btn" title="{% trans 'Ordered list' %}"   data-cmd="insertOrderedList">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10 6h11M10 12h11M10 18h11M4 6h.01M4 12l1-1v4M4 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </button>
-                            <button class="ti-toolbar__btn" title="Unordered list" data-cmd="insertUnorderedList">
+                            <button class="ti-toolbar__btn" title="{% trans 'Unordered list' %}" data-cmd="insertUnorderedList">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             </button>
                         </div>
 
                         <!-- Attach file — single file picker -->
                         <div class="ti-toolbar__group">
-                            <button class="ti-toolbar__btn" id="attachFileBtn" title="Attach file" aria-label="Attach file">
+                            <button class="ti-toolbar__btn" id="attachFileBtn" title="{% trans 'Attach file' %}" aria-label="{% trans 'Attach file' %}">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.66 5.65l-9.2 9.2a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </button>
                             <!-- Hidden file input: no "multiple" = single file only -->
@@ -167,8 +170,8 @@
                                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.66 5.65l-9.2 9.2a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </div>
-                        <span class="ti-attachment-row__name" id="attachmentName"></span>
-                        <button class="ti-attachment-row__remove" id="attachmentRemove" type="button" title="Remove attachment" aria-label="Remove attached file">
+                        <span class="ti-attachment-row__name" id="attachmentName" dir="auto"></span>
+                        <button class="ti-attachment-row__remove" id="attachmentRemove" type="button" title="{% trans 'Remove attachment' %}" aria-label="{% trans 'Remove attached file' %}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -181,14 +184,14 @@
                         id="editorBody"
                         contenteditable="true"
                         spellcheck="true"
-                        data-placeholder="Start writing your content here..."
+                        data-placeholder="{% trans 'Start writing your content here...' %}"
                     ></div>
 
                     <!-- FIX 1: Footer — word count + reading time updated live -->
                     <div class="ti-editor-footer">
-                        <span class="ti-stat" id="wordCountLabel">Word Count: 0</span>
+                        <span class="ti-stat" id="wordCountLabel">{% blocktrans with count=0 %}Word Count: {{ count }}{% endblocktrans %}</span>
                         <span class="ti-dot" aria-hidden="true"></span>
-                        <span class="ti-stat" id="readingTimeLabel">Reading Time: ~0 min</span>
+                        <span class="ti-stat" id="readingTimeLabel">{% blocktrans with mins=0 %}Reading Time: ~{{ mins }} min{% endblocktrans %}</span>
                     </div>
 
                 </div><!-- /ti-editor-card -->
@@ -199,8 +202,8 @@
                 <div class="ti-publish-card">
 
                     <div class="ti-publish-card__header">
-                        <h2 class="ti-publish-card__title">Publish</h2>
-                        <button class="ti-publish-card__toggle" id="publishToggle" aria-label="Collapse">
+                        <h2 class="ti-publish-card__title">{% trans "Publish" %}</h2>
+                        <button class="ti-publish-card__toggle" id="publishToggle" aria-label="{% trans 'Collapse' %}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -216,9 +219,9 @@
                                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                     <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
-                                <span>Status: <strong id="statusValue">Draft</strong></span>
+                                <span>{% trans "Status:" %} <strong id="statusValue">{% trans "Draft" %}</strong></span>
                             </div>
-                            <button class="ti-publish-edit-btn">Edit</button>
+                            <button class="ti-publish-edit-btn">{% trans "Edit" %}</button>
                         </div>
 
                         <!-- FIX 8: Visibility row — inline Public / Only me selector -->
@@ -229,13 +232,13 @@
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                         <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
                                     </svg>
-                                    <span>Visibility: <strong id="visibilityValue">Public</strong></span>
+                                    <span>{% trans "Visibility:" %} <strong id="visibilityValue">{% trans "Public" %}</strong></span>
                                 </div>
-                                <button class="ti-publish-edit-btn" id="visibilityEditBtn">Edit</button>
+                                <button class="ti-publish-edit-btn" id="visibilityEditBtn">{% trans "Edit" %}</button>
                             </div>
                             <div class="ti-inline-selector" id="visibilitySelector">
-                                <button class="ti-selector-option ti-selector-option--active" data-value="Public">Public</button>
-                                <button class="ti-selector-option" data-value="Only me">Only me</button>
+                                <button class="ti-selector-option ti-selector-option--active" data-value="Public">{% trans "Public" %}</button>
+                                <button class="ti-selector-option" data-value="Only me">{% trans "Only me" %}</button>
                             </div>
                         </div>
 
@@ -247,13 +250,13 @@
                                         <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/>
                                         <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                                     </svg>
-                                    <span>Schedule: <strong id="scheduleValue">Off</strong></span>
+                                    <span>{% trans "Schedule:" %} <strong id="scheduleValue">{% trans "Off" %}</strong></span>
                                 </div>
-                                <button class="ti-publish-edit-btn" id="scheduleEditBtn">Edit</button>
+                                <button class="ti-publish-edit-btn" id="scheduleEditBtn">{% trans "Edit" %}</button>
                             </div>
                             <div class="ti-inline-selector" id="scheduleSelector">
                                 <input type="date" id="scheduleDateInput" class="ti-date-input">
-                                <button class="ti-selector-option" id="scheduleClearBtn">Clear</button>
+                                <button class="ti-selector-option" id="scheduleClearBtn">{% trans "Clear" %}</button>
                             </div>
                         </div>
 
@@ -261,8 +264,8 @@
 
                     <!-- FIX 3: Buttons now trigger custom modal, not alert() -->
                     <div class="ti-publish-card__footer">
-                        <button class="ti-btn ti-btn--outline" id="saveDraftBtn">Save Draft</button>
-                        <button class="ti-btn ti-btn--primary" id="publishBtn">Publish</button>
+                        <button class="ti-btn ti-btn--outline" id="saveDraftBtn">{% trans "Save Draft" %}</button>
+                        <button class="ti-btn ti-btn--primary" id="publishBtn">{% trans "Publish" %}</button>
                     </div>
 
                 </div><!-- /ti-publish-card -->
@@ -282,18 +285,31 @@
         <h3 class="ti-modal__title" id="tiModalTitle"></h3>
         <p  class="ti-modal__message" id="tiModalMessage"></p>
         <div class="ti-modal__actions">
-            <button class="ti-btn ti-btn--outline  ti-modal__cancel"  id="tiModalCancel">Cancel</button>
-            <button class="ti-btn ti-btn--primary  ti-modal__confirm" id="tiModalConfirm">OK</button>
+            <button class="ti-btn ti-btn--outline  ti-modal__cancel"  id="tiModalCancel">{% trans "Cancel" %}</button>
+            <button class="ti-btn ti-btn--primary  ti-modal__confirm" id="tiModalConfirm">{% trans "OK" %}</button>
         </div>
     </div>
 </div>
 
+
+<script>
+    window.WORKSPACE_ID = '{{ workspace.workspace_id|default:"" }}';
+    window.DOCUMENTS_PAGE_URL = '{% url "documents:documents_page" workspace.workspace_id %}';
+</script>
 
 <!-- ============================================================
      JAVASCRIPT
      ============================================================ -->
 <script>
 (function () {
+
+    const _t = (typeof gettext === 'function') ? gettext : (s) => s;
+    const _interp = (typeof interpolate === 'function') ? interpolate : function (fmt, obj) {
+        return fmt.replace(/%\(\w+\)s/g, function (m) {
+            var k = m.slice(2, -2);
+            return obj[k] != null ? obj[k] : m;
+        });
+    };
 
     /* ── element refs ── */
     const editor           = document.getElementById('editorBody');
@@ -317,8 +333,8 @@
         var raw   = editor.textContent || '';
         var words = raw.trim().length === 0 ? 0 : raw.trim().split(/\s+/).filter(Boolean).length;
         var mins  = words === 0 ? 0 : Math.ceil(words / 200);
-        wordCountEl.textContent = 'Word Count: ' + words.toLocaleString();
-        readingEl.textContent   = 'Reading Time: ~' + mins + ' min';
+        wordCountEl.textContent = _interp(_t('Word Count: %(count)s'), { count: words.toLocaleString() }, true);
+        readingEl.textContent   = _interp(_t('Reading Time: ~%(mins)s min'), { mins: mins }, true);
     }
     // Primary trigger: every keystroke
     editor.addEventListener('input', updateStats);
@@ -384,8 +400,8 @@
     function showModal(opts) {
         modalTitle.textContent   = opts.title   || '';
         modalMessage.textContent = opts.message || '';
-        modalConfirm.textContent = opts.confirmLabel || 'OK';
-        modalCancel.textContent  = 'Cancel';
+        modalConfirm.textContent = opts.confirmLabel || _t('OK');
+        modalCancel.textContent  = _t('Cancel');
 
         /* icon */
         /* draft uses an SVG document icon; others use text glyphs */
@@ -434,13 +450,13 @@
     ================================================================ */
     document.getElementById('clearEditorBtn').addEventListener('click', function () {
         showModal({
-            title:        'Clear editor?',
-            message:      'This will remove all content. This cannot be undone.',
+            title:        _t('Clear editor?'),
+            message:      _t('This will remove all content. This cannot be undone.'),
             type:         'confirm',
-            confirmLabel: 'Clear',
+            confirmLabel: _t('Clear'),
             onConfirm: function () {
                 editor.innerHTML = '';
-                postTitle.value  = 'Title';
+                postTitle.value  = _t('Title');
                 updateStats();
             }
         });
@@ -475,15 +491,16 @@
 
     scheduleDateInput.addEventListener('change', function () {
         if (!scheduleDateInput.value) return;
-        const d     = new Date(scheduleDateInput.value + 'T00:00:00');
-        const label = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        const d      = new Date(scheduleDateInput.value + 'T00:00:00');
+        const locale = (document.documentElement.lang || 'en');
+        const label  = d.toLocaleDateString(locale, { month: 'long', day: 'numeric' });
         scheduleValue.textContent = label;
         scheduleSelector.classList.remove('ti-inline-selector--open');
     });
 
     scheduleClearBtn.addEventListener('click', function () {
         scheduleDateInput.value   = '';
-        scheduleValue.textContent = 'Off';
+        scheduleValue.textContent = _t('Off');
         scheduleSelector.classList.remove('ti-inline-selector--open');
     });
 
@@ -504,7 +521,7 @@
 
     visibilitySelector.querySelectorAll('.ti-selector-option').forEach(function (opt) {
         opt.addEventListener('click', function () {
-            visibilityValue.textContent = opt.dataset.value;
+            visibilityValue.textContent = opt.textContent.trim();
             visibilitySelector.querySelectorAll('.ti-selector-option').forEach(function (o) {
                 o.classList.remove('ti-selector-option--active');
             });
@@ -647,12 +664,90 @@
 
     /* Save Draft */
     document.getElementById('saveDraftBtn').addEventListener('click', function () {
-        showModal({ title: 'Draft saved', message: 'Your draft has been saved successfully.', type: 'draft' });
+        showModal({ title: _t('Draft saved'), message: _t('Your draft has been saved successfully.'), type: 'draft' });
     });
 
-    /* Publish */
-    document.getElementById('publishBtn').addEventListener('click', function () {
-        showModal({ title: 'Published!', message: 'Your post has been published successfully.', type: 'success' });
+    /* Publish — upload editor content as a .txt document */
+    function getCookie(name) {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : '';
+    }
+
+    function sanitizeFilename(name) {
+        const cleaned = (name || '').replace(/[\\/:*?"<>|]+/g, '').trim();
+        return cleaned || 'Untitled';
+    }
+
+    const publishBtn = document.getElementById('publishBtn');
+
+    publishBtn.addEventListener('click', async function () {
+        const workspaceId = (typeof window.WORKSPACE_ID !== 'undefined' && window.WORKSPACE_ID !== '')
+            ? window.WORKSPACE_ID
+            : null;
+        if (!workspaceId) {
+            showModal({ title: _t('Workspace not loaded'), message: _t('Please refresh the page and try again.'), type: 'danger' });
+            return;
+        }
+
+        const titleRaw = (postTitle.value || '').trim();
+        const bodyText = (editor.innerText || editor.textContent || '').trim();
+
+        if (!bodyText) {
+            showModal({ title: _t('Nothing to publish'), message: _t('Write some content before publishing.'), type: 'danger' });
+            return;
+        }
+
+        const title    = titleRaw || _t('Untitled');
+        const filename = sanitizeFilename(title) + '.txt';
+        const fileBody = title + '\n\n' + bodyText;
+        const blob     = new Blob([fileBody], { type: 'text/plain' });
+        const file     = new File([blob], filename, { type: 'text/plain' });
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('workspace_id', workspaceId);
+
+        const originalLabel = publishBtn.textContent;
+        publishBtn.disabled    = true;
+        publishBtn.textContent = _t('Publishing…');
+
+        try {
+            const response = await fetch('/documents/upload/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || ('HTTP ' + response.status));
+            }
+
+            const statusValue = document.getElementById('statusValue');
+            if (statusValue) statusValue.textContent = _t('Published');
+
+            showModal({
+                title:   _t('Published!'),
+                message: _t('Your post has been added to Documents.'),
+                type:    'success',
+                onConfirm: function () {
+                    const url = (typeof window.DOCUMENTS_PAGE_URL !== 'undefined' && window.DOCUMENTS_PAGE_URL)
+                        ? window.DOCUMENTS_PAGE_URL
+                        : null;
+                    if (url) window.location.href = url;
+                },
+            });
+        } catch (err) {
+            console.error('Publish failed:', err);
+            showModal({
+                title:   _t('Publish failed'),
+                message: err.message || _t('Could not publish. Please try again.'),
+                type:    'danger',
+            });
+        } finally {
+            publishBtn.disabled    = false;
+            publishBtn.textContent = originalLabel;
+        }
     });
 
 })();
