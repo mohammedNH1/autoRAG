@@ -1,9 +1,12 @@
 {% load static %}
+{% load i18n %}
 {% load workspace_perms %}
 {% load account_extras %}
 {% with nav_workspace_id=workspace_id|default:workspace.workspace_id %}
 {% can_edit_settings workspace request.user as can_open_settings %}
+{% is_basic_member workspace request.user as is_basic_member %}
 {% user_image_url request.user as sidebar_pfp_url %}
+{% get_current_language as CUR_LANG %}
 <script>
     (function () {
         try {
@@ -14,10 +17,10 @@
 <aside class="dash-sidebar" data-autorag-sidebar>
     <div class="dash-sidebar__top">
         <div class="dash-sidebar__brand">
-            <a class="dash-logo" href="{% url 'workspace_list' %}" title="Workspaces" aria-label="Workspaces">
+            <a class="dash-logo" href="{% url 'workspace_list' %}" title="{% trans 'Workspaces' %}" aria-label="{% trans 'Workspaces' %}">
                 <img src="{% static 'logo.svg' %}" alt="AutoRAG" />
             </a>
-            <button class="dash-sidebar__toggle" type="button" title="Expand sidebar" aria-label="Expand sidebar" aria-expanded="false" data-sidebar-toggle>
+            <button class="dash-sidebar__toggle" type="button" title="{% trans 'Expand sidebar' %}" aria-label="{% trans 'Expand sidebar' %}" aria-expanded="false" data-sidebar-toggle>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -25,64 +28,108 @@
         </div>
 
         <nav class="dash-nav">
-            <a class="dash-nav__item{% if active_nav == 'sessions' %} is-active{% endif %}" href="{% url 'chat_page' nav_workspace_id %}" title="Sessions">
+            <a class="dash-nav__item{% if active_nav == 'sessions' %} is-active{% endif %}" href="{% url 'chat_page' nav_workspace_id %}" title="{% trans 'Sessions' %}">
                 <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Sessions.svg' %}" alt="">
-                <span class="dash-nav__label">Sessions</span>
+                <span class="dash-nav__label">{% trans "Sessions" %}</span>
             </a>
-            <a class="dash-nav__item{% if active_nav == 'members' %} is-active{% endif %}" href="{% url 'workspace_members' nav_workspace_id %}" title="Members">
+            {% if not is_basic_member %}
+            <a class="dash-nav__item{% if active_nav == 'members' %} is-active{% endif %}" href="{% url 'workspace_members' nav_workspace_id %}" title="{% trans 'Members' %}">
                 <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Members.svg' %}" alt="">
-                <span class="dash-nav__label">Members</span>
+                <span class="dash-nav__label">{% trans "Members" %}</span>
             </a>
-            <a class="dash-nav__item{% if active_nav == 'documents' %} is-active{% endif %}" href="{% url 'documents:documents_page' nav_workspace_id %}" title="Documents">
+            <a class="dash-nav__item{% if active_nav == 'documents' %} is-active{% endif %}" href="{% url 'documents:documents_page' nav_workspace_id %}" title="{% trans 'Documents' %}">
                 <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Documents.svg' %}" alt="">
-                <span class="dash-nav__label">Documents</span>
+                <span class="dash-nav__label">{% trans "Documents" %}</span>
             </a>
-            <a class="dash-nav__item dash-nav__item--dashboard{% if active_nav == 'dashboard' %} is-active{% endif %}" href="{% url 'workspace_dashboard' nav_workspace_id %}" title="Dashboards">
+            <a class="dash-nav__item dash-nav__item--dashboard{% if active_nav == 'dashboard' %} is-active{% endif %}" href="{% url 'workspace_dashboard' nav_workspace_id %}" title="{% trans 'Dashboards' %}">
                 <span class="dash-nav__icon-stack" aria-hidden="true">
                     <img class="dash-nav__icon dash-nav__icon--regular" src="{% static 'icons/dashboardiconregular.svg' %}" alt="">
                     <img class="dash-nav__icon dash-nav__icon--hover" src="{% static 'icons/dashboardiconwhite.svg' %}" alt="">
                 </span>
-                <span class="dash-nav__label">Dashboards</span>
+                <span class="dash-nav__label">{% trans "Dashboards" %}</span>
             </a>
+            {% endif %}
             {% if can_open_settings %}
-            <a class="dash-nav__item{% if active_nav == 'settings' %} is-active{% endif %}" href="{% url 'workspace_settings' nav_workspace_id %}" title="Settings">
+            <a class="dash-nav__item{% if active_nav == 'settings' %} is-active{% endif %}" href="{% url 'workspace_settings' nav_workspace_id %}" title="{% trans 'Settings' %}">
                 <img class="dash-nav__icon" src="{% static 'Sidebar_icons/Settings.svg' %}" alt="">
-                <span class="dash-nav__label">Settings</span>
+                <span class="dash-nav__label">{% trans "Settings" %}</span>
             </a>
             {% endif %}
         </nav>
+
     </div>
 
-    <div class="dash-user">
+    <div class="dash-user{% if request.user.is_authenticated %} dash-user--menu{% endif %}" data-user-menu>
         {% if request.user.is_authenticated %}
-        <a class="dash-user__avatar dash-user__avatar--link{% if sidebar_pfp_url %} has-image{% endif %}" href="{% url 'accounts:profile' %}?next={{ request.get_full_path|urlencode }}" title="Edit profile"{% if sidebar_pfp_url %} style="background-image:url('{{ sidebar_pfp_url }}')"{% endif %}>
-            {% if not sidebar_pfp_url %}
-            <span>{{ request.user.first_name|default:request.user.email|default:request.user.username|make_list|first|upper }}</span>
+        <button type="button" class="dash-user__trigger" data-user-menu-toggle aria-haspopup="menu" aria-expanded="false" title="{% trans 'Account menu' %}" aria-label="{% trans 'Open account menu' %}">
+            <span class="dash-user__avatar{% if sidebar_pfp_url %} has-image{% endif %}"{% if sidebar_pfp_url %} style="background-image:url('{{ sidebar_pfp_url }}')"{% endif %}>
+                {% if not sidebar_pfp_url %}
+                <span>{{ request.user.first_name|default:request.user.email|default:request.user.username|make_list|first|upper }}</span>
+                {% endif %}
+            </span>
+            <span class="dash-user__meta">
+                <span class="dash-user__name">{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</span>
+                <span class="dash-user__role">
+                    {% if workspace.workspace_owner_id == request.user.id %}{% trans "Owner" %}{% else %}{% trans "Member" %}{% endif %}
+                </span>
+            </span>
+            <svg class="dash-user__caret" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <div class="dash-user__menu" role="menu" data-user-menu-panel hidden>
+            <a class="dash-user__menu-item" role="menuitem" href="{% url 'accounts:profile' %}?next={{ request.get_full_path|urlencode }}">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>{% trans "Profile" %}</span>
+            </a>
+            {% if workspace and workspace.workspace_owner_id != request.user.id %}
+            <form method="post" action="{% url 'workspace_settings_leave' nav_workspace_id %}" class="dash-user__menu-form" data-leave-workspace-form>
+                {% csrf_token %}
+                <button type="submit" class="dash-user__menu-item dash-user__menu-item--danger" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 17l5-5-5-5M19 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>{% trans "Leave workspace" %}</span>
+                </button>
+            </form>
             {% endif %}
-        </a>
-        <a class="dash-user__meta dash-user__meta--link" href="{% url 'accounts:profile' %}?next={{ request.get_full_path|urlencode }}" title="Edit profile">
-            <p class="dash-user__name">{{ request.user.get_full_name|default:request.user.email|default:request.user.username }}</p>
-            <p class="dash-user__role">
-                {% if workspace.workspace_owner_id == request.user.id %}Owner{% else %}Member{% endif %}
-            </p>
-        </a>
+            <a class="dash-user__menu-item" role="menuitem" href="{% url 'accounts:logout' %}">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>{% trans "Sign out" %}</span>
+            </a>
+        </div>
         {% else %}
         <div class="dash-user__avatar"><span>G</span></div>
         <div class="dash-user__meta">
-            <p class="dash-user__name">Guest</p>
-            <p class="dash-user__role">Viewer</p>
+            <span class="dash-user__name">{% trans "Guest" %}</span>
+            <span class="dash-user__role">{% trans "Viewer" %}</span>
         </div>
-        {% endif %}
-        {% if request.user.is_authenticated %}
-        <a class="dash-user__action" href="{% url 'accounts:logout' %}" title="Sign out" aria-label="Sign out">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </a>
         {% endif %}
     </div>
 </aside>
+{% if request.user.is_authenticated and workspace and workspace.workspace_owner_id != request.user.id %}
+<div class="ws-confirm-overlay" data-leave-modal hidden>
+    <div class="ws-confirm" role="dialog" aria-modal="true" aria-labelledby="ws-leave-title" aria-describedby="ws-leave-body">
+        <div class="ws-confirm__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <h2 id="ws-leave-title" class="ws-confirm__title">{% trans "Leave this workspace?" %}</h2>
+        <p id="ws-leave-body" class="ws-confirm__body">{% trans "You will lose access to this workspace. An owner or admin can re-invite you later." %}</p>
+        <div class="ws-confirm__actions">
+            <button type="button" class="ws-confirm__btn ws-confirm__btn--cancel" data-leave-cancel>{% trans "Cancel" %}</button>
+            <button type="button" class="ws-confirm__btn ws-confirm__btn--danger" data-leave-confirm>{% trans "Leave" %}</button>
+        </div>
+    </div>
+</div>
+{% endif %}
 <script>
     // Save current URL before navigating to profile so Back returns precisely here.
     (function () {
@@ -101,6 +148,7 @@
         var KEY = 'autorag.sidebar';
         var root = document.documentElement;
         var toggle = document.querySelector('[data-sidebar-toggle]');
+        var _t = (typeof gettext === 'function') ? gettext : function (s) { return s; };
 
         function isExpanded() {
             return root.classList.contains('autorag-sidebar-expanded');
@@ -110,8 +158,8 @@
             if (!toggle) return;
             var expanded = isExpanded();
             toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            toggle.setAttribute('aria-label', expanded ? 'Collapse sidebar' : 'Expand sidebar');
-            toggle.setAttribute('title', expanded ? 'Collapse sidebar' : 'Expand sidebar');
+            toggle.setAttribute('aria-label', expanded ? _t('Collapse sidebar') : _t('Expand sidebar'));
+            toggle.setAttribute('title', expanded ? _t('Collapse sidebar') : _t('Expand sidebar'));
         }
 
         updateToggle();
@@ -126,6 +174,121 @@
                 updateToggle();
             });
         }
+    })();
+
+    (function () {
+        var root = document.querySelector('[data-user-menu]');
+        if (!root) return;
+        var trigger = root.querySelector('[data-user-menu-toggle]');
+        var panel = root.querySelector('[data-user-menu-panel]');
+        if (!trigger || !panel) return;
+
+        function positionPanel() {
+            var rect = trigger.getBoundingClientRect();
+            var gap = 8;
+            panel.style.visibility = 'hidden';
+            panel.hidden = false;
+            var panelWidth = panel.offsetWidth;
+            var panelHeight = panel.offsetHeight;
+            panel.hidden = true;
+            panel.style.visibility = '';
+
+            var left = rect.left;
+            var maxLeft = window.innerWidth - panelWidth - 8;
+            if (left > maxLeft) left = Math.max(8, maxLeft);
+            var top = rect.top - panelHeight - gap;
+            if (top < 8) top = rect.bottom + gap;
+
+            panel.style.left = left + 'px';
+            panel.style.top = top + 'px';
+        }
+
+        function setOpen(open) {
+            if (open) positionPanel();
+            trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+            panel.hidden = !open;
+            root.classList.toggle('is-open', open);
+        }
+
+        trigger.addEventListener('click', function (event) {
+            event.stopPropagation();
+            setOpen(panel.hidden);
+        });
+
+        document.addEventListener('click', function (event) {
+            if (panel.hidden) return;
+            if (!root.contains(event.target) && !panel.contains(event.target)) setOpen(false);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !panel.hidden) {
+                setOpen(false);
+                trigger.focus();
+            }
+        });
+
+        window.addEventListener('resize', function () {
+            if (!panel.hidden) positionPanel();
+        });
+
+        window.addEventListener('scroll', function () {
+            if (!panel.hidden) positionPanel();
+        }, true);
+    })();
+
+    (function () {
+        var form = document.querySelector('[data-leave-workspace-form]');
+        var modal = document.querySelector('[data-leave-modal]');
+        if (!form || !modal) return;
+        var cancelBtn = modal.querySelector('[data-leave-cancel]');
+        var confirmBtn = modal.querySelector('[data-leave-confirm]');
+        var dialog = modal.querySelector('.ws-confirm');
+        var lastFocus = null;
+
+        function openModal() {
+            lastFocus = document.activeElement;
+            modal.hidden = false;
+            document.body.style.overflow = 'hidden';
+            var userMenu = document.querySelector('[data-user-menu]');
+            var panel = userMenu && userMenu.querySelector('[data-user-menu-panel]');
+            if (panel && !panel.hidden) {
+                panel.hidden = true;
+                var trigger = userMenu.querySelector('[data-user-menu-toggle]');
+                if (trigger) trigger.setAttribute('aria-expanded', 'false');
+                userMenu.classList.remove('is-open');
+            }
+            setTimeout(function () { cancelBtn && cancelBtn.focus(); }, 0);
+        }
+
+        function closeModal() {
+            modal.hidden = true;
+            document.body.style.overflow = '';
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            openModal();
+        });
+
+        cancelBtn && cancelBtn.addEventListener('click', closeModal);
+
+        confirmBtn && confirmBtn.addEventListener('click', function () {
+            confirmBtn.disabled = true;
+            HTMLFormElement.prototype.submit.call(form);
+        });
+
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) closeModal();
+        });
+
+        dialog && dialog.addEventListener('click', function (event) {
+            event.stopPropagation();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !modal.hidden) closeModal();
+        });
     })();
 </script>
 {% endwith %}

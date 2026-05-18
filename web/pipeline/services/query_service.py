@@ -24,8 +24,8 @@ EMBEDDING_MODEL_COLLECTION_SUFFIX = {
 }
 
 OLLAMA_URL         = "http://ollama:11434/api/generate"
-OLLAMA_MODEL       = "llama3:latest"
 
+OLLAMA_MODEL       = "llama3:8b-instruct-q4_0"
 OLLAMA_TITLE_MODEL = "llama3:8b-instruct-q4_0"
 
 STRICT_TOP_P = 0.2
@@ -51,6 +51,12 @@ def _detect_language_instruction(query):
 NO_DOCS_REPLY = (
     "No documents have been uploaded to this workspace yet. "
     "Please upload documents first, then ask your question."
+)
+
+REINDEX_REQUIRED_REPLY = (
+    "This workspace's embedding or chunking settings have changed since its "
+    "documents were indexed, so the existing vectors can't be searched. "
+    "Please re-upload (or re-index) the documents to use the new configuration."
 )
 
 
@@ -98,8 +104,10 @@ def run_query(workspace, query):
     )
 
     if not chunks:
+        has_documents = workspace.documents.exists()
+        answer = REINDEX_REQUIRED_REPLY if has_documents else NO_DOCS_REPLY
         return QueryResult(
-            answer=NO_DOCS_REPLY,
+            answer=answer,
             ranked_chunks=[],
             sources=[],
             is_citation=is_citation,

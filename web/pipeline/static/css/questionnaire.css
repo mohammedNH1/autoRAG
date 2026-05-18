@@ -226,3 +226,36 @@ button:hover {
 .modal-content.error .modal-header {
     background: #fef2f2;
 }
+/* ====== Arabic primary font override ====== */
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-SemiBold.otf') format('opentype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Year of Handicrafts';
+    src: url('/static/font/TheYearofHandicrafts-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:lang(ar), :lang(ar) * {
+    font-family: 'Year of Handicrafts', 'Tajawal', sans-serif !important;
+}

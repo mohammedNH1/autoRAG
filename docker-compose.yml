@@ -1,21 +1,36 @@
 services:
   web:
     build: .
-    container_name: django_web_test
-    command: python web/manage.py runserver 0.0.0.0:8000
+    container_name: autorag_web
+    # Apply migrations, create the default admin (no-op on subsequent runs
+    # — `|| true` swallows the "already exists" error), then start Django.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        python web/manage.py migrate --noinput
+        python web/manage.py createsuperuser --noinput || true
+        python web/manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started
+      ollama-init:
+        condition: service_completed_successfully
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
       - PYTHONUNBUFFERED=1
+      # Used by `createsuperuser --noinput`. Override via shell env or .env
+      # for any non-local deployment — the defaults are demo-only.
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@autorag.local}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-changeme}
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant_test
+    container_name: autorag_qdrant
     ports:
       - "6333:6333"
     volumes:
@@ -23,13 +38,32 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama_test
+    container_name: autorag_ollama
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_KEEP_ALIVE=15m
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: autorag_ollama_init
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Ollama API to be ready..."
+        until ollama list >/dev/null 2>&1; do sleep 2; done
+        echo "Pulling llama3:latest (first run can take several minutes)..."
+        ollama pull llama3:latest
+        echo "Pulling llama3:8b-instruct-q4_0..."
+        ollama pull llama3:8b-instruct-q4_0
+        echo "All models ready."
+    restart: "no"
 
 volumes:
   qdrant_storage:

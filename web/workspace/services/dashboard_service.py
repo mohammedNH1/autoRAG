@@ -9,17 +9,32 @@ from collections import Counter
 
 from django.db.models import Count
 from django.utils import timezone
+from django.utils.formats import date_format
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 
 from workspace.models import Message, WorkspaceActivity
 from workspace.services import activity_log
 from workspace.services.manage_members import user_display_name
 
 
-# Based on the McKinsey-style estimate that employees spend 1.8 hours per
-# day searching for and gathering information.
-TIME_SAVED_MINUTES_PER_ACTIVE_DAY = 108
+MINUTES_SAVED_PER_QUESTION = 18
+DAILY_CAP_MINUTES          = 108
 
-WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+def _time_saved_minutes(message_dates):
+    """Sum per-day savings, each day capped at the McKinsey ceiling."""
+    return sum(
+        min(count * MINUTES_SAVED_PER_QUESTION, DAILY_CAP_MINUTES)
+        for count in Counter(message_dates).values()
+    )
+
+WEEKDAY_LABELS = [
+    _("Sunday"), _("Monday"), _("Tuesday"), _("Wednesday"),
+    _("Thursday"), _("Friday"), _("Saturday"),
+]
+# Python's date.weekday(): Monday=0..Sunday=6. Map to WEEKDAY_LABELS index where Sunday=0.
+_WEEKDAY_PY_TO_LABEL_IDX = [1, 2, 3, 4, 5, 6, 0]
 CHART_W, CHART_H, CHART_TOP, CHART_BOTTOM = 365, 80, 12, 62
 
 
@@ -43,10 +58,13 @@ def smooth_svg_path(points):
 def format_time_saved(minutes):
     minutes = int(minutes or 0)
     if minutes < 60:
-        return f"{minutes} {'min' if minutes == 1 else 'mins'}"
+        return ngettext("%(count)s min", "%(count)s mins", minutes) % {"count": minutes}
     hours = minutes / 60
     hours_value = int(hours) if hours.is_integer() else round(hours, 1)
-    return f"{hours_value} {'hour' if hours_value == 1 else 'hours'}"
+    int_hours = int(hours_value) if isinstance(hours_value, (int, float)) and hours_value == int(hours_value) else None
+    # Use the integer hours value for plural form picking when possible; fall back to 2 (plural) for fractional values.
+    plural_key = int_hours if int_hours is not None else 2
+    return ngettext("%(count)s hour", "%(count)s hours", plural_key) % {"count": hours_value}
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +83,7 @@ def build_audit_trail(workspace, limit=50):
         rows.append({
             "action_label": activity_log.ACTION_LABELS.get(a.action, a.action),
             "action":       a.action,
-            "actor_name":   user_display_name(a.actor) if a.actor else "System",
+            "actor_name":   user_display_name(a.actor) if a.actor else _("System"),
             "target":       a.target,
             "created_at":   a.created_at,
             "changes":      _format_config_changes(a.metadata.get("changes", []))
@@ -101,17 +119,20 @@ def build_dashboard_context(workspace, viewer, can_view_audit_trail):
     questions_count  = user_messages.count()
     timestamps       = list(user_messages.values_list("timestamp", flat=True))
     message_dates    = [timezone.localtime(ts).date() for ts in timestamps]
-    active_days      = len(set(message_dates))
     week_ago         = timezone.now() - timezone.timedelta(days=7)
     questions_week   = user_messages.filter(timestamp__gte=week_ago).count()
-    time_saved_min   = active_days * TIME_SAVED_MINUTES_PER_ACTIVE_DAY
+    time_saved_min   = _time_saved_minutes(message_dates)
 
     documents_qs     = workspace.documents.all()
     documents_count  = documents_qs.count()
 
-    productive_days  = Counter(
-        timezone.localtime(ts).strftime("%A") for ts in timestamps
+    productive_days_idx = Counter(
+        timezone.localtime(ts).weekday() for ts in timestamps
     ).most_common(3)
+    productive_days = [
+        (WEEKDAY_LABELS[_WEEKDAY_PY_TO_LABEL_IDX[idx]], count)
+        for idx, count in productive_days_idx
+    ]
 
     time_chart       = _build_time_chart(message_dates)
 
@@ -147,11 +168,11 @@ def _build_time_chart(message_dates):
     week_start = today - timezone.timedelta(days=(today.weekday() + 1) % 7)
     week_end   = week_start + timezone.timedelta(days=7)
 
-    active_indexes = {
+    questions_per_day = Counter(
         (d - week_start).days for d in message_dates if week_start <= d < week_end
-    }
+    )
     minutes = [
-        TIME_SAVED_MINUTES_PER_ACTIVE_DAY if i in active_indexes else 0
+        min(questions_per_day.get(i, 0) * MINUTES_SAVED_PER_QUESTION, DAILY_CAP_MINUTES)
         for i in range(7)
     ]
     this_week_minutes = sum(minutes)
@@ -165,9 +186,6 @@ def _build_time_chart(message_dates):
     peak = max(range(7), key=lambda i: minutes[i]) if any(minutes) else min(max((today - week_start).days, 0), 6)
     peak_x, peak_y = points[peak]
     peak_date = week_start + timezone.timedelta(days=peak)
-    day_suffix = "th" if 10 <= peak_date.day % 100 <= 20 else (
-        {1: "st", 2: "nd", 3: "rd"}.get(peak_date.day % 10, "th")
-    )
 
     return {
         "this_week_minutes": this_week_minutes,
@@ -180,6 +198,6 @@ def _build_time_chart(message_dates):
             "tooltip_x":     f"{max(38, min(CHART_W - 38, peak_x)):.2f}",
             "tooltip_y":     f"{max(0, peak_y - 48):.2f}",
             "tooltip_value": format_time_saved(minutes[peak]),
-            "tooltip_date":  f"{peak_date.strftime('%b')} {peak_date.day}{day_suffix}, {peak_date.year}",
+            "tooltip_date":  date_format(peak_date, format="DATE_FORMAT", use_l10n=True),
         },
     }

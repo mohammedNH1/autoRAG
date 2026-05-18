@@ -1,16 +1,18 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Chat - AutoRAG</title>
+    <title>{% trans "Chat" %} - AutoRAG</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=20260513">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=20260514">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}?v=20260511">
+    <script src="{% url 'javascript-catalog' %}"></script>
 </head>
 <body>
     <div class="chat-container">
@@ -19,12 +21,12 @@
         <!-- Sessions Panel -->
         <aside class="sessions-panel">
             <div class="sessions-header">
-                <h3>{{ workspace_name }}</h3>
-                <span class="sessions-count">{{ sessions|length }} Total</span>
+                <h3 dir="auto">{{ workspace_name }}</h3>
+                <span class="sessions-count">{% blocktrans with count=sessions|length %}{{ count }} Total{% endblocktrans %}</span>
             </div>
 
             <div class="new-session-wrapper">
-                <button class="new-session-btn" type="button">+ New Session</button>
+                <button class="new-session-btn" type="button">{% trans "+ New Session" %}</button>
             </div>
 
             <div class="sessions-list">
@@ -35,9 +37,9 @@
                         href="{% url 'chat_session' workspace_id session.session_id %}"
                     >
                         <div class="session-indicator"></div>
-                        <span class="session-title">{{ session.title }}</span>
+                        <span class="session-title" dir="auto">{% if session.title == "New Session" %}{% trans "New Session" %}{% else %}{{ session.title }}{% endif %}</span>
                     </a>
-                    <button type="button" class="session-kebab" data-session-kebab title="More" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="session-kebab" data-session-kebab title="{% trans 'More' %}" aria-haspopup="true" aria-expanded="false">
                         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="12" cy="5"  r="1.7" fill="currentColor"/>
                             <circle cx="12" cy="12" r="1.7" fill="currentColor"/>
@@ -45,8 +47,8 @@
                         </svg>
                     </button>
                     <div class="session-kebab-menu" data-session-menu hidden>
-                        <button type="button" data-session-action="rename">Rename</button>
-                        <button type="button" class="session-kebab-menu__danger" data-session-action="delete">Delete</button>
+                        <button type="button" data-session-action="rename">{% trans "Rename" %}</button>
+                        <button type="button" class="session-kebab-menu__danger" data-session-action="delete">{% trans "Delete" %}</button>
                     </div>
                 </div>
                 {% endfor %}
@@ -58,13 +60,13 @@
             <!-- Header -->
             <header class="main-header">
                 <div class="header-left">
-                    <h1 class="header-session" id="headerSessionName">{{ session_name }}</h1>
+                    <h1 class="header-session" id="headerSessionName" dir="auto">{% if session_name == "New Session" %}{% trans "New Session" %}{% else %}{{ session_name }}{% endif %}</h1>
                     <button
                         class="header-session-edit-btn"
                         type="button"
-                        title="Rename session"
+                        title="{% trans 'Rename session' %}"
                     >
-                        <img src="{% static 'edit.svg' %}" alt="Edit" class="header-edit-icon">
+                        <img src="{% static 'edit.svg' %}" alt="{% trans 'Edit' %}" class="header-edit-icon">
                     </button>
                 </div>
             </header>
@@ -81,17 +83,16 @@
                         type="text"
                         class="message-input"
                         id="messageInput"
-                        placeholder="Ask AutoRAG..."
+                        placeholder="{% trans 'Ask AutoRAG...' %}"
                         autocomplete="off"
-                        dir="auto"
                     >
                     <button class="send-button" id="sendButton" type="button">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="send-button__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.9429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.6563168,11.6889879 L4.13399899,2.85218561 C3.34915502,2.68508827 2.40734225,2.79640318 1.77946707,3.27046097 C0.994623095,3.89199275 0.837654304,5.10231098 1.15159189,5.88779788 L3.03521743,12.3287909 C3.03521743,12.4858883 3.19218622,12.6429857 3.50612381,12.6429857 L16.6915026,13.4284726 C16.6915026,13.4284726 17.1624089,13.4284726 17.1624089,12.9572586 L17.1624089,12.4744748 C17.1624089,12.0032608 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"/>
                         </svg>
                     </button>
                 </div>
-                <p class="composer-disclaimer">AutoRAG can make mistakes. Check our Terms & Conditions.</p>
+                <p class="composer-disclaimer">{% trans "AutoRAG can make mistakes. Check our Terms & Conditions." %}</p>
             </div>
         </main>
     </div>
@@ -100,13 +101,13 @@
     <div id="errorModal" class="modal" style="display: none;">
         <div class="modal-content error">
             <div class="modal-header">
-                <h2>❌ Error</h2>
+                <h2>❌ {% trans "Error" %}</h2>
             </div>
             <div class="modal-body">
-                <p id="errorMessage">An error occurred. Please try again.</p>
+                <p id="errorMessage">{% trans "An error occurred. Please try again." %}</p>
             </div>
             <div class="modal-footer">
-                <button onclick="closeErrorModal()" class="btn-primary">Close</button>
+                <button onclick="closeErrorModal()" class="btn-primary">{% trans "Close" %}</button>
             </div>
         </div>
     </div>
@@ -124,6 +125,6 @@
             frontendOnly: false
         };
     </script>
-    <script src="{% static 'js/chat.js' %}?v=5"></script>
+    <script src="{% static 'js/chat.js' %}?v=6"></script>
 </body>
 </html>

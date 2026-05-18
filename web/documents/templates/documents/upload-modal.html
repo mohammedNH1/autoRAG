@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n %}
 <script>window.UPLOAD_MODAL_ICONS_BASE = "{% static 'icons' %}";</script>
 <script>window.TEXT_INPUT_URL = "{% url 'documents:text_input_page' workspace.workspace_id %}";</script>
 <!-- Upload Modal Overlay -->
@@ -8,10 +9,10 @@
         <!-- Header -->
         <div class="upload-modal__header">
             <div>
-                <h2 class="upload-modal__title">File Upload</h2>
-                <p class="upload-modal__subtitle">Choose a file and upload securely to proceed.</p>
+                <h2 class="upload-modal__title">{% trans "File Upload" %}</h2>
+                <p class="upload-modal__subtitle">{% trans "Choose a file and upload securely to proceed." %}</p>
             </div>
-            <button class="upload-modal__close" type="button" id="uploadModalClose" aria-label="Close">
+            <button class="upload-modal__close" type="button" id="uploadModalClose" aria-label="{% trans 'Close' %}">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -21,22 +22,22 @@
         <!-- Dropzone -->
         <div class="upload-modal__dropzone" id="uploadDropzone">
             <div class="upload-modal__dropzone-content">
-                <img class="upload-modal__dropzone-illustration" src="{% static 'icons/Document upload icon.svg' %}" alt="Upload documents" width="100" height="104">
-                <p class="upload-modal__dropzone-title">Drag and drop your files</p>
-                <p class="upload-modal__dropzone-formats">PDF, TXT, CSV, DOC, DOCX, XLS, XLSX, PPT, and PPTX formats.</p>
+                <img class="upload-modal__dropzone-illustration" src="{% static 'icons/Document upload icon.svg' %}" alt="{% trans 'Upload documents' %}" width="100" height="104">
+                <p class="upload-modal__dropzone-title">{% trans "Drag and drop your files" %}</p>
+                <p class="upload-modal__dropzone-formats">{% trans "PDF, TXT, CSV, DOC, DOCX, XLS, XLSX, PPT, and PPTX formats." %}</p>
                 <div class="upload-modal__dropzone-actions">
                     <button class="upload-modal__action-btn" type="button" id="uploadPickerBtn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        Upload
+                        {% trans "Upload" %}
                     </button>
                     <button class="upload-modal__action-btn" type="button" id="textInputBtn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
                             <path d="M8 8h8M8 12h8M8 16h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         </svg>
-                        Text Input
+                        {% trans "Text Input" %}
                     </button>
                 </div>
             </div>
@@ -44,14 +45,14 @@
 
         <!-- Uploaded Files List -->
         <div class="upload-modal__files" id="uploadFilesList" style="display:none;">
-            <h3 class="upload-modal__files-title">Uploaded Files</h3>
+            <h3 class="upload-modal__files-title">{% trans "Uploaded Files" %}</h3>
             <div class="upload-modal__file-list" id="uploadFileList"></div>
         </div>
 
         <!-- Footer -->
         <div class="upload-modal__footer">
-            <button class="upload-modal__btn-cancel" type="button" id="uploadModalCancel">Cancel</button>
-            <button class="upload-modal__btn-submit" type="button" id="uploadModalSubmit" disabled>Submit</button>
+            <button class="upload-modal__btn-cancel" type="button" id="uploadModalCancel">{% trans "Cancel" %}</button>
+            <button class="upload-modal__btn-submit" type="button" id="uploadModalSubmit" disabled>{% trans "Submit" %}</button>
         </div>
 
     </div>
@@ -62,6 +63,13 @@
 
 <script>
             (function () {
+                const _t = (typeof gettext === 'function') ? gettext : (s) => s;
+                const _interp = (typeof interpolate === 'function') ? interpolate : function (fmt, obj) {
+                    return fmt.replace(/%\(\w+\)s/g, function (m) {
+                        var k = m.slice(2, -2);
+                        return obj[k] != null ? obj[k] : m;
+                    });
+                };
                 const ACCEPTED_EXTENSIONS = ['pdf','txt','csv','doc','docx','xls','xlsx','ppt','pptx'];
                 const ICONS_BASE = (typeof window.UPLOAD_MODAL_ICONS_BASE !== 'undefined' ? window.UPLOAD_MODAL_ICONS_BASE : '../../../components/icons');
 
@@ -117,7 +125,6 @@
                 }
 
                 function resetModal() {
-                    files.forEach(f => { if (f.timer) clearInterval(f.timer); });
                     files = [];
                     fileIdCounter = 0;
                     dragCounter = 0;
@@ -149,12 +156,12 @@
                             '<img src="' + ICONS_BASE + '/' + iconName + '.svg" alt="' + fileObj.ext + '" width="32" height="32">' +
                         '</div>' +
                         '<div class="upload-modal__file-info">' +
-                            '<span class="upload-modal__file-name">' + fileObj.name + '</span>' +
+                            '<span class="upload-modal__file-name" dir="auto">' + fileObj.name + '</span>' +
                             '<span class="upload-modal__file-status" data-status-id="' + fileObj.id + '">' +
-                                sizeStr + ' | 0% \u2022 Uploading' +
+                                sizeStr + ' | ' + _t('Ready') +
                             '</span>' +
                         '</div>' +
-                        '<button class="upload-modal__file-delete" type="button" data-delete-id="' + fileObj.id + '" aria-label="Remove file">' +
+                        '<button class="upload-modal__file-delete" type="button" data-delete-id="' + fileObj.id + '" aria-label="' + _t('Remove file') + '">' +
                             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
                                 '<path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
                             '</svg>' +
@@ -163,31 +170,11 @@
                     return row;
                 }
 
-                function updateFileStatus(fileObj) {
+                function setFileStatus(fileObj, label, done) {
                     const statusEl = fileListEl.querySelector('[data-status-id="' + fileObj.id + '"]');
                     if (!statusEl) return;
-                    const sizeStr = formatFileSize(fileObj.size);
-
-                    if (fileObj.progress >= 100) {
-                        statusEl.textContent = sizeStr + ' | 100% \u2022 Uploaded Successfully';
-                        statusEl.classList.add('upload-modal__file-status--done');
-                    } else {
-                        const remaining = Math.max(1, Math.round((100 - fileObj.progress) * 0.7));
-                        statusEl.textContent = sizeStr + ' | ' + fileObj.progress + '% \u2022 ' + remaining + ' sec left \u2728 Uploading';
-                        statusEl.classList.remove('upload-modal__file-status--done');
-                    }
-                }
-
-                function simulateUpload(fileObj) {
-                    fileObj.timer = setInterval(function () {
-                        fileObj.progress = Math.min(100, fileObj.progress + Math.floor(Math.random() * 8 + 3));
-                        updateFileStatus(fileObj);
-                        if (fileObj.progress >= 100) {
-                            clearInterval(fileObj.timer);
-                            fileObj.timer = null;
-                            updateSubmitState();
-                        }
-                    }, 300);
+                    statusEl.textContent = formatFileSize(fileObj.size) + ' | ' + label;
+                    statusEl.classList.toggle('upload-modal__file-status--done', !!done);
                 }
 
                 function addFiles(rawFiles) {
@@ -202,15 +189,14 @@
                             name: f.name,
                             size: f.size,
                             ext: ext,
-                            file: f,        // ← store the real File object
-                            progress: 0,
-                            timer: null
+                            file: f,
+                            progress: 100,
                         };
                         files.push(fileObj);
 
                         const row = renderFileRow(fileObj);
                         fileListEl.appendChild(row);
-                        simulateUpload(fileObj);
+                        setFileStatus(fileObj, _t('Ready'), true);
                         added = true;
                     }
 
@@ -223,7 +209,6 @@
                 function removeFile(id) {
                     const idx = files.findIndex(f => f.id === id);
                     if (idx === -1) return;
-                    if (files[idx].timer) clearInterval(files[idx].timer);
                     files.splice(idx, 1);
 
                     const row = fileListEl.querySelector('[data-file-id="' + id + '"]');
@@ -305,12 +290,12 @@
                         ? window.WORKSPACE_ID
                         : null;
                     if (!workspaceId) {
-                        alert('Workspace not loaded. Please refresh the page.');
+                        alert(_t('Workspace not loaded. Please refresh the page.'));
                         return;
                     }
 
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Uploading…';
+                    submitBtn.textContent = _t('Uploading…');
 
                     const failures = [];
 
@@ -318,6 +303,8 @@
                         const formData = new FormData();
                         formData.append('file', fileObj.file);
                         formData.append('workspace_id', workspaceId);
+
+                        setFileStatus(fileObj, _t('Uploading…'), false);
 
                         try {
                             const response = await fetch('/documents/upload/', {
@@ -332,13 +319,16 @@
                                 const err = await response.json().catch(() => ({}));
                                 const msg = err.error || ('HTTP ' + response.status);
                                 console.error('Upload error for', fileObj.name, err);
+                                setFileStatus(fileObj, _interp(_t('Failed: %(msg)s'), { msg: msg }, true), false);
                                 failures.push(fileObj.name + ': ' + msg);
                             } else {
                                 const data = await response.json();
                                 console.log('Uploaded successfully:', fileObj.name, data);
+                                setFileStatus(fileObj, _t('Uploaded'), true);
                             }
                         } catch (err) {
                             console.error('Network error uploading', fileObj.name, err);
+                            setFileStatus(fileObj, _t('Network error'), false);
                             failures.push(fileObj.name + ': network error');
                         }
                     }
@@ -347,9 +337,9 @@
                         closeModal();
                         window.location.reload();
                     } else {
-                        alert('Upload failed:\n\n' + failures.join('\n'));
+                        alert(_t('Upload failed:') + '\n\n' + failures.join('\n'));
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'Retry';
+                        submitBtn.textContent = _t('Retry');
                     }
                 });
 

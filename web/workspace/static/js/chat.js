@@ -1,4 +1,11 @@
 (function () {
+  const _t = (typeof gettext === 'function') ? gettext : (s) => s;
+  const _interp = (typeof interpolate === 'function') ? interpolate : function (fmt, obj) {
+      return fmt.replace(/%\(\w+\)s/g, function (m) {
+          var k = m.slice(2, -2);
+          return obj[k] != null ? obj[k] : m;
+      });
+  };
   const cfg = window.CHAT_CONFIG || {};
   const API_BASE_URL = (typeof cfg.apiBaseUrl === 'string') ? cfg.apiBaseUrl : '';
   const SEND_MESSAGE_URL = API_BASE_URL + '/api/chat/send';
@@ -45,7 +52,8 @@
     const sessionsList = document.querySelector('.sessions-list');
     const countElement = document.querySelector('.sessions-count');
     if (!sessionsList || !countElement) return;
-    countElement.textContent = sessionsList.querySelectorAll('.session-item').length + ' Total';
+    const count = sessionsList.querySelectorAll('.session-item').length;
+    countElement.textContent = _interp(_t('%(count)s Total'), { count: count }, true);
   }
 
   function showWelcomeState() {
@@ -54,7 +62,7 @@
     const container = document.getElementById('chatMessages');
     if (container) {
       container.innerHTML =
-        '<div class="welcome-state"><h2 class="welcome-title">What can I help with?</h2></div>';
+        '<div class="welcome-state"><h2 class="welcome-title">' + _t('What can I help with?') + '</h2></div>';
     }
   }
 
@@ -71,17 +79,17 @@
     if (main) main.classList.remove('welcome-mode');
 
     container.innerHTML = '';
+    const pageRTL = (document.documentElement.dir || '').toLowerCase() === 'rtl';
     messages.forEach((msg) => {
       const el = document.createElement('div');
       el.className = 'message ' + msg.sender;
       const timestamp = msg.timestamp ? formatTime(msg.timestamp) : '';
-      // dir="auto" lets the browser pick RTL/LTR per message from its
-      // first strong directional character — so Arabic answers flip
-      // automatically, English stays left-to-right, no JS detection needed.
+      // Both bubbles follow page direction so content reads in the active language.
+      const contentDir = pageRTL ? 'rtl' : 'auto';
       el.innerHTML =
         '<div class="message-bubble">' +
         (msg.sender === 'assistant' ? '<div class="message-sender">AutoRAG</div>' : '') +
-        '<div class="message-content" dir="auto">' + renderMarkdown(msg.text) + '</div>' +
+        '<div class="message-content" dir="' + contentDir + '">' + renderMarkdown(msg.text) + '</div>' +
         (timestamp ? '<div class="message-time">' + timestamp + '</div>' : '') +
         '</div>';
       container.appendChild(el);
@@ -127,8 +135,9 @@
       item.className = 'session-item active';
       item.href = newUrl;
       item.dataset.sessionId = sessionId;
-      item.dataset.sessionName = sessionTitle || 'New Session';
-      item.innerHTML = sessionItemInnerHtml(sessionTitle || 'New Session');
+      const defaultName = _t('New Session');
+      item.dataset.sessionName = sessionTitle || defaultName;
+      item.innerHTML = sessionItemInnerHtml(sessionTitle || defaultName);
       sessionsList.insertBefore(item, sessionsList.firstChild);
     }
     updateSessionsCount();
@@ -164,7 +173,7 @@
       thinkingEl.innerHTML =
         '<div class="message-bubble"><div class="message-sender">AutoRAG</div>' +
         '<div class="message-content">' +
-          '<span class="thinking-dots" aria-label="Thinking">' +
+          '<span class="thinking-dots" aria-label="' + _t('Thinking') + '">' +
             '<span></span><span></span><span></span>' +
           '</span>' +
         '</div></div>';
@@ -215,7 +224,7 @@
       const thinkingPlaceholder = document.getElementById('thinkingPlaceholder');
       if (thinkingPlaceholder) thinkingPlaceholder.remove();
 
-      const assistantText = (data && typeof data.response === 'string') ? data.response : 'No response.';
+      const assistantText = (data && typeof data.response === 'string') ? data.response : _t('No response.');
       messages.push({
         message_id: 'asst_' + Date.now(),
         sender: 'assistant',
@@ -229,7 +238,7 @@
       // Drop the optimistic user message on failure.
       messages = messages.filter((m) => m.message_id !== userMessage.message_id);
       renderMessages();
-      showErrorModal(e.message || 'Network error. Please try again.');
+      showErrorModal(e.message || _t('Network error. Please try again.'));
     } finally {
       sendBtn.disabled = false;
       input.disabled = false;
@@ -264,12 +273,12 @@
     const confirmBtn = document.createElement('button');
     confirmBtn.type = 'button';
     confirmBtn.className = 'header-rename-confirm';
-    confirmBtn.title = 'Confirm rename';
+    confirmBtn.title = _t('Confirm rename');
     confirmBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.className = 'header-rename-cancel';
-    cancelBtn.title = 'Cancel rename';
+    cancelBtn.title = _t('Cancel rename');
     cancelBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     editor.appendChild(input);
     editor.appendChild(confirmBtn);
@@ -375,7 +384,7 @@
     }
 
     function renameSidebarSession(row, sessionId, current) {
-      var name = prompt('Rename session', current || '');
+      var name = prompt(_t('Rename session'), current || '');
       if (name === null) return;
       name = name.trim();
       if (!name) return;
@@ -398,7 +407,7 @@
     }
 
     function deleteSidebarSession(row, sessionId) {
-      if (!confirm('Delete this session? This cannot be undone.')) return;
+      if (!confirm(_t('Delete this session? This cannot be undone.'))) return;
       fetch(WORKSPACE_CHAT_ROOT_URL + 'sessions/' + sessionId + '/delete/', {
         method: 'POST',
         headers: { 'X-CSRFToken': getCsrfToken() },

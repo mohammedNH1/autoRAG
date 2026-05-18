@@ -1,5 +1,6 @@
 from typing import Any, Optional
 from qdrant_client import QdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import (
     Distance,
     VectorParams,
@@ -120,13 +121,27 @@ class QdrantService:
             ]
         )
 
-        search_result = self.client.query_points(
-            collection_name=collection_name,
-            query=query_vector,
-            query_filter=workspace_filter,
-            limit=top_k,
-            score_threshold=score_threshold,
-        ).points
+        try:
+            search_result = self.client.query_points(
+                collection_name=collection_name,
+                query=query_vector,
+                query_filter=workspace_filter,
+                limit=top_k,
+                score_threshold=score_threshold,
+            ).points
+        except UnexpectedResponse as exc:
+            # 404 = collection doesn't exist yet. Happens when the workspace
+            # config has been switched to a different embedding model but
+            # no documents have been (re)indexed under the new model.
+            # Treat this as "nothing to search" instead of crashing — callers
+            # already handle empty results.
+            if getattr(exc, "status_code", None) == 404:
+                logger.warning(
+                    f"Search hit missing collection '{collection_name}' "
+                    f"for workspace {workspace_id} — returning no results."
+                )
+                return []
+            raise
 
         results = [
             {
@@ -161,6 +176,29 @@ class QdrantService:
 
         logger.info(f"Deleted document {document_id} from workspace {workspace_id}")
         return result
+
+    def count_document_chunks(
+        self,
+        collection_name: str,
+        workspace_id: int,
+        document_id: int,
+    ) -> int:
+        """Return the number of stored chunks for a document in a workspace."""
+        try:
+            result = self.client.count(
+                collection_name=collection_name,
+                count_filter=Filter(
+                    must=[
+                        FieldCondition(key="workspace_id", match=MatchValue(value=workspace_id)),
+                        FieldCondition(key="document_id", match=MatchValue(value=document_id)),
+                    ]
+                ),
+                exact=True,
+            )
+            return int(result.count)
+        except Exception as e:
+            logger.warning(f"count_document_chunks failed for doc {document_id}: {e}")
+            return 0
 
     def get_document_chunks(
         self,
