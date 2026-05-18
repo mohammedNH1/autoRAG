@@ -49,7 +49,6 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """x: [B, T, D]"""
-
         x = x + self.pe[:, : x.size(1), :]
         return self.dropout(x)
 
@@ -83,7 +82,6 @@ class MultiHeadSelfAttention(nn.Module):
 
     def _split_heads(self, x: torch.Tensor) -> torch.Tensor:
         """[B, T, D] → [B, H, T, d_head]"""
-        
         B, T, D = x.shape
         x = x.view(B, T, self.n_heads, self.d_head)
         return x.transpose(1, 2)   # [B, H, T, d_head]
@@ -293,20 +291,25 @@ class DecoderOnlyLM(nn.Module):
     @torch.no_grad()
     def generate(
         self,
-        input_ids:     torch.Tensor,
-        max_new_tokens: int = 200,
-        temperature:    float = 1.0,
-        top_k:          int = 50,
+        input_ids:          torch.Tensor,
+        max_new_tokens:     int   = 200,
+        temperature:        float = 1.0,
+        top_k:              int   = 50,
+        stop_token:         int   = None,
+        repetition_penalty: float = 2.0,
     ) -> torch.Tensor:
         """
         Autoregressively generate tokens given a prompt.
 
         Parameters
         ----------
-        input_ids       : [1, T] — prompt token ids (batch size must be 1)
-        max_new_tokens  : how many tokens to generate
-        temperature     : >1 → more random, <1 → more deterministic
-        top_k           : sample from the top-k most likely tokens (0 = greedy)
+        input_ids           : [1, T] — prompt token ids (batch size must be 1)
+        max_new_tokens      : how many tokens to generate
+        temperature         : >1 → more random, <1 → more deterministic
+        top_k               : sample from the top-k most likely tokens (0 = greedy)
+        stop_token          : stop generation when this token id is produced
+        repetition_penalty  : >1.0 penalizes tokens that already appeared (1.0 = off)
+                              1.3 is a good default — strong enough to stop loops
 
         Returns
         -------
@@ -320,6 +323,15 @@ class DecoderOnlyLM(nn.Module):
             logits = self.forward(ctx)           # [1, T, vocab_size]
             logits = logits[:, -1, :]            # last position → [1, vocab_size]
 
+            # Repetition penalty — divide logits of already-seen tokens
+            # by the penalty factor (>1 makes them less likely)
+            if repetition_penalty != 1.0:
+                for token_id in set(input_ids[0].tolist()):
+                    if logits[0, token_id] < 0:
+                        logits[0, token_id] *= repetition_penalty
+                    else:
+                        logits[0, token_id] /= repetition_penalty
+
             # Apply temperature
             logits = logits / max(temperature, 1e-8)
 
@@ -332,6 +344,10 @@ class DecoderOnlyLM(nn.Module):
             probs     = F.softmax(logits, dim=-1)           # [1, vocab_size]
             next_tok  = torch.multinomial(probs, num_samples=1)  # [1, 1]
             input_ids = torch.cat([input_ids, next_tok], dim=1)
+
+            # Stop at stop token
+            if stop_token is not None and next_tok.item() == stop_token:
+                break
 
         return input_ids
 

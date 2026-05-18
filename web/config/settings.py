@@ -150,3 +150,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ============================================
 QDRANT_HOST = 'qdrant'
 QDRANT_PORT = 6333
+#USE_DECODER = False
+USE_DECODER = True
