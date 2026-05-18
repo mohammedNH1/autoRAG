@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/workspace.css' %}?v=15">
+    <link rel="stylesheet" href="{% static 'css/workspace.css' %}?v=16">
     <script src="{% url 'javascript-catalog' %}"></script>
     {% get_current_language as CUR_LANG %}
 </head>
@@ -21,6 +21,14 @@
 
         <!-- Main Content -->
         <main class="main-content">
+
+            {% if messages %}
+            <div class="ws-flashes" aria-live="polite">
+                {% for message in messages %}
+                <p class="ws-flash ws-flash--{{ message.tags|default:'info' }}">{{ message }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             {% if workspaces %}
             <!-- ============================================
@@ -433,6 +441,6 @@
         </div>
     </div>
 
-    <script src="{% static 'js/workspace.js' %}?v=15"></script>
+    <script src="{% static 'js/workspace.js' %}?v=16"></script>
 </body>
 </html>

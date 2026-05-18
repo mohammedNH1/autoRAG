@@ -337,9 +337,10 @@
             if (pendingWorkspace.image) {
                 payload.append('workspace_image', pendingWorkspace.image);
             }
-            payload.append('language',          data.get('language') || '');
-            payload.append('use_case',          data.get('speed_quality') || '');
-            payload.append('reference',         data.get('reference') || '');
+            payload.append('language',             data.get('language') || '');
+            payload.append('use_case',             data.get('speed_quality') || '');
+            payload.append('main_idea_or_related', data.get('main_idea_or_related') || '');
+            payload.append('reference',            data.get('reference') || '');
             payload.append('temperature',       data.get('temperature') || '');
             payload.append('top_p',             data.get('top_p') || '');
             payload.append('metadata',          data.get('document_info') || '');
